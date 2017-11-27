@@ -24,7 +24,28 @@ option(USE_MSAN "Use memory sanitizer" OFF)
 option(USE_LSAN "Use leak sanitizer" OFF)
 option(USE_UBSAN "Use undefined behavior sanitizer" OFF)
 option(CODE_COVERAGE "Build with code coverage enabled" OFF)
-option(WITH_EXCEPTIONS "Build with exceptions enabled" OFF)
+option(WITH_EXCEPTIONS "Build with exceptions enabled" ON)
+
+set(OMR_DDR OFF CACHE BOOL "Enable DDR")
+set(OMR_EXAMPLE OFF CACHE BOOL "")
+set(OMR_JIT  ON CACHE BOOL "")
+set(OMR_JITBUILDER ON CACHE BOOL "")
+set(OMR_GC OFF CACHE BOOL "")
+set(OMR_PORT ON CACHE BOOL "")
+set(OMR_THREAD ON CACHE BOOL "")
+set(OMR_TEST_COMPILER OFF CACHE BOOL "")
+set(OMR_OMRSIG OFF CACHE BOOL "")
+set(OMR_FVTEST OFF CACHE BOOL "")
+set(OMR_GLUE ${CMAKE_SOURCE_DIR}/example/glue)
+set(OMR_GC_SEGREGATED_HEAP OFF CACHE BOOL "")
+set(OMR_GC_MODRON_SCAVENGER OFF CACHE BOOL "")
+set(OMR_GC_MODRON_CONCURRENT_MARK OFF CACHE BOOL "")
+set(OMR_THR_CUSTOM_SPIN_OPTIONS OFF CACHE BOOL "")
+set(OMR_NOTIFY_POLICY_CONTROL OFF CACHE BOOL "")
+set(OMR_THR_SPIN_WAKE_CONTROL OFF CACHE BOOL "")
+set(OMR_THR_SPIN_CODE_REFACTOR OFF CACHE BOOL "")
+set(OMR_THR_FORK_SUPPORT OFF CACHE BOOL "")
+set(OMR_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
 
 if (${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
   set(COMPILER_IS_CLANG 1)
@@ -100,8 +121,9 @@ else ()
   #   interfaces, etc.
   # disable -Wpointer-arith: this is a GCC extension, and doesn't work in MSVC.
   add_definitions(
-    -Wall -Wextra -Werror -Wno-unused-parameter -Wpointer-arith -g -std=c++11
+    -Wall -Wextra -Wno-unused-parameter -Wpointer-arith -g -std=c++11
     -Wold-style-cast -Wuninitialized
+
   )
 
   if (NOT WITH_EXCEPTIONS)
@@ -253,7 +275,12 @@ if (NOT EMSCRIPTEN)
     link_libraries(gcov)
   endif ()
 
-  add_subdirectory(third_party/omr)
+  function(add_omr)
+    set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -w)
+    add_subdirectory(third_party/omr)
+  endfunction()
+
+  add_omr()
 
   function(wabt_executable name)
     # ARGV contains all arguments; remove the first one, ${name}, so it's just
