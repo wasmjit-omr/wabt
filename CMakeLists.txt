@@ -253,6 +253,8 @@ if (NOT EMSCRIPTEN)
     link_libraries(gcov)
   endif ()
 
+  add_subdirectory(third_party/omr)
+
   function(wabt_executable name)
     # ARGV contains all arguments; remove the first one, ${name}, so it's just
     # a list of sources.
@@ -260,7 +262,7 @@ if (NOT EMSCRIPTEN)
 
     add_executable(${name} ${ARGV})
     add_dependencies(everything ${name})
-    target_link_libraries(${name} libwabt)
+    target_link_libraries(${name} libwabt jitbuilder)
     set_property(TARGET ${name} PROPERTY CXX_STANDARD 11)
     set_property(TARGET ${name} PROPERTY CXX_STANDARD_REQUIRED ON)
     list(APPEND WABT_EXECUTABLES ${name})
