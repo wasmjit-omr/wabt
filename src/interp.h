@@ -493,6 +493,7 @@ class Thread {
   Result CallHost(HostFunc*);
 
  private:
+  friend class FunctionBuilder;
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
 
   Memory* ReadMemory(const uint8_t** pc);
