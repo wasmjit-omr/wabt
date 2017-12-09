@@ -27,6 +27,8 @@
 #include "src/cast.h"
 #include "src/stream.h"
 
+#include "src/jit/wabtjit.h"
+
 namespace wabt {
 namespace interp {
 
@@ -1326,8 +1328,13 @@ Result Thread::Run(int num_instructions) {
 
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
-        CHECK_TRAP(PushCall(pc));
-        GOTO(offset);
+        auto f = jit::compile(this, offset);
+        if (f) {
+          CHECK_TRAP(f());
+        } else {
+          CHECK_TRAP(PushCall(pc));
+          GOTO(offset);
+        }
         break;
       }
 

@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-#include "type-dictionary.h"
+#ifndef WABTJIT_HPP
+#define WABTJIT_HPP
+
+#include "src/common.h"
 #include "src/interp.h"
 
-wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
-    using namespace wabt::interp;
-    DefineUnion("Value");
-    UnionField("Value", "i32", toIlType<decltype(Value::i32)>());
-    UnionField("Value", "i64", toIlType<decltype(Value::i64)>());
-    UnionField("Value", "f32", toIlType<decltype(Value::f32_bits)>());
-    UnionField("Value", "f64", toIlType<decltype(Value::f64_bits)>());
-    CloseUnion("Value");
+namespace wabt {
+namespace jit {
+
+using JITedFunction = wabt::interp::Result (*)();
+
+JITedFunction compile(wabt::interp::Thread* thread, wabt::interp::IstreamOffset offset);
+
 }
+}
+
+#endif // WABTJIT_HPP

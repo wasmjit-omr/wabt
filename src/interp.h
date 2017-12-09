@@ -30,6 +30,10 @@
 
 namespace wabt {
 
+namespace jit {
+class FunctionBuilder;
+}
+
 namespace interp {
 
 #define FOREACH_INTERP_RESULT(V)                                            \
@@ -493,7 +497,7 @@ class Thread {
   Result CallHost(HostFunc*);
 
  private:
-  friend class FunctionBuilder;
+  friend class wabt::jit::FunctionBuilder;
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
 
   Memory* ReadMemory(const uint8_t** pc);

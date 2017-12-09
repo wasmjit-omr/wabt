@@ -19,6 +19,7 @@
 
 #include "type-dictionary.h"
 #include "ilgen/MethodBuilder.hpp"
+#include "ilgen/VirtualMachineOperandStack.hpp"
 
 #include "src/interp.h"
 
@@ -30,9 +31,28 @@ class FunctionBuilder : public TR::MethodBuilder {
   FunctionBuilder(interp::Thread* thread, interp::IstreamOffset const offset, TypeDictionary* types);
   bool buildIL() override;
 
+  /**
+   * @brief Generate push to the interpreter stack
+   * @param b is the builder object used to generate the code
+   * @param type is the name of the field in the Value union corresponding to the type of the value being pushed
+   * @param value is the IlValue representing the value being pushed
+   */
+  void Push(TR::IlBuilder* b, const char* type, TR::IlValue* value);
+
+  /**
+   * @brief Generate pop from the interpreter stack
+   * @param b is the builder object used to generate the code
+   * @param type is the name of the field in the Value union corresponding to the type of the value being popped
+   * @return an IlValue representing the popped value
+   */
+  TR::IlValue* Pop(TR::IlBuilder* b, const char* type);
+
  private:
   interp::Thread* thread_;
   interp::IstreamOffset const offset_;
+
+  TR::IlType* const valueType_;
+  TR::IlType* const pValueType_;
 };
 
 }
