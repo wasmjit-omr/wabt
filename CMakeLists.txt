@@ -24,7 +24,28 @@ option(USE_MSAN "Use memory sanitizer" OFF)
 option(USE_LSAN "Use leak sanitizer" OFF)
 option(USE_UBSAN "Use undefined behavior sanitizer" OFF)
 option(CODE_COVERAGE "Build with code coverage enabled" OFF)
-option(WITH_EXCEPTIONS "Build with exceptions enabled" OFF)
+option(WITH_EXCEPTIONS "Build with exceptions enabled" ON)
+
+set(OMR_DDR OFF CACHE BOOL "Enable DDR")
+set(OMR_EXAMPLE OFF CACHE BOOL "")
+set(OMR_JIT  ON CACHE BOOL "")
+set(OMR_JITBUILDER ON CACHE BOOL "")
+set(OMR_GC OFF CACHE BOOL "")
+set(OMR_PORT ON CACHE BOOL "")
+set(OMR_THREAD ON CACHE BOOL "")
+set(OMR_TEST_COMPILER OFF CACHE BOOL "")
+set(OMR_OMRSIG OFF CACHE BOOL "")
+set(OMR_FVTEST OFF CACHE BOOL "")
+set(OMR_GLUE ${CMAKE_SOURCE_DIR}/example/glue)
+set(OMR_GC_SEGREGATED_HEAP OFF CACHE BOOL "")
+set(OMR_GC_MODRON_SCAVENGER OFF CACHE BOOL "")
+set(OMR_GC_MODRON_CONCURRENT_MARK OFF CACHE BOOL "")
+set(OMR_THR_CUSTOM_SPIN_OPTIONS OFF CACHE BOOL "")
+set(OMR_NOTIFY_POLICY_CONTROL OFF CACHE BOOL "")
+set(OMR_THR_SPIN_WAKE_CONTROL OFF CACHE BOOL "")
+set(OMR_THR_SPIN_CODE_REFACTOR OFF CACHE BOOL "")
+set(OMR_THR_FORK_SUPPORT OFF CACHE BOOL "")
+set(OMR_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
 
 if (${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
   set(COMPILER_IS_CLANG 1)
@@ -89,40 +110,37 @@ if (COMPILER_IS_MSVC)
   #   seems to not like float compare w/ HUGE_VALF; bug?
   # disable warnings C4267 and C4244: conversion/truncation from larger to smaller type.
   # disable warning C4800: implicit conversion from larger int to bool
-  add_definitions(-W3 -wd4018 -wd4056 -wd4756 -wd4267 -wd4244 -wd4800 -WX -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W3 -wd4018 -wd4056 -wd4756 -wd4267 -wd4244 -wd4800 -WX -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
 
   if (NOT WITH_EXCEPTIONS)
     # disable exception use in C++ library
-    add_definitions(-D_HAS_EXCEPTIONS=0)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_HAS_EXCEPTIONS=0")
   endif ()
 else ()
   # disable -Wunused-parameter: this is really common when implementing
   #   interfaces, etc.
   # disable -Wpointer-arith: this is a GCC extension, and doesn't work in MSVC.
-  add_definitions(
-    -Wall -Wextra -Werror -Wno-unused-parameter -Wpointer-arith -g -std=c++11
-    -Wold-style-cast -Wuninitialized
-  )
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wpointer-arith -g -std=c++11 -Wold-style-cast -Wuninitialized")
 
   if (NOT WITH_EXCEPTIONS)
-    add_definitions(-fno-exceptions)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
   endif ()
 
   # Need to define __STDC_*_MACROS because C99 specifies that C++ shouldn't
   # define format (e.g. PRIu64) or limit (e.g. UINT32_MAX) macros without the
   # definition, and some libcs (e.g. glibc2.17 and earlier) follow that.
-  add_definitions(-D__STDC_LIMIT_MACROS=1 -D__STDC_FORMAT_MACROS=1)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS=1 -D__STDC_FORMAT_MACROS=1")
 
   if (MINGW)
     # _POSIX is needed to ensure we use mingw printf
     # instead of the VC runtime one.
-    add_definitions(-D_POSIX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_POSIX")
   endif ()
 
   if (COMPILER_IS_GNU)
     # disable -Wclobbered: it seems to be guessing incorrectly about a local
     # variable being clobbered by longjmp.
-    add_definitions(-Wno-clobbered)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-clobbered")
   endif ()
 
   if (NOT EMSCRIPTEN)
@@ -162,7 +180,7 @@ else ()
 
     if (TARGET_ARCH STREQUAL "i386")
       # wasm doesn't allow for x87 floating point math
-      add_definitions(-msse2 -mfpmath=sse)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -mfpmath=sse")
     endif ()
   endif ()
 endif ()
@@ -249,9 +267,16 @@ set_target_properties(libwabt PROPERTIES OUTPUT_NAME wabt)
 
 if (NOT EMSCRIPTEN)
   if (CODE_COVERAGE)
-    add_definitions("-fprofile-arcs -ftest-coverage")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \"-fprofile-arcs -ftest-coverage\"")
     link_libraries(gcov)
   endif ()
+
+  function(add_omr)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+    add_subdirectory(third_party/omr)
+  endfunction()
+
+  add_omr()
 
   function(wabt_executable name)
     # ARGV contains all arguments; remove the first one, ${name}, so it's just
@@ -260,7 +285,7 @@ if (NOT EMSCRIPTEN)
 
     add_executable(${name} ${ARGV})
     add_dependencies(everything ${name})
-    target_link_libraries(${name} libwabt)
+    target_link_libraries(${name} libwabt jitbuilder)
     set_property(TARGET ${name} PROPERTY CXX_STANDARD 11)
     set_property(TARGET ${name} PROPERTY CXX_STANDARD_REQUIRED ON)
     list(APPEND WABT_EXECUTABLES ${name})
@@ -370,7 +395,7 @@ else ()
   # emscripten stuff
 
   # just dump everything into one binary so we can reference it from JavaScript
-  add_definitions(-Wno-warn-absolute-paths)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-warn-absolute-paths")
   add_executable(libwabtjs src/emscripten-helpers.cc)
   add_dependencies(everything libwabtjs)
   target_link_libraries(libwabtjs libwabt)

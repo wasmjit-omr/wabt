@@ -3,3 +3,4 @@
 /fuzz-out
 /emscripten
 *.pyc
+*.user
