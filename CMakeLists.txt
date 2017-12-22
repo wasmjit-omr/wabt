@@ -265,18 +265,28 @@ add_library(libwabt STATIC
 )
 set_target_properties(libwabt PROPERTIES OUTPUT_NAME wabt)
 
+function(add_omr)
+  # Disable warnings when building all OMR components since OMR is more lax about some warnings.
+  # Since this logic is inside a function, this only applies within the scope of the OMR CMake
+  # files.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+
+  add_subdirectory(third_party/omr EXCLUDE_FROM_ALL)
+  target_link_libraries(libwabt PUBLIC jitbuilder)
+
+  # Mark JitBuilder include directories as "system" include directories. For most compilers, this
+  # suppresses any warnings they would otherwise generate.
+  get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+  target_include_directories(libwabt SYSTEM PUBLIC "${JITBUILDER_INCLUDE}")
+endfunction()
+
+add_omr()
+
 if (NOT EMSCRIPTEN)
   if (CODE_COVERAGE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \"-fprofile-arcs -ftest-coverage\"")
     link_libraries(gcov)
   endif ()
-
-  function(add_omr)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
-    add_subdirectory(third_party/omr)
-  endfunction()
-
-  add_omr()
 
   function(wabt_executable name)
     # ARGV contains all arguments; remove the first one, ${name}, so it's just
@@ -285,7 +295,7 @@ if (NOT EMSCRIPTEN)
 
     add_executable(${name} ${ARGV})
     add_dependencies(everything ${name})
-    target_link_libraries(${name} libwabt jitbuilder)
+    target_link_libraries(${name} libwabt)
     set_property(TARGET ${name} PROPERTY CXX_STANDARD 11)
     set_property(TARGET ${name} PROPERTY CXX_STANDARD_REQUIRED ON)
     list(APPEND WABT_EXECUTABLES ${name})
