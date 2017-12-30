@@ -242,6 +242,9 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       DropKeep(b, 1, 0);
       break;
 
+    case Opcode::Nop:
+      break;
+
     default:
       return false;
   }
