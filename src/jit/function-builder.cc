@@ -17,10 +17,59 @@
 #include "function-builder.h"
 #include "src/interp.h"
 #include "ilgen/VirtualMachineState.hpp"
+#include "infra/Assert.hpp"
 #include <type_traits>
 
 namespace wabt {
 namespace jit {
+
+// The following functions are required to be able to properly parse opcodes. However, their
+// original definitions are defined with static linkage in src/interp.cc. Because of this, the only
+// way to use them is to simply copy their definitions here.
+
+template <typename T>
+inline T ReadUxAt(const uint8_t* pc) {
+  T result;
+  memcpy(&result, pc, sizeof(T));
+  return result;
+}
+
+template <typename T>
+inline T ReadUx(const uint8_t** pc) {
+  T result = ReadUxAt<T>(*pc);
+  *pc += sizeof(T);
+  return result;
+}
+
+inline uint8_t ReadU8(const uint8_t** pc) {
+  return ReadUx<uint8_t>(pc);
+}
+
+inline uint32_t ReadU32(const uint8_t** pc) {
+  return ReadUx<uint32_t>(pc);
+}
+
+inline uint64_t ReadU64(const uint8_t** pc) {
+  return ReadUx<uint64_t>(pc);
+}
+
+inline Opcode ReadOpcode(const uint8_t** pc) {
+  uint8_t value = ReadU8(pc);
+  if (Opcode::IsPrefixByte(value)) {
+    // For now, assume all instructions are encoded with just one extra byte
+    // so we don't have to decode LEB128 here.
+    uint32_t code = ReadU8(pc);
+    return Opcode::FromCode(value, code);
+  } else {
+    // TODO(binji): Optimize if needed; Opcode::FromCode does a log2(n) lookup
+    // from the encoding.
+    return Opcode::FromCode(value);
+  }
+}
+
+inline Opcode ReadOpcodeAt(const uint8_t* pc) {
+  return ReadOpcode(&pc);
+}
 
 FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::IstreamOffset const offset, TypeDictionary* types)
     : TR::MethodBuilder(types),
@@ -36,19 +85,23 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::IstreamOffset c
 }
 
 bool FunctionBuilder::buildIL() {
-  using ValueEnum = std::underlying_type<wabt::interp::Result>::type;
-  setVMState(new OMR::VirtualMachineState{});
+  setVMState(new OMR::VirtualMachineState());
 
-  // generate pop
-  Pop(this, "i32");
+  const uint8_t* istream = thread_->GetIstream();
 
-  // generate push 3
-  Push(this, "i32", Const(3));
+  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(ReadOpcodeAt(&istream[offset_]).GetName())),
+                          &istream[offset_]);
+  AppendBuilder(workItems_[0].builder);
 
-  // generate return to the interpreter
-  Return(Const(static_cast<ValueEnum>(interp::Result::Ok)));
+  int32_t next_index;
 
-  // return from IL gen signalling success
+  while ((next_index = GetNextBytecodeFromWorklist()) != -1) {
+    auto& work_item = workItems_[next_index];
+
+    if (!Emit(work_item.builder, istream, work_item.pc))
+      return false;
+  }
+
   return true;
 }
 
@@ -100,6 +153,24 @@ TR::IlValue* FunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
          b->             IndexAt(pValueType_,
                                  stack_base_addr,
                                  new_stack_top));
+}
+
+bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
+                           const uint8_t* istream,
+                           const uint8_t* pc) {
+  using ValueEnum = std::underlying_type<wabt::interp::Result>::type;
+
+  Opcode opcode = ReadOpcode(&pc);
+  TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
+
+  switch (opcode) {
+    case Opcode::Return:
+      b->Return(b->Const(static_cast<ValueEnum>(interp::Result::Ok)));
+      return true;
+
+    default:
+      return false;
+  }
 }
 
 }

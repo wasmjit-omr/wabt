@@ -18,6 +18,7 @@
 #define FUNCTIONBUILDER_HPP
 
 #include "type-dictionary.h"
+#include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
 #include "ilgen/VirtualMachineOperandStack.hpp"
 
@@ -48,11 +49,23 @@ class FunctionBuilder : public TR::MethodBuilder {
   TR::IlValue* Pop(TR::IlBuilder* b, const char* type);
 
  private:
+  struct BytecodeWorkItem {
+    TR::BytecodeBuilder* builder;
+    const uint8_t* pc;
+
+    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc)
+      : builder(builder), pc(pc) {}
+  };
+
+  std::vector<BytecodeWorkItem> workItems_;
+
   interp::Thread* thread_;
   interp::IstreamOffset const offset_;
 
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
+
+  bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
 
 }
