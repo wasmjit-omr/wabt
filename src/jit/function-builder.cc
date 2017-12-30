@@ -155,6 +155,46 @@ TR::IlValue* FunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
                                  new_stack_top));
 }
 
+/**
+ * @brief Generate a drop-x from the interpreter stack, optionally keeping the top value
+ *
+ * The generated code should be equivalent to:
+ *
+ * auto stack_top = *stack_top_addr;
+ * auto new_stack_top = stack_top - drop_count;
+ *
+ * if (keep_count == 1) {
+ *   stack_base_addr[new_stack_top - 1] = stack_base_addr[stack_top - 1];
+ * }
+ *
+ * *stack_top_addr = new_stack_top;
+ */
+void FunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
+  TR_ASSERT(keep_count <= 1, "Invalid keep count");
+
+  auto pInt32 = typeDictionary()->PointerTo(Int32);
+  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
+  auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
+
+  auto* stack_top = b->LoadAt(pInt32, stack_top_addr);
+  auto* new_stack_top = b->Sub(stack_top, b->Const(static_cast<int32_t>(drop_count)));
+
+  if (keep_count == 1) {
+    auto* old_top_value = b->LoadAt(pValueType_,
+                          b->       IndexAt(pValueType_,
+                                            stack_base_addr,
+                          b->               Sub(stack_top, b->Const(1))));
+
+    b->StoreAt(
+    b->        IndexAt(pValueType_,
+                       stack_base_addr,
+    b->                Sub(new_stack_top, b->Const(1))),
+               old_top_value);
+  }
+
+  b->StoreAt(stack_top_addr, new_stack_top);
+}
+
 bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
                            const uint8_t* istream,
                            const uint8_t* pc) {
@@ -164,6 +204,16 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
   TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
 
   switch (opcode) {
+    case Opcode::Select: {
+      TR::IlBuilder* true_path = nullptr;
+      TR::IlBuilder* false_path = nullptr;
+
+      b->IfThenElse(&true_path, &false_path, Pop(b, "i32"));
+      DropKeep(true_path, 1, 0);
+      DropKeep(false_path, 1, 1);
+      break;
+    }
+
     case Opcode::Return:
       b->Return(b->Const(static_cast<ValueEnum>(interp::Result::Ok)));
       return true;
@@ -182,6 +232,10 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F64Const:
       Push(b, "f64", b->ConstInt64(ReadU64(&pc)));
+      break;
+
+    case Opcode::Drop:
+      DropKeep(b, 1, 0);
       break;
 
     default:

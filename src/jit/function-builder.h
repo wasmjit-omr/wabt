@@ -48,6 +48,14 @@ class FunctionBuilder : public TR::MethodBuilder {
    */
   TR::IlValue* Pop(TR::IlBuilder* b, const char* type);
 
+  /**
+   * @brief Drop a number of values from the interpreter stack, optionally keeping the top value of the stack
+   * @param b is the builder object used to generate the code
+   * @param drop_count is the number of values to drop from the stack
+   * @param keep_count is 1 to keep the top value intact and 0 otherwise
+   */
+  void DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count);
+
  private:
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;
