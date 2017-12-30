@@ -19,7 +19,10 @@
 #include "ilgen/VirtualMachineState.hpp"
 #include <type_traits>
 
-wabt::jit::FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::IstreamOffset const offset, TypeDictionary* types)
+namespace wabt {
+namespace jit {
+
+FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::IstreamOffset const offset, TypeDictionary* types)
     : TR::MethodBuilder(types),
       thread_(thread),
       offset_(offset),
@@ -32,7 +35,7 @@ wabt::jit::FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::Istr
   DefineReturnType(types->toIlType<std::underlying_type<wabt::interp::Result>::type>());
 }
 
-bool wabt::jit::FunctionBuilder::buildIL() {
+bool FunctionBuilder::buildIL() {
   using ValueEnum = std::underlying_type<wabt::interp::Result>::type;
   setVMState(new OMR::VirtualMachineState{});
 
@@ -58,7 +61,7 @@ bool wabt::jit::FunctionBuilder::buildIL() {
  * stack_base_addr[stack_top] = value;
  * *stack_top_addr = stack_top + 1;
  */
-void wabt::jit::FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value) {
+void FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value) {
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
@@ -84,7 +87,7 @@ void wabt::jit::FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::Il
  * *stack_top_addr = new_stack_top;
  * return stack_base_addr[new_stack_top];
  */
-TR::IlValue* wabt::jit::FunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
+TR::IlValue* FunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
@@ -97,4 +100,7 @@ TR::IlValue* wabt::jit::FunctionBuilder::Pop(TR::IlBuilder* b, const char* type)
          b->             IndexAt(pValueType_,
                                  stack_base_addr,
                                  new_stack_top));
+}
+
+}
 }
