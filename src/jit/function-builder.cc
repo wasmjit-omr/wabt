@@ -218,6 +218,10 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->Return(b->Const(static_cast<ValueEnum>(interp::Result::Ok)));
       return true;
 
+    case Opcode::Unreachable:
+      b->Return(b->Const(static_cast<ValueEnum>(interp::Result::TrapUnreachable)));
+      return true;
+
     case Opcode::I32Const:
       Push(b, "i32", b->ConstInt32(ReadU32(&pc)));
       break;
