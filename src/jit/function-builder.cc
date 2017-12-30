@@ -168,9 +168,33 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->Return(b->Const(static_cast<ValueEnum>(interp::Result::Ok)));
       return true;
 
+    case Opcode::I32Const:
+      Push(b, "i32", b->ConstInt32(ReadU32(&pc)));
+      break;
+
+    case Opcode::I64Const:
+      Push(b, "i64", b->ConstInt64(ReadU64(&pc)));
+      break;
+
+    case Opcode::F32Const:
+      Push(b, "f32", b->ConstInt32(ReadU32(&pc)));
+      break;
+
+    case Opcode::F64Const:
+      Push(b, "f64", b->ConstInt64(ReadU64(&pc)));
+      break;
+
     default:
       return false;
   }
+
+  int32_t next_index = static_cast<int32_t>(workItems_.size());
+
+  workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
+                                                const_cast<char*>(ReadOpcodeAt(pc).GetName())),
+                          pc);
+  b->AddFallThroughBuilder(workItems_[next_index].builder);
+  return true;
 }
 
 }
