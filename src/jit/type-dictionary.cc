@@ -1,0 +1,28 @@
+/*
+ * Copyright 2017 wasmjit-omr project participants
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "type-dictionary.h"
+#include "src/interp.h"
+
+wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
+    using namespace wabt::interp;
+    DefineUnion("Value");
+    UnionField("Value", "i32", toIlType<decltype(Value::i32)>());
+    UnionField("Value", "i64", toIlType<decltype(Value::i64)>());
+    UnionField("Value", "f32", toIlType<decltype(Value::f32_bits)>());
+    UnionField("Value", "f64", toIlType<decltype(Value::f64_bits)>());
+    CloseUnion("Value");
+}

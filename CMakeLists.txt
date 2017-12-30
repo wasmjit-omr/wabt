@@ -272,15 +272,11 @@ function(add_omr)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 
   add_subdirectory(third_party/omr EXCLUDE_FROM_ALL)
-  target_link_libraries(libwabt PUBLIC jitbuilder)
-
-  # Mark JitBuilder include directories as "system" include directories. For most compilers, this
-  # suppresses any warnings they would otherwise generate.
-  get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-  target_include_directories(libwabt SYSTEM PUBLIC "${JITBUILDER_INCLUDE}")
 endfunction()
 
 add_omr()
+add_subdirectory(src/jit)
+target_link_libraries(libwabt PUBLIC wabtjit)
 
 if (NOT EMSCRIPTEN)
   if (CODE_COVERAGE)
