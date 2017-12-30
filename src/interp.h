@@ -346,6 +346,7 @@ class Environment {
     size_t globals_size = 0;
     size_t istream_size = 0;
   };
+  bool enable_jit = true;
 
   Environment();
 

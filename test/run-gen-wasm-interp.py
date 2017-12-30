@@ -42,6 +42,7 @@ def main(args):
                       + ' an error occurs', dest='error_cmdline',
                       action='store_false')
   parser.add_argument('--run-all-exports', action='store_true')
+  parser.add_argument('--disable-jit', action='store_true')
   parser.add_argument('--spec', action='store_true')
   parser.add_argument('-t', '--trace', action='store_true')
   parser.add_argument('--print-cmd', help='print the commands that are run.',
@@ -58,6 +59,7 @@ def main(args):
   wasm_interp.AppendOptionalArgs({
       '-v': options.verbose,
       '--run-all-exports': options.run_all_exports,
+      '--disable-jit': options.disable_jit,
       '--spec': options.spec,
       '--trace': options.trace,
   })

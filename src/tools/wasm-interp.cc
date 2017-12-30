@@ -48,6 +48,7 @@ static Thread::Options s_thread_options;
 static Stream* s_trace_stream;
 static bool s_run_all_exports;
 static bool s_host_print;
+static bool s_disable_jit;
 static Features s_features;
 
 static std::unique_ptr<FileStream> s_log_stream;
@@ -108,6 +109,9 @@ static void ParseOptions(int argc, char** argv) {
                    "Include an importable function named \"host.print\" for "
                    "printing to stdout",
                    []() { s_host_print = true; });
+  parser.AddOption("disable-jit",
+                   "Prevent just in time compilation",
+                   []() { s_disable_jit = true; });
 
   parser.AddArgument("filename", OptionParser::ArgumentCount::One,
                      [](const char* argument) { s_infile = argument; });
@@ -224,6 +228,9 @@ static void InitEnvironment(Environment* env) {
   if (s_host_print) {
     HostModule* host_module = env->AppendHostModule("host");
     host_module->import_delegate.reset(new WasmInterpHostImportDelegate());
+  }
+  if (s_disable_jit) {
+      env->enable_jit = false;
   }
 }
 

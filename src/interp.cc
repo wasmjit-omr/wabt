@@ -1328,9 +1328,14 @@ Result Thread::Run(int num_instructions) {
 
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
-        auto f = jit::compile(this, offset);
-        if (f) {
-          CHECK_TRAP(f());
+        if (env_->enable_jit) {
+          auto f = jit::compile(this, offset);
+          if (f) {
+            CHECK_TRAP(f());
+          } else {
+            CHECK_TRAP(PushCall(pc));
+            GOTO(offset);
+          }
         } else {
           CHECK_TRAP(PushCall(pc));
           GOTO(offset);

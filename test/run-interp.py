@@ -50,6 +50,7 @@ def main(args):
   parser.add_argument('file', help='test file.')
   parser.add_argument('--enable-saturating-float-to-int', action='store_true')
   parser.add_argument('--enable-threads', action='store_true')
+  parser.add_argument('--disable-jit', action='store_true')
   options = parser.parse_args(args)
 
   wast_tool = None
@@ -87,6 +88,7 @@ def main(args):
       '--enable-saturating-float-to-int':
           options.enable_saturating_float_to_int,
       '--enable-threads': options.enable_threads,
+      '--disable-jit': options.disable_jit,
   })
 
   wast_tool.verbose = options.print_cmd
