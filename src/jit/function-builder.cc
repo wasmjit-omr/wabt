@@ -115,11 +115,23 @@ bool FunctionBuilder::buildIL() {
  * *stack_top_addr = stack_top + 1;
  */
 void FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value) {
+  using ResultEnum = std::underlying_type<wabt::interp::Result>::type;
+
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
 
   auto* stack_top = b->LoadAt(pInt32, stack_top_addr);
+
+  TR::IlBuilder* overflow_handler = nullptr;
+
+  b->IfThen(&overflow_handler,
+  b->       UnsignedGreaterOrEqualTo(
+                stack_top,
+  b->           Const(static_cast<int32_t>(thread_->value_stack_.size()))));
+  overflow_handler->Return(
+  overflow_handler->    Const(static_cast<ResultEnum>(interp::Result::TrapValueStackExhausted)));
+
   b->StoreIndirect("Value", type,
   b->              IndexAt(pValueType_,
                            stack_base_addr,
