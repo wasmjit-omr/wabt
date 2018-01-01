@@ -1,0 +1,12 @@
+;;; TOOL: run-interp-jit
+(module
+  (func (export "test_return_three") (result i32)
+    call $return_three)
+
+  (func $return_three (result i32)
+    i32.const 3
+    return)
+)
+(;; STDOUT ;;;
+test_return_three() => i32:3
+;;; STDOUT ;;)
