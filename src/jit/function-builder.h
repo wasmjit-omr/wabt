@@ -18,6 +18,7 @@
 #define FUNCTIONBUILDER_HPP
 
 #include "type-dictionary.h"
+#include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
 #include "ilgen/VirtualMachineOperandStack.hpp"
 
@@ -47,12 +48,32 @@ class FunctionBuilder : public TR::MethodBuilder {
    */
   TR::IlValue* Pop(TR::IlBuilder* b, const char* type);
 
+  /**
+   * @brief Drop a number of values from the interpreter stack, optionally keeping the top value of the stack
+   * @param b is the builder object used to generate the code
+   * @param drop_count is the number of values to drop from the stack
+   * @param keep_count is 1 to keep the top value intact and 0 otherwise
+   */
+  void DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count);
+
  private:
+  struct BytecodeWorkItem {
+    TR::BytecodeBuilder* builder;
+    const uint8_t* pc;
+
+    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc)
+      : builder(builder), pc(pc) {}
+  };
+
+  std::vector<BytecodeWorkItem> workItems_;
+
   interp::Thread* thread_;
   interp::IstreamOffset const offset_;
 
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
+
+  bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
 
 }

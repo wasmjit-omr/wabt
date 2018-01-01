@@ -17,9 +17,61 @@
 #include "function-builder.h"
 #include "src/interp.h"
 #include "ilgen/VirtualMachineState.hpp"
+#include "infra/Assert.hpp"
 #include <type_traits>
 
-wabt::jit::FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::IstreamOffset const offset, TypeDictionary* types)
+namespace wabt {
+namespace jit {
+
+// The following functions are required to be able to properly parse opcodes. However, their
+// original definitions are defined with static linkage in src/interp.cc. Because of this, the only
+// way to use them is to simply copy their definitions here.
+
+template <typename T>
+inline T ReadUxAt(const uint8_t* pc) {
+  T result;
+  memcpy(&result, pc, sizeof(T));
+  return result;
+}
+
+template <typename T>
+inline T ReadUx(const uint8_t** pc) {
+  T result = ReadUxAt<T>(*pc);
+  *pc += sizeof(T);
+  return result;
+}
+
+inline uint8_t ReadU8(const uint8_t** pc) {
+  return ReadUx<uint8_t>(pc);
+}
+
+inline uint32_t ReadU32(const uint8_t** pc) {
+  return ReadUx<uint32_t>(pc);
+}
+
+inline uint64_t ReadU64(const uint8_t** pc) {
+  return ReadUx<uint64_t>(pc);
+}
+
+inline Opcode ReadOpcode(const uint8_t** pc) {
+  uint8_t value = ReadU8(pc);
+  if (Opcode::IsPrefixByte(value)) {
+    // For now, assume all instructions are encoded with just one extra byte
+    // so we don't have to decode LEB128 here.
+    uint32_t code = ReadU8(pc);
+    return Opcode::FromCode(value, code);
+  } else {
+    // TODO(binji): Optimize if needed; Opcode::FromCode does a log2(n) lookup
+    // from the encoding.
+    return Opcode::FromCode(value);
+  }
+}
+
+inline Opcode ReadOpcodeAt(const uint8_t* pc) {
+  return ReadOpcode(&pc);
+}
+
+FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::IstreamOffset const offset, TypeDictionary* types)
     : TR::MethodBuilder(types),
       thread_(thread),
       offset_(offset),
@@ -32,20 +84,24 @@ wabt::jit::FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::Istr
   DefineReturnType(types->toIlType<std::underlying_type<wabt::interp::Result>::type>());
 }
 
-bool wabt::jit::FunctionBuilder::buildIL() {
-  using ValueEnum = std::underlying_type<wabt::interp::Result>::type;
-  setVMState(new OMR::VirtualMachineState{});
+bool FunctionBuilder::buildIL() {
+  setVMState(new OMR::VirtualMachineState());
 
-  // generate pop
-  Pop(this, "i32");
+  const uint8_t* istream = thread_->GetIstream();
 
-  // generate push 3
-  Push(this, "i32", Const(3));
+  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(ReadOpcodeAt(&istream[offset_]).GetName())),
+                          &istream[offset_]);
+  AppendBuilder(workItems_[0].builder);
 
-  // generate return to the interpreter
-  Return(Const(static_cast<ValueEnum>(interp::Result::Ok)));
+  int32_t next_index;
 
-  // return from IL gen signalling success
+  while ((next_index = GetNextBytecodeFromWorklist()) != -1) {
+    auto& work_item = workItems_[next_index];
+
+    if (!Emit(work_item.builder, istream, work_item.pc))
+      return false;
+  }
+
   return true;
 }
 
@@ -58,7 +114,7 @@ bool wabt::jit::FunctionBuilder::buildIL() {
  * stack_base_addr[stack_top] = value;
  * *stack_top_addr = stack_top + 1;
  */
-void wabt::jit::FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value) {
+void FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value) {
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
@@ -84,7 +140,7 @@ void wabt::jit::FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::Il
  * *stack_top_addr = new_stack_top;
  * return stack_base_addr[new_stack_top];
  */
-TR::IlValue* wabt::jit::FunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
+TR::IlValue* FunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
@@ -97,4 +153,110 @@ TR::IlValue* wabt::jit::FunctionBuilder::Pop(TR::IlBuilder* b, const char* type)
          b->             IndexAt(pValueType_,
                                  stack_base_addr,
                                  new_stack_top));
+}
+
+/**
+ * @brief Generate a drop-x from the interpreter stack, optionally keeping the top value
+ *
+ * The generated code should be equivalent to:
+ *
+ * auto stack_top = *stack_top_addr;
+ * auto new_stack_top = stack_top - drop_count;
+ *
+ * if (keep_count == 1) {
+ *   stack_base_addr[new_stack_top - 1] = stack_base_addr[stack_top - 1];
+ * }
+ *
+ * *stack_top_addr = new_stack_top;
+ */
+void FunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
+  TR_ASSERT(keep_count <= 1, "Invalid keep count");
+
+  auto pInt32 = typeDictionary()->PointerTo(Int32);
+  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
+  auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
+
+  auto* stack_top = b->LoadAt(pInt32, stack_top_addr);
+  auto* new_stack_top = b->Sub(stack_top, b->Const(static_cast<int32_t>(drop_count)));
+
+  if (keep_count == 1) {
+    auto* old_top_value = b->LoadAt(pValueType_,
+                          b->       IndexAt(pValueType_,
+                                            stack_base_addr,
+                          b->               Sub(stack_top, b->Const(1))));
+
+    b->StoreAt(
+    b->        IndexAt(pValueType_,
+                       stack_base_addr,
+    b->                Sub(new_stack_top, b->Const(1))),
+               old_top_value);
+  }
+
+  b->StoreAt(stack_top_addr, new_stack_top);
+}
+
+bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
+                           const uint8_t* istream,
+                           const uint8_t* pc) {
+  using ValueEnum = std::underlying_type<wabt::interp::Result>::type;
+
+  Opcode opcode = ReadOpcode(&pc);
+  TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
+
+  switch (opcode) {
+    case Opcode::Select: {
+      TR::IlBuilder* true_path = nullptr;
+      TR::IlBuilder* false_path = nullptr;
+
+      b->IfThenElse(&true_path, &false_path, Pop(b, "i32"));
+      DropKeep(true_path, 1, 0);
+      DropKeep(false_path, 1, 1);
+      break;
+    }
+
+    case Opcode::Return:
+      b->Return(b->Const(static_cast<ValueEnum>(interp::Result::Ok)));
+      return true;
+
+    case Opcode::Unreachable:
+      b->Return(b->Const(static_cast<ValueEnum>(interp::Result::TrapUnreachable)));
+      return true;
+
+    case Opcode::I32Const:
+      Push(b, "i32", b->ConstInt32(ReadU32(&pc)));
+      break;
+
+    case Opcode::I64Const:
+      Push(b, "i64", b->ConstInt64(ReadU64(&pc)));
+      break;
+
+    case Opcode::F32Const:
+      Push(b, "f32", b->ConstInt32(ReadU32(&pc)));
+      break;
+
+    case Opcode::F64Const:
+      Push(b, "f64", b->ConstInt64(ReadU64(&pc)));
+      break;
+
+    case Opcode::Drop:
+      DropKeep(b, 1, 0);
+      break;
+
+    case Opcode::Nop:
+      break;
+
+    default:
+      return false;
+  }
+
+  int32_t next_index = static_cast<int32_t>(workItems_.size());
+
+  workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
+                                                const_cast<char*>(ReadOpcodeAt(pc).GetName())),
+                          pc);
+  b->AddFallThroughBuilder(workItems_[next_index].builder);
+  return true;
+}
+
+}
 }
