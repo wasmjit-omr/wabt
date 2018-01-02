@@ -1329,7 +1329,16 @@ Result Thread::Run(int num_instructions) {
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
         if (env_->enable_jit) {
-          auto f = jit::compile(this, offset);
+          jit::JITedFunction f = nullptr;
+          auto fi = env_->jit_compiled_functions_.find(offset);
+
+          if (fi != env_->jit_compiled_functions_.end()) {
+            f = fi->second;
+          } else {
+            f = jit::compile(this, offset);
+            env_->jit_compiled_functions_.insert({offset, f});
+          }
+
           if (f) {
             CHECK_TRAP(f());
           } else {
