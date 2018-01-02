@@ -22,6 +22,7 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include "src/binding-hash.h"
 #include "src/common.h"
@@ -454,6 +455,7 @@ class Environment {
 
  private:
   friend class Thread;
+  using JITedFunction = wabt::interp::Result (*)();
 
   std::vector<std::unique_ptr<Module>> modules_;
   std::vector<FuncSignature> sigs_;
@@ -464,6 +466,7 @@ class Environment {
   std::unique_ptr<OutputBuffer> istream_;
   BindingHash module_bindings_;
   BindingHash registered_module_bindings_;
+  std::unordered_map<IstreamOffset, JITedFunction> jit_compiled_functions_;
 };
 
 class Thread {
