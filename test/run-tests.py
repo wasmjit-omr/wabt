@@ -78,6 +78,18 @@ TOOLS = {
         ],
         'VERBOSE-FLAGS': ['--print-cmd', '-v']
     },
+    'run-interp-jit': {
+        'EXE': 'test/run-interp.py',
+        'FLAGS': [
+                '--bindir=%(bindir)s',
+                '--run-all-exports',
+                '--trap-on-failed-comp',
+                '--no-error-cmdline',
+                '-o',
+                '%(out_dir)s',
+        ],
+        'VERBOSE-FLAGS': ['--print-cmd', '-v']
+    },
     'run-interp': {
         'EXE': 'test/run-interp.py',
         'FLAGS': [
