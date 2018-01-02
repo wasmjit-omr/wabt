@@ -49,6 +49,7 @@ static Stream* s_trace_stream;
 static bool s_run_all_exports;
 static bool s_host_print;
 static bool s_disable_jit;
+static bool s_trap_on_failed_comp;
 static Features s_features;
 
 static std::unique_ptr<FileStream> s_log_stream;
@@ -112,6 +113,9 @@ static void ParseOptions(int argc, char** argv) {
   parser.AddOption("disable-jit",
                    "Prevent just in time compilation",
                    []() { s_disable_jit = true; });
+  parser.AddOption("trap-on-failed-comp",
+                   "Trap if a JIT compilation fails",
+                   []() { s_trap_on_failed_comp = true; });
 
   parser.AddArgument("filename", OptionParser::ArgumentCount::One,
                      [](const char* argument) { s_infile = argument; });
@@ -230,7 +234,10 @@ static void InitEnvironment(Environment* env) {
     host_module->import_delegate.reset(new WasmInterpHostImportDelegate());
   }
   if (s_disable_jit) {
-      env->enable_jit = false;
+    env->enable_jit = false;
+  }
+  if (s_trap_on_failed_comp) {
+    env->trap_on_failed_comp = true;
   }
 }
 

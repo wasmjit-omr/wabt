@@ -68,6 +68,8 @@ namespace interp {
   V(TrapHostResultTypeMismatch, "host result type mismatch")                \
   /* we called an import function, but it didn't complete succesfully */    \
   V(TrapHostTrapped, "host function trapped")                               \
+  /* we attempted to JIT compile a function and failed */                   \
+  V(TrapFailedJITCompilation, "failed JIT compilation")                     \
   /* we attempted to call a function with the an argument list that doesn't \
    * match the function signature */                                        \
   V(ArgumentTypeMismatch, "argument type mismatch")                         \
@@ -347,7 +349,9 @@ class Environment {
     size_t globals_size = 0;
     size_t istream_size = 0;
   };
+
   bool enable_jit = true;
+  bool trap_on_failed_comp = false;
 
   Environment();
 
