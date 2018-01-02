@@ -1337,6 +1337,7 @@ Result Thread::Run(int num_instructions) {
           } else {
             f = jit::compile(this, offset);
             env_->jit_compiled_functions_.insert({offset, f});
+            TRAP_IF(env_->trap_on_failed_comp && f == nullptr, FailedJITCompilation);
           }
 
           if (f) {
