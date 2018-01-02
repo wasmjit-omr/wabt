@@ -27,17 +27,10 @@
   (func $return_3_f64 (result f64)
     f64.const 3.0
     return)
-
-  (func (export "test_outer_func_not_compiled") (result i32)
-    call $return_3_i32
-    call $return_3_i32
-    i32.add
-    return)
 )
 (;; STDOUT ;;;
 test_return_3_i32() => i32:3
 test_return_3_i64() => i64:3
 test_return_3_f32() => f32:3.000000
 test_return_3_f64() => f64:3.000000
-test_outer_func_not_compiled() => i32:6
 ;;; STDOUT ;;)
