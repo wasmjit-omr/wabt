@@ -51,6 +51,7 @@ def main(args):
   parser.add_argument('--enable-saturating-float-to-int', action='store_true')
   parser.add_argument('--enable-threads', action='store_true')
   parser.add_argument('--disable-jit', action='store_true')
+  parser.add_argument('--trap-on-failed-comp', action='store_true')
   options = parser.parse_args(args)
 
   wast_tool = None
@@ -84,6 +85,7 @@ def main(args):
   interp_tool.AppendOptionalArgs({
       '-v': options.verbose,
       '--run-all-exports': options.run_all_exports,
+      '--trap-on-failed-comp': options.trap_on_failed_comp,
       '--trace': options.trace,
       '--enable-saturating-float-to-int':
           options.enable_saturating_float_to_int,

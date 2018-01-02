@@ -83,6 +83,7 @@ TOOLS = {
         'FLAGS': [
                 '--bindir=%(bindir)s',
                 '--run-all-exports',
+                '--trap-on-failed-comp',
                 '--no-error-cmdline',
                 '-o',
                 '%(out_dir)s',

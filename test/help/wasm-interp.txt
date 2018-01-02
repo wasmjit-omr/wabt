@@ -32,4 +32,5 @@ options:
       --run-all-exports                       Run all the exported functions, in order. Useful for testing
       --host-print                            Include an importable function named "host.print" for printing to stdout
       --disable-jit                           Prevent just in time compilation
+      --trap-on-failed-comp                   Trap if a JIT compilation fails
 ;;; STDOUT ;;)
