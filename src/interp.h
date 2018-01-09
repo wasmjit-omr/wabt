@@ -24,6 +24,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include "src/jit/environment.h"
 #include "src/binding-hash.h"
 #include "src/common.h"
 #include "src/opcode.h"
@@ -470,6 +471,8 @@ class Environment {
   std::unique_ptr<OutputBuffer> istream_;
   BindingHash module_bindings_;
   BindingHash registered_module_bindings_;
+
+  jit::JitEnvironment jit_env_;
   std::unordered_map<IstreamOffset, JITedFunction> jit_compiled_functions_;
 };
 
