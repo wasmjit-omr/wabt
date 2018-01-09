@@ -245,7 +245,6 @@ static wabt::Result ReadAndRunModule(const char* module_filename) {
   wabt::Result result;
   Environment env;
   InitEnvironment(&env);
-  initializeJit();
 
   ErrorHandlerFile error_handler(Location::Type::Binary);
   DefinedModule* module = nullptr;
@@ -261,7 +260,6 @@ static wabt::Result ReadAndRunModule(const char* module_filename) {
                   exec_result.result);
     }
   }
-  shutdownJit();
   return result;
 }
 

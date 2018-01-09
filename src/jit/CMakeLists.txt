@@ -15,6 +15,7 @@
 #
 
 add_library(wabtjit STATIC
+  environment.cc
   type-dictionary.cc
   function-builder.cc
   wabtjit.cc
