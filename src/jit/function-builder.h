@@ -65,6 +65,15 @@ class FunctionBuilder : public TR::MethodBuilder {
       : builder(builder), pc(pc) {}
   };
 
+  template <typename T>
+  const char* TypeFieldName() const;
+
+  template <typename T, typename TOpHandler>
+  void EmitBinaryOp(TR::IlBuilder* b, TOpHandler h);
+
+  template <typename T>
+  void EmitIntDivide(TR::IlBuilder* b);
+
   std::vector<BytecodeWorkItem> workItems_;
 
   interp::Thread* thread_;
