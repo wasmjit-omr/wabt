@@ -922,6 +922,7 @@ class SpectestHostImportDelegate : public HostImportDelegate {
 static void InitEnvironment(Environment* env) {
   HostModule* host_module = env->AppendHostModule("spectest");
   host_module->import_delegate.reset(new SpectestHostImportDelegate());
+  env->enable_jit = false;
 }
 
 CommandRunner::CommandRunner()

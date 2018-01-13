@@ -24,6 +24,8 @@ class JitEnvironment {
 public:
   JitEnvironment();
   ~JitEnvironment();
+private:
+  static unsigned short instance_count_;
 };
 
 }

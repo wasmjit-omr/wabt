@@ -20,12 +20,18 @@
 namespace wabt {
 namespace jit {
 
+unsigned short JitEnvironment::instance_count_ = 0;
+
 JitEnvironment::JitEnvironment() {
-  initializeJit();
+  if (instance_count_ == 0)
+     initializeJit();
+  ++instance_count_;
 }
 
 JitEnvironment::~JitEnvironment() {
-  shutdownJit();
+  --instance_count_;
+  if (instance_count_ == 0)
+      shutdownJit();
 }
 
 }
