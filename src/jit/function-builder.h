@@ -74,6 +74,9 @@ class FunctionBuilder : public TR::MethodBuilder {
   template <typename T>
   void EmitIntDivide(TR::IlBuilder* b);
 
+  template <typename T>
+  void EmitIntRemainder(TR::IlBuilder* b);
+
   std::vector<BytecodeWorkItem> workItems_;
 
   interp::Thread* thread_;

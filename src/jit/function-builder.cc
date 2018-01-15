@@ -262,6 +262,32 @@ void FunctionBuilder::EmitIntDivide(TR::IlBuilder* b) {
   });
 }
 
+template <typename T>
+void FunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {
+  static_assert(std::is_integral<T>::value,
+                "EmitIntRemainder only works on integral types");
+
+  EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
+    TR::IlBuilder* div_zero_path = nullptr;
+
+    b->IfThen(&div_zero_path, b->EqualTo(divisor, b->Const(static_cast<T>(0))));
+    div_zero_path->Return(div_zero_path->Const(
+        static_cast<ResultEnum>(interp::Result::TrapIntegerDivideByZero)));
+
+    TR::IlValue* return_value = b->ConstInt32(0);
+
+    TR::IlBuilder* div_no_ovf_path = nullptr;
+    b->IfThen(&div_no_ovf_path,
+    b->       Or(
+    b->           NotEqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
+    b->           NotEqualTo(divisor, b->Const(static_cast<T>(-1)))));
+    div_no_ovf_path->StoreOver(return_value,
+                               div_no_ovf_path->Rem(dividend, divisor));
+
+    return return_value;
+  });
+}
+
 bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
                            const uint8_t* istream,
                            const uint8_t* pc) {
@@ -323,6 +349,10 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::I32DivS:
       EmitIntDivide<int32_t>(b);
+      break;
+
+    case Opcode::I32RemS:
+      EmitIntRemainder<int32_t>(b);
       break;
 
     case Opcode::Drop:
