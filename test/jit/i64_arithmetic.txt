@@ -23,7 +23,130 @@
   (func $add_7_i64 (result i64) i64.const 0x8000000000000000 i64.const 0x8000000000000000 i64.add return)
   (func $add_8_i64 (result i64) i64.const 0x3fffffff i64.const 1 i64.add return)
 
+  ;; Sub
+  (func (export "test_sub_1_i64") (result i64) call $sub_1_i64)
+  (func (export "test_sub_2_i64") (result i64) call $sub_2_i64)
+  (func (export "test_sub_3_i64") (result i64) call $sub_3_i64)
+  (func (export "test_sub_4_i64") (result i64) call $sub_4_i64)
+  (func (export "test_sub_5_i64") (result i64) call $sub_5_i64)
+  (func (export "test_sub_6_i64") (result i64) call $sub_6_i64)
+  (func (export "test_sub_7_i64") (result i64) call $sub_7_i64)
+  (func (export "test_sub_8_i64") (result i64) call $sub_8_i64)
 
+  (func $sub_1_i64 (result i64) i64.const 1 i64.const 1 i64.sub return)
+  (func $sub_2_i64 (result i64) i64.const 1 i64.const 0 i64.sub return)
+  (func $sub_3_i64 (result i64) i64.const -1 i64.const -1 i64.sub return)
+  (func $sub_4_i64 (result i64) i64.const -1 i64.const 1 i64.sub return)
+  (func $sub_5_i64 (result i64) i64.const 0x7fffffffffffffff i64.const -1 i64.sub return)
+  (func $sub_6_i64 (result i64) i64.const 0x8000000000000000 i64.const 1 i64.sub return)
+  (func $sub_7_i64 (result i64) i64.const 0x8000000000000000 i64.const 0x8000000000000000 i64.sub return)
+  (func $sub_8_i64 (result i64) i64.const 0x3fffffff i64.const -1 i64.sub return)
+
+  ;; Mul
+  (func (export "test_mul_1_i64") (result i64) call $mul_1_i64)
+  (func (export "test_mul_2_i64") (result i64) call $mul_2_i64)
+  (func (export "test_mul_3_i64") (result i64) call $mul_3_i64)
+  (func (export "test_mul_4_i64") (result i64) call $mul_4_i64)
+  (func (export "test_mul_5_i64") (result i64) call $mul_5_i64)
+  (func (export "test_mul_6_i64") (result i64) call $mul_6_i64)
+  (func (export "test_mul_7_i64") (result i64) call $mul_7_i64)
+  (func (export "test_mul_8_i64") (result i64) call $mul_8_i64)
+  (func (export "test_mul_9_i64") (result i64) call $mul_9_i64)
+
+  (func $mul_1_i64 (result i64) i64.const 1 i64.const 1 i64.mul return)
+  (func $mul_2_i64 (result i64) i64.const 1 i64.const 0 i64.mul return)
+  (func $mul_3_i64 (result i64) i64.const -1 i64.const -1 i64.mul return)
+  (func $mul_4_i64 (result i64) i64.const 0x1000000000000000 i64.const 4096 i64.mul return)
+  (func $mul_5_i64 (result i64) i64.const 0x8000000000000000 i64.const 0 i64.mul return)
+  (func $mul_6_i64 (result i64) i64.const 0x8000000000000000 i64.const -1 i64.mul return)
+  (func $mul_7_i64 (result i64) i64.const 0x7fffffffffffffff i64.const -1 i64.mul return)
+  (func $mul_8_i64 (result i64) i64.const 0x0123456789abcdef i64.const 0xfedcba9876543210 i64.mul return)
+  (func $mul_9_i64 (result i64) i64.const 0x7fffffffffffffff i64.const 0x7fffffffffffffff i64.mul return)
+
+  ;; Div_s
+  (func (export "test_div_s_1_i64") (result i64) call $div_s_1_i64)
+  (func (export "test_div_s_2_i64") (result i64) call $div_s_2_i64)
+  (func (export "test_div_s_3_i64") (result i64) call $div_s_3_i64)
+  (func (export "test_div_s_4_i64") (result i64) call $div_s_4_i64)
+  (func (export "test_div_s_5_i64") (result i64) call $div_s_5_i64)
+  (func (export "test_div_s_6_i64") (result i64) call $div_s_6_i64)
+  (func (export "test_div_s_7_i64") (result i64) call $div_s_7_i64)
+  (func (export "test_div_s_8_i64") (result i64) call $div_s_8_i64)
+  (func (export "test_div_s_9_i64") (result i64) call $div_s_9_i64)
+  (func (export "test_div_s_10_i64") (result i64) call $div_s_10_i64)
+  (func (export "test_div_s_11_i64") (result i64) call $div_s_11_i64)
+  (func (export "test_div_s_12_i64") (result i64) call $div_s_12_i64)
+  (func (export "test_div_s_13_i64") (result i64) call $div_s_13_i64)
+  (func (export "test_div_s_14_i64") (result i64) call $div_s_14_i64)
+  (func (export "test_div_s_15_i64") (result i64) call $div_s_15_i64)
+  (func (export "test_div_s_16_i64") (result i64) call $div_s_16_i64)
+  (func (export "test_div_s_17_i64") (result i64) call $div_s_17_i64)
+  (func (export "test_div_s_18_i64") (result i64) call $div_s_18_i64)
+  (func (export "test_div_s_19_i64") (result i64) call $div_s_19_i64)
+
+  (func $div_s_1_i64 (result i64) i64.const 1 i64.const 0 i64.div_s return)
+  (func $div_s_2_i64 (result i64) i64.const 0 i64.const 0 i64.div_s return)
+  (func $div_s_3_i64 (result i64) i64.const 0x8000000000000000 i64.const -1 i64.div_s return)
+  (func $div_s_4_i64 (result i64) i64.const 1 i64.const 1 i64.div_s return)
+  (func $div_s_5_i64 (result i64) i64.const 0 i64.const 1 i64.div_s return)
+  (func $div_s_6_i64 (result i64) i64.const 0 i64.const -1 i64.div_s return)
+  (func $div_s_7_i64 (result i64) i64.const -1 i64.const -1 i64.div_s return)
+  (func $div_s_8_i64 (result i64) i64.const 0x8000000000000000 i64.const 2 i64.div_s return)
+  (func $div_s_9_i64 (result i64) i64.const 0x8000000000000001 i64.const 1000 i64.div_s return)
+  (func $div_s_10_i64 (result i64) i64.const 5 i64.const 2 i64.div_s return)
+  (func $div_s_11_i64 (result i64) i64.const -5 i64.const 2 i64.div_s return)
+  (func $div_s_12_i64 (result i64) i64.const 5 i64.const -2 i64.div_s return)
+  (func $div_s_13_i64 (result i64) i64.const -5 i64.const -2 i64.div_s return)
+  (func $div_s_14_i64 (result i64) i64.const 7 i64.const 3 i64.div_s return)
+  (func $div_s_15_i64 (result i64) i64.const -7 i64.const 3 i64.div_s return)
+  (func $div_s_16_i64 (result i64) i64.const 7 i64.const -3 i64.div_s return)
+  (func $div_s_17_i64 (result i64) i64.const -7 i64.const -3 i64.div_s return)
+  (func $div_s_18_i64 (result i64) i64.const 11 i64.const 5 i64.div_s return)
+  (func $div_s_19_i64 (result i64) i64.const 17 i64.const 7 i64.div_s return)
+
+  ;; Rem_s
+  (func (export "test_rem_s_1_i64") (result i64) call $rem_s_1_i64)
+  (func (export "test_rem_s_2_i64") (result i64) call $rem_s_2_i64)
+  (func (export "test_rem_s_3_i64") (result i64) call $rem_s_3_i64)
+  (func (export "test_rem_s_4_i64") (result i64) call $rem_s_4_i64)
+  (func (export "test_rem_s_5_i64") (result i64) call $rem_s_5_i64)
+  (func (export "test_rem_s_6_i64") (result i64) call $rem_s_6_i64)
+  (func (export "test_rem_s_7_i64") (result i64) call $rem_s_7_i64)
+  (func (export "test_rem_s_8_i64") (result i64) call $rem_s_8_i64)
+  (func (export "test_rem_s_9_i64") (result i64) call $rem_s_9_i64)
+  (func (export "test_rem_s_10_i64") (result i64) call $rem_s_10_i64)
+  (func (export "test_rem_s_11_i64") (result i64) call $rem_s_11_i64)
+  (func (export "test_rem_s_12_i64") (result i64) call $rem_s_12_i64)
+  (func (export "test_rem_s_13_i64") (result i64) call $rem_s_13_i64)
+  (func (export "test_rem_s_14_i64") (result i64) call $rem_s_14_i64)
+  (func (export "test_rem_s_15_i64") (result i64) call $rem_s_15_i64)
+  (func (export "test_rem_s_16_i64") (result i64) call $rem_s_16_i64)
+  (func (export "test_rem_s_17_i64") (result i64) call $rem_s_17_i64)
+  (func (export "test_rem_s_18_i64") (result i64) call $rem_s_18_i64)
+  (func (export "test_rem_s_19_i64") (result i64) call $rem_s_19_i64)
+  (func (export "test_rem_s_20_i64") (result i64) call $rem_s_20_i64)
+
+  (func $rem_s_1_i64 (result i64) i64.const 1 i64.const 0 i64.rem_s return)
+  (func $rem_s_2_i64 (result i64) i64.const 0 i64.const 0 i64.rem_s return)
+  (func $rem_s_3_i64 (result i64) i64.const 0x7fffffffffffffff i64.const -1 i64.rem_s return)
+  (func $rem_s_4_i64 (result i64) i64.const 1 i64.const 1 i64.rem_s return)
+  (func $rem_s_5_i64 (result i64) i64.const 0 i64.const 1 i64.rem_s return)
+  (func $rem_s_6_i64 (result i64) i64.const 0 i64.const -1 i64.rem_s return)
+  (func $rem_s_7_i64 (result i64) i64.const -1 i64.const -1 i64.rem_s return)
+  (func $rem_s_8_i64 (result i64) i64.const 0x8000000000000000 i64.const -1 i64.rem_s return)
+  (func $rem_s_9_i64 (result i64) i64.const 0x8000000000000000 i64.const 2 i64.rem_s return)
+  (func $rem_s_10_i64 (result i64) i64.const 0x8000000000000001 i64.const 1000 i64.rem_s return)
+  (func $rem_s_11_i64 (result i64) i64.const 5 i64.const 2 i64.rem_s return)
+  (func $rem_s_12_i64 (result i64) i64.const -5 i64.const 2 i64.rem_s return)
+  (func $rem_s_13_i64 (result i64) i64.const 5 i64.const -2 i64.rem_s return)
+  (func $rem_s_14_i64 (result i64) i64.const -5 i64.const -2 i64.rem_s return)
+  (func $rem_s_15_i64 (result i64) i64.const 7 i64.const 3 i64.rem_s return)
+  (func $rem_s_16_i64 (result i64) i64.const -7 i64.const 3 i64.rem_s return)
+  (func $rem_s_17_i64 (result i64) i64.const 7 i64.const -3 i64.rem_s return)
+  (func $rem_s_18_i64 (result i64) i64.const -7 i64.const -3 i64.rem_s return)
+  (func $rem_s_19_i64 (result i64) i64.const 11 i64.const 5 i64.rem_s return)
+  (func $rem_s_20_i64 (result i64) i64.const 17 i64.const 7 i64.rem_s return)
+  
 )
 (;; STDOUT ;;;
 test_add_1_i64() => i64:2
@@ -34,4 +157,60 @@ test_add_5_i64() => i64:9223372036854775808
 test_add_6_i64() => i64:9223372036854775807
 test_add_7_i64() => i64:0
 test_add_8_i64() => i64:1073741824
+test_sub_1_i64() => i64:0
+test_sub_2_i64() => i64:1
+test_sub_3_i64() => i64:0
+test_sub_4_i64() => i64:18446744073709551614
+test_sub_5_i64() => i64:9223372036854775808
+test_sub_6_i64() => i64:9223372036854775807
+test_sub_7_i64() => i64:0
+test_sub_8_i64() => i64:1073741824
+test_mul_1_i64() => i64:1
+test_mul_2_i64() => i64:0
+test_mul_3_i64() => i64:1
+test_mul_4_i64() => i64:0
+test_mul_5_i64() => i64:0
+test_mul_6_i64() => i64:9223372036854775808
+test_mul_7_i64() => i64:9223372036854775809
+test_mul_8_i64() => i64:2465395958572223728
+test_mul_9_i64() => i64:1
+test_div_s_1_i64() => error: integer divide by zero
+test_div_s_2_i64() => error: integer divide by zero
+test_div_s_3_i64() => error: integer overflow
+test_div_s_4_i64() => i64:1
+test_div_s_5_i64() => i64:0
+test_div_s_6_i64() => i64:0
+test_div_s_7_i64() => i64:1
+test_div_s_8_i64() => i64:13835058055282163712
+test_div_s_9_i64() => i64:18437520701672696841
+test_div_s_10_i64() => i64:2
+test_div_s_11_i64() => i64:18446744073709551614
+test_div_s_12_i64() => i64:18446744073709551614
+test_div_s_13_i64() => i64:2
+test_div_s_14_i64() => i64:2
+test_div_s_15_i64() => i64:18446744073709551614
+test_div_s_16_i64() => i64:18446744073709551614
+test_div_s_17_i64() => i64:2
+test_div_s_18_i64() => i64:2
+test_div_s_19_i64() => i64:2
+test_rem_s_1_i64() => error: integer divide by zero
+test_rem_s_2_i64() => error: integer divide by zero
+test_rem_s_3_i64() => i64:0
+test_rem_s_4_i64() => i64:0
+test_rem_s_5_i64() => i64:0
+test_rem_s_6_i64() => i64:0
+test_rem_s_7_i64() => i64:0
+test_rem_s_8_i64() => i64:0
+test_rem_s_9_i64() => i64:0
+test_rem_s_10_i64() => i64:18446744073709550809
+test_rem_s_11_i64() => i64:1
+test_rem_s_12_i64() => i64:18446744073709551615
+test_rem_s_13_i64() => i64:1
+test_rem_s_14_i64() => i64:18446744073709551615
+test_rem_s_15_i64() => i64:1
+test_rem_s_16_i64() => i64:18446744073709551615
+test_rem_s_17_i64() => i64:1
+test_rem_s_18_i64() => i64:18446744073709551615
+test_rem_s_19_i64() => i64:1
+test_rem_s_20_i64() => i64:3
 ;;; STDOUT ;;)
