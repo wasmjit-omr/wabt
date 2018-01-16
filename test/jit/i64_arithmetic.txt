@@ -1,0 +1,37 @@
+;;; TOOL: run-interp-jit
+(module
+  ;; Tests from third_party/testsuite/i64.wast, converted for jit compilation
+  ;; When params work, this can be simplified!
+
+
+  ;; Add
+  (func (export "test_add_1_i64") (result i64) call $add_1_i64)
+  (func (export "test_add_2_i64") (result i64) call $add_2_i64)
+  (func (export "test_add_3_i64") (result i64) call $add_3_i64)
+  (func (export "test_add_4_i64") (result i64) call $add_4_i64)
+  (func (export "test_add_5_i64") (result i64) call $add_5_i64)
+  (func (export "test_add_6_i64") (result i64) call $add_6_i64)
+  (func (export "test_add_7_i64") (result i64) call $add_7_i64)
+  (func (export "test_add_8_i64") (result i64) call $add_8_i64)
+
+  (func $add_1_i64 (result i64) i64.const 1 i64.const 1 i64.add return)
+  (func $add_2_i64 (result i64) i64.const 1 i64.const 0 i64.add return)
+  (func $add_3_i64 (result i64) i64.const -1 i64.const -1 i64.add return)
+  (func $add_4_i64 (result i64) i64.const -1 i64.const 1 i64.add return)
+  (func $add_5_i64 (result i64) i64.const 0x7fffffffffffffff i64.const 1 i64.add return)
+  (func $add_6_i64 (result i64) i64.const 0x8000000000000000 i64.const -1 i64.add return)
+  (func $add_7_i64 (result i64) i64.const 0x8000000000000000 i64.const 0x8000000000000000 i64.add return)
+  (func $add_8_i64 (result i64) i64.const 0x3fffffff i64.const 1 i64.add return)
+
+
+)
+(;; STDOUT ;;;
+test_add_1_i64() => i64:2
+test_add_2_i64() => i64:1
+test_add_3_i64() => i64:18446744073709551614
+test_add_4_i64() => i64:0
+test_add_5_i64() => i64:9223372036854775808
+test_add_6_i64() => i64:9223372036854775807
+test_add_7_i64() => i64:0
+test_add_8_i64() => i64:1073741824
+;;; STDOUT ;;)
