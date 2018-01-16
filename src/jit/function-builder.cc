@@ -355,6 +355,12 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       EmitIntRemainder<int32_t>(b);
       break;
 
+    case Opcode::I64Add:
+        EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+          return b->Add(lhs, rhs);
+        });
+        break;
+
     case Opcode::Drop:
       DropKeep(b, 1, 0);
       break;
