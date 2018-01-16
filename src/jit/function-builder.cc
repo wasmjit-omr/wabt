@@ -18,10 +18,14 @@
 #include "src/interp.h"
 #include "ilgen/VirtualMachineState.hpp"
 #include "infra/Assert.hpp"
+
+#include <limits>
 #include <type_traits>
 
 namespace wabt {
 namespace jit {
+
+using ResultEnum = std::underlying_type<wabt::interp::Result>::type;
 
 // The following functions are required to be able to properly parse opcodes. However, their
 // original definitions are defined with static linkage in src/interp.cc. Because of this, the only
@@ -115,8 +119,6 @@ bool FunctionBuilder::buildIL() {
  * *stack_top_addr = stack_top + 1;
  */
 void FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value) {
-  using ResultEnum = std::underlying_type<wabt::interp::Result>::type;
-
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
@@ -207,11 +209,88 @@ void FunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t ke
   b->StoreAt(stack_top_addr, new_stack_top);
 }
 
+template <>
+const char* FunctionBuilder::TypeFieldName<int32_t>() const {
+  return "i32";
+}
+
+template <>
+const char* FunctionBuilder::TypeFieldName<uint32_t>() const {
+  return "i32";
+}
+
+template <>
+const char* FunctionBuilder::TypeFieldName<int64_t>() const {
+  return "i64";
+}
+
+template <>
+const char* FunctionBuilder::TypeFieldName<uint64_t>() const {
+  return "i64";
+}
+
+template <typename T, typename TOpHandler>
+void FunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
+  auto* rhs = Pop(b, TypeFieldName<T>());
+  auto* lhs = Pop(b, TypeFieldName<T>());
+
+  Push(b, TypeFieldName<T>(), h(lhs, rhs));
+}
+
+template <typename T>
+void FunctionBuilder::EmitIntDivide(TR::IlBuilder* b) {
+  static_assert(std::is_integral<T>::value,
+                "EmitIntDivide only works on integral types");
+
+  EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
+    TR::IlBuilder* div_zero_path = nullptr;
+
+    b->IfThen(&div_zero_path, b->EqualTo(divisor, b->Const(static_cast<T>(0))));
+    div_zero_path->Return(div_zero_path->Const(
+        static_cast<ResultEnum>(interp::Result::TrapIntegerDivideByZero)));
+
+    TR::IlBuilder* div_ovf_path = nullptr;
+
+    b->IfThen(&div_ovf_path,
+    b->       And(
+    b->           EqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
+    b->           EqualTo(divisor, b->Const(static_cast<T>(-1)))));
+    div_ovf_path->Return(div_ovf_path->Const(
+        static_cast<ResultEnum>(interp::Result::TrapIntegerOverflow)));
+
+    return b->Div(dividend, divisor);
+  });
+}
+
+template <typename T>
+void FunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {
+  static_assert(std::is_integral<T>::value,
+                "EmitIntRemainder only works on integral types");
+
+  EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
+    TR::IlBuilder* div_zero_path = nullptr;
+
+    b->IfThen(&div_zero_path, b->EqualTo(divisor, b->Const(static_cast<T>(0))));
+    div_zero_path->Return(div_zero_path->Const(
+        static_cast<ResultEnum>(interp::Result::TrapIntegerDivideByZero)));
+
+    TR::IlValue* return_value = b->ConstInt32(0);
+
+    TR::IlBuilder* div_no_ovf_path = nullptr;
+    b->IfThen(&div_no_ovf_path,
+    b->       Or(
+    b->           NotEqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
+    b->           NotEqualTo(divisor, b->Const(static_cast<T>(-1)))));
+    div_no_ovf_path->StoreOver(return_value,
+                               div_no_ovf_path->Rem(dividend, divisor));
+
+    return return_value;
+  });
+}
+
 bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
                            const uint8_t* istream,
                            const uint8_t* pc) {
-  using ValueEnum = std::underlying_type<wabt::interp::Result>::type;
-
   Opcode opcode = ReadOpcode(&pc);
   TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
 
@@ -227,11 +306,11 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::Return:
-      b->Return(b->Const(static_cast<ValueEnum>(interp::Result::Ok)));
+      b->Return(b->Const(static_cast<ResultEnum>(interp::Result::Ok)));
       return true;
 
     case Opcode::Unreachable:
-      b->Return(b->Const(static_cast<ValueEnum>(interp::Result::TrapUnreachable)));
+      b->Return(b->Const(static_cast<ResultEnum>(interp::Result::TrapUnreachable)));
       return true;
 
     case Opcode::I32Const:
@@ -248,6 +327,32 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F64Const:
       Push(b, "f64", b->ConstInt64(ReadU64(&pc)));
+      break;
+
+    case Opcode::I32Add:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Add(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32Sub:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Sub(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32Mul:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Mul(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32DivS:
+      EmitIntDivide<int32_t>(b);
+      break;
+
+    case Opcode::I32RemS:
+      EmitIntRemainder<int32_t>(b);
       break;
 
     case Opcode::Drop:
