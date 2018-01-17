@@ -327,11 +327,11 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::F32Const:
-      Push(b, "f32", b->ConstInt32(ReadU32(&pc)));
+      Push(b, "f32", b->ConstFloat(ReadUx<float>(&pc)));
       break;
 
     case Opcode::F64Const:
-      Push(b, "f64", b->ConstInt64(ReadU64(&pc)));
+      Push(b, "f64", b->ConstDouble(ReadUx<double>(&pc)));
       break;
 
     case Opcode::I32Add:
