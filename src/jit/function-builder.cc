@@ -382,6 +382,25 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       Push(b, "f64", b->ConstDouble(ReadUx<double>(&pc)));
       break;
 
+    case Opcode::GetLocal:
+      // note: to work around JitBuilder's lack of support unions as value types,
+      // just copy a field that's the size of the entire union
+      Push(b, "i64", b->LoadIndirect("Value", "i64", Pick(b, ReadU32(&pc))));
+      break;
+
+    case Opcode::SetLocal: {
+      // see note for GetLocal
+      auto* value = Pop(b, "i64");
+      auto* local_addr = Pick(b, ReadU32(&pc));
+      b->StoreIndirect("Value", "i64", local_addr, value);
+      break;
+    }
+
+    case Opcode::TeeLocal:
+      // see note for GetLocal
+      b->StoreIndirect("Value", "i64", Pick(b, ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(b, 1)));
+      break;
+
     case Opcode::I32Add:
       EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Add(lhs, rhs);
