@@ -222,6 +222,26 @@ void FunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t ke
   b->StoreAt(stack_top_addr, new_stack_top);
 }
 
+/**
+ * @brief Generate load from the interpreter stack by an index
+ *
+ * The generate code should be equivalent to:
+ *
+ * return &value_stack_[value_stack_top_ - depth];
+ */
+TR::IlValue* FunctionBuilder::Pick(TR::IlBuilder* b, Index depth) {
+  auto pInt32 = typeDictionary()->PointerTo(Int32);
+  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
+  auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
+
+  auto* offset = b->Sub(
+                 b->    LoadAt(pInt32, stack_top_addr),
+                 b->    ConstInt32(depth));
+  return b->IndexAt(pValueType_,
+                    stack_base_addr,
+                    offset);
+}
+
 template <>
 const char* FunctionBuilder::TypeFieldName<int32_t>() const {
   return "i32";
