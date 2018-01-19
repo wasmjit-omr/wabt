@@ -535,6 +535,13 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       DropKeep(b, 1, 0);
       break;
 
+    case Opcode::InterpDropKeep: {
+      uint32_t drop_count = ReadU32(&pc);
+      uint8_t keep_count = *pc++;
+      DropKeep(b, drop_count, keep_count);
+      break;
+    }
+
     case Opcode::Nop:
       break;
 
