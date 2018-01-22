@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 #
+# Modified from: run-interp.py
+# Modified to compare the output and execution time of the JIT and the
+# interpreter. Minor additional modifications to allow the passing of .wasm
+# files directly.
+#
 # Copyright 2016 WebAssembly Community Group participants
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -108,9 +113,13 @@ def main(args):
   interp_jit_tool.verbose = options.print_cmd
 
   with utils.TempDirectory(options.out_dir, 'run-interp-') as out_dir:
-    new_ext = '.json' if options.spec else '.wasm'
-    out_file = utils.ChangeDir(utils.ChangeExt(options.file, new_ext), out_dir)
-    wast_tool.RunWithArgs(options.file, '-o', out_file)
+    if not options.file.endswith('.wasm'):
+        new_ext = '.json' if options.spec else '.wasm'
+        out_file = utils.ChangeDir(
+            utils.ChangeExt(options.file, new_ext), out_dir)
+        wast_tool.RunWithArgs(options.file, '-o', out_file)
+    else:
+        out_file = options.file
     start = time.time()
     interp_out = interp_tool.RunWithArgsForStdout(out_file)
     interp_time = time.time() - start
