@@ -1,0 +1,704 @@
+;;; TOOL: run-interp-jit
+(module
+  (func (export "test_f32_abs_1") (result f32)
+    call $f32_abs_1)
+
+  (func $f32_abs_1 (result f32)
+    f32.const -1.0
+    f32.abs)
+
+  (func (export "test_f32_abs_2") (result f32)
+    call $f32_abs_2)
+
+  (func $f32_abs_2 (result f32)
+    f32.const 1.0
+    f32.abs)
+
+  (func (export "test_f32_abs_3") (result f32)
+    call $f32_abs_3)
+
+  (func $f32_abs_3 (result f32)
+    f32.const 0.0
+    f32.abs)
+
+  (func (export "test_f32_abs_4") (result f32)
+    call $f32_abs_4)
+
+  (func $f32_abs_4 (result f32)
+    f32.const -0.0
+    f32.abs)
+
+  (func (export "test_f32_abs_5") (result f32)
+    call $f32_abs_5)
+
+  (func $f32_abs_5 (result f32)
+    f32.const nan
+    f32.abs)
+
+  (func (export "test_f32_abs_6") (result f32)
+    call $f32_abs_6)
+
+  (func $f32_abs_6 (result f32)
+    f32.const inf
+    f32.abs)
+
+  (func (export "test_f32_abs_7") (result f32)
+    call $f32_abs_7)
+
+  (func $f32_abs_7 (result f32)
+    f32.const -inf
+    f32.abs)
+
+  (func (export "test_f32_neg_1") (result f32)
+    call $f32_neg_1)
+
+  (func $f32_neg_1 (result f32)
+    f32.const 1.0
+    f32.neg)
+
+  (func (export "test_f32_neg_2") (result f32)
+    call $f32_neg_2)
+
+  (func $f32_neg_2 (result f32)
+    f32.const -1.0
+    f32.neg)
+
+  (func (export "test_f32_neg_3") (result f32)
+    call $f32_neg_3)
+
+  (func $f32_neg_3 (result f32)
+    f32.const inf
+    f32.neg)
+
+  (func (export "test_f32_neg_4") (result f32)
+    call $f32_neg_4)
+
+  (func $f32_neg_4 (result f32)
+    f32.const -inf
+    f32.neg)
+
+  (func (export "test_f32_neg_5") (result f32)
+    call $f32_neg_5)
+
+  (func $f32_neg_5 (result f32)
+    f32.const 0.0
+    f32.neg)
+
+  (func (export "test_f32_neg_6") (result f32)
+    call $f32_neg_6)
+
+  (func $f32_neg_6 (result f32)
+    f32.const -0.0
+    f32.neg)
+
+  (func (export "test_f32_neg_7") (result f32)
+    call $f32_neg_7)
+
+  (func $f32_neg_7 (result f32)
+    f32.const nan
+    f32.neg)
+
+  (func (export "test_f32_sqrt_1") (result f32)
+    call $f32_sqrt_1)
+
+  (func $f32_sqrt_1 (result f32)
+    f32.const 2.0
+    f32.sqrt)
+
+  (func (export "test_f32_sqrt_2") (result f32)
+    call $f32_sqrt_2)
+
+  (func $f32_sqrt_2 (result f32)
+    f32.const 0.0
+    f32.sqrt)
+
+  (func (export "test_f32_sqrt_3") (result f32)
+    call $f32_sqrt_3)
+
+  (func $f32_sqrt_3 (result f32)
+    f32.const -0.0
+    f32.sqrt)
+
+  (func (export "test_f32_sqrt_4") (result f32)
+    call $f32_sqrt_4)
+
+  (func $f32_sqrt_4 (result f32)
+    f32.const inf
+    f32.sqrt)
+
+  (func (export "test_f32_sqrt_5") (result f32)
+    call $f32_sqrt_5)
+
+  (func $f32_sqrt_5 (result f32)
+    f32.const -1.0
+    f32.sqrt)
+
+  (func (export "test_f32_sqrt_6") (result f32)
+    call $f32_sqrt_6)
+
+  (func $f32_sqrt_6 (result f32)
+    f32.const nan
+    f32.sqrt)
+
+  (func (export "test_f32_add_1") (result f32)
+    call $f32_add_1)
+
+  (func $f32_add_1 (result f32)
+    f32.const 1.25
+    f32.const 2.25
+    f32.add)
+
+  (func (export "test_f32_add_2") (result f32)
+    call $f32_add_2)
+
+  (func $f32_add_2 (result f32)
+    f32.const -2.0
+    f32.const 1.0
+    f32.add)
+
+  (func (export "test_f32_add_3") (result f32)
+    call $f32_add_3)
+
+  (func $f32_add_3 (result f32)
+    f32.const 1.0
+    f32.const 0.0
+    f32.add)
+
+  (func (export "test_f32_add_4") (result f32)
+    call $f32_add_4)
+
+  (func $f32_add_4 (result f32)
+    f32.const nan
+    f32.const 0.0
+    f32.add)
+
+  (func (export "test_f32_add_5") (result f32)
+    call $f32_add_5)
+
+  (func $f32_add_5 (result f32)
+    f32.const 0.0
+    f32.const nan
+    f32.add)
+
+  (func (export "test_f32_add_6") (result f32)
+    call $f32_add_6)
+
+  (func $f32_add_6 (result f32)
+    f32.const inf
+    f32.const 0.0
+    f32.add)
+
+  (func (export "test_f32_add_7") (result f32)
+    call $f32_add_7)
+
+  (func $f32_add_7 (result f32)
+    f32.const 0.0
+    f32.const -inf
+    f32.add)
+
+  (func (export "test_f32_add_8") (result f32)
+    call $f32_add_8)
+
+  (func $f32_add_8 (result f32)
+    f32.const inf
+    f32.const -inf
+    f32.add)
+
+  (func (export "test_f32_add_9") (result f32)
+    call $f32_add_9)
+
+  (func $f32_add_9 (result f32)
+    f32.const inf
+    f32.const inf
+    f32.add)
+
+  (func (export "test_f32_add_10") (result f32)
+    call $f32_add_10)
+
+  (func $f32_add_10 (result f32)
+    f32.const -inf
+    f32.const -inf
+    f32.add)
+
+  (func (export "test_f32_sub_1") (result f32)
+    call $f32_sub_1)
+
+  (func $f32_sub_1 (result f32)
+    f32.const 1.25
+    f32.const 2.25
+    f32.sub)
+
+  (func (export "test_f32_sub_2") (result f32)
+    call $f32_sub_2)
+
+  (func $f32_sub_2 (result f32)
+    f32.const -2.0
+    f32.const 1.0
+    f32.sub)
+
+  (func (export "test_f32_sub_3") (result f32)
+    call $f32_sub_3)
+
+  (func $f32_sub_3 (result f32)
+    f32.const 1.0
+    f32.const 0.0
+    f32.sub)
+
+  (func (export "test_f32_sub_4") (result f32)
+    call $f32_sub_4)
+
+  (func $f32_sub_4 (result f32)
+    f32.const nan
+    f32.const 0.0
+    f32.sub)
+
+  (func (export "test_f32_sub_5") (result f32)
+    call $f32_sub_5)
+
+  (func $f32_sub_5 (result f32)
+    f32.const 0.0
+    f32.const nan
+    f32.sub)
+
+  (func (export "test_f32_sub_6") (result f32)
+    call $f32_sub_6)
+
+  (func $f32_sub_6 (result f32)
+    f32.const inf
+    f32.const 0.0
+    f32.sub)
+
+  (func (export "test_f32_sub_7") (result f32)
+    call $f32_sub_7)
+
+  (func $f32_sub_7 (result f32)
+    f32.const 0.0
+    f32.const -inf
+    f32.sub)
+
+  (func (export "test_f32_sub_8") (result f32)
+    call $f32_sub_8)
+
+  (func $f32_sub_8 (result f32)
+    f32.const inf
+    f32.const -inf
+    f32.sub)
+
+  (func (export "test_f32_sub_9") (result f32)
+    call $f32_sub_9)
+
+  (func $f32_sub_9 (result f32)
+    f32.const -inf
+    f32.const inf
+    f32.sub)
+
+  (func (export "test_f32_sub_10") (result f32)
+    call $f32_sub_10)
+
+  (func $f32_sub_10 (result f32)
+    f32.const inf
+    f32.const inf
+    f32.sub)
+
+  (func (export "test_f32_mul_1") (result f32)
+    call $f32_mul_1)
+
+  (func $f32_mul_1 (result f32)
+    f32.const 3.0
+    f32.const 2.0
+    f32.mul)
+
+  (func (export "test_f32_mul_2") (result f32)
+    call $f32_mul_2)
+
+  (func $f32_mul_2 (result f32)
+    f32.const 3.0
+    f32.const -2.0
+    f32.mul)
+
+  (func (export "test_f32_mul_3") (result f32)
+    call $f32_mul_3)
+
+  (func $f32_mul_3 (result f32)
+    f32.const 0.0
+    f32.const 0.0
+    f32.mul)
+
+  (func (export "test_f32_mul_4") (result f32)
+    call $f32_mul_4)
+
+  (func $f32_mul_4 (result f32)
+    f32.const 0.0
+    f32.const -0.0
+    f32.mul)
+
+  (func (export "test_f32_mul_5") (result f32)
+    call $f32_mul_5)
+
+  (func $f32_mul_5 (result f32)
+    f32.const inf
+    f32.const inf
+    f32.mul)
+
+  (func (export "test_f32_mul_6") (result f32)
+    call $f32_mul_6)
+
+  (func $f32_mul_6 (result f32)
+    f32.const inf
+    f32.const -inf
+    f32.mul)
+
+  (func (export "test_f32_mul_7") (result f32)
+    call $f32_mul_7)
+
+  (func $f32_mul_7 (result f32)
+    f32.const inf
+    f32.const 0.0
+    f32.mul)
+
+  (func (export "test_f32_mul_8") (result f32)
+    call $f32_mul_8)
+
+  (func $f32_mul_8 (result f32)
+    f32.const 2.0
+    f32.const inf
+    f32.mul)
+
+  (func (export "test_f32_mul_9") (result f32)
+    call $f32_mul_9)
+
+  (func $f32_mul_9 (result f32)
+    f32.const -2.0
+    f32.const inf
+    f32.mul)
+
+  (func (export "test_f32_mul_10") (result f32)
+    call $f32_mul_10)
+
+  (func $f32_mul_10 (result f32)
+    f32.const nan
+    f32.const 1.0
+    f32.mul)
+
+  (func (export "test_f32_div_1") (result f32)
+    call $f32_div_1)
+
+  (func $f32_div_1 (result f32)
+    f32.const 4.0
+    f32.const 2.0
+    f32.div)
+
+  (func (export "test_f32_div_2") (result f32)
+    call $f32_div_2)
+
+  (func $f32_div_2 (result f32)
+    f32.const 4.0
+    f32.const -2.0
+    f32.div)
+
+  (func (export "test_f32_div_3") (result f32)
+    call $f32_div_3)
+
+  (func $f32_div_3 (result f32)
+    f32.const inf
+    f32.const 2.0
+    f32.div)
+
+  (func (export "test_f32_div_4") (result f32)
+    call $f32_div_4)
+
+  (func $f32_div_4 (result f32)
+    f32.const -inf
+    f32.const 2.0
+    f32.div)
+
+  (func (export "test_f32_div_5") (result f32)
+    call $f32_div_5)
+
+  (func $f32_div_5 (result f32)
+    f32.const inf
+    f32.const 0.0
+    f32.div)
+
+  (func (export "test_f32_div_6") (result f32)
+    call $f32_div_6)
+
+  (func $f32_div_6 (result f32)
+    f32.const inf
+    f32.const -0.0
+    f32.div)
+
+  (func (export "test_f32_div_7") (result f32)
+    call $f32_div_7)
+
+  (func $f32_div_7 (result f32)
+    f32.const 2.0
+    f32.const inf
+    f32.div)
+
+  (func (export "test_f32_div_8") (result f32)
+    call $f32_div_8)
+
+  (func $f32_div_8 (result f32)
+    f32.const 2.0
+    f32.const -inf
+    f32.div)
+
+  (func (export "test_f32_div_9") (result f32)
+    call $f32_div_9)
+
+  (func $f32_div_9 (result f32)
+    f32.const 2.0
+    f32.const 0.0
+    f32.div)
+
+  (func (export "test_f32_div_10") (result f32)
+    call $f32_div_10)
+
+  (func $f32_div_10 (result f32)
+    f32.const 2.0
+    f32.const -0.0
+    f32.div)
+
+  (func (export "test_f32_div_11") (result f32)
+    call $f32_div_11)
+
+  (func $f32_div_11 (result f32)
+    f32.const 0.0
+    f32.const inf
+    f32.div)
+
+  (func (export "test_f32_div_12") (result f32)
+    call $f32_div_12)
+
+  (func $f32_div_12 (result f32)
+    f32.const 0.0
+    f32.const -inf
+    f32.div)
+
+  (func (export "test_f32_div_13") (result f32)
+    call $f32_div_13)
+
+  (func $f32_div_13 (result f32)
+    f32.const inf
+    f32.const inf
+    f32.div)
+
+  (func (export "test_f32_div_14") (result f32)
+    call $f32_div_14)
+
+  (func $f32_div_14 (result f32)
+    f32.const inf
+    f32.const -inf
+    f32.div)
+
+  (func (export "test_f32_div_15") (result f32)
+    call $f32_div_15)
+
+  (func $f32_div_15 (result f32)
+    f32.const 0.0
+    f32.const 0.0
+    f32.div)
+
+  (func (export "test_f32_div_16") (result f32)
+    call $f32_div_16)
+
+  (func $f32_div_16 (result f32)
+    f32.const 0.0
+    f32.const -0.0
+    f32.div)
+
+  (func (export "test_f32_div_17") (result f32)
+    call $f32_div_17)
+
+  (func $f32_div_17 (result f32)
+    f32.const nan
+    f32.const 2.0
+    f32.div)
+
+  (func (export "test_f32_div_18") (result f32)
+    call $f32_div_18)
+
+  (func $f32_div_18 (result f32)
+    f32.const 2.0
+    f32.const nan
+    f32.div)
+
+  (func (export "test_f32_copysign_1") (result f32)
+    call $f32_copysign_1)
+
+  (func $f32_copysign_1 (result f32)
+    f32.const 2.0
+    f32.const 1.0
+    f32.copysign)
+
+  (func (export "test_f32_copysign_2") (result f32)
+    call $f32_copysign_2)
+
+  (func $f32_copysign_2 (result f32)
+    f32.const 2.0
+    f32.const -1.0
+    f32.copysign)
+
+  (func (export "test_f32_copysign_3") (result f32)
+    call $f32_copysign_3)
+
+  (func $f32_copysign_3 (result f32)
+    f32.const -2.0
+    f32.const 1.0
+    f32.copysign)
+
+  (func (export "test_f32_copysign_4") (result f32)
+    call $f32_copysign_4)
+
+  (func $f32_copysign_4 (result f32)
+    f32.const -2.0
+    f32.const -1.0
+    f32.copysign)
+
+  (func (export "test_f32_copysign_5") (result f32)
+    call $f32_copysign_5)
+
+  (func $f32_copysign_5 (result f32)
+    f32.const 0.0
+    f32.const inf
+    f32.copysign)
+
+  (func (export "test_f32_copysign_6") (result f32)
+    call $f32_copysign_6)
+
+  (func $f32_copysign_6 (result f32)
+    f32.const 0.0
+    f32.const -inf
+    f32.copysign)
+
+  (func (export "test_f32_copysign_7") (result f32)
+    call $f32_copysign_7)
+
+  (func $f32_copysign_7 (result f32)
+    f32.const -0.0
+    f32.const inf
+    f32.copysign)
+
+  (func (export "test_f32_copysign_8") (result f32)
+    call $f32_copysign_8)
+
+  (func $f32_copysign_8 (result f32)
+    f32.const -0.0
+    f32.const -inf
+    f32.copysign)
+
+  (func (export "test_f32_copysign_9") (result f32)
+    call $f32_copysign_9)
+
+  (func $f32_copysign_9 (result f32)
+    f32.const 1.0
+    f32.const 0.0
+    f32.copysign)
+
+  (func (export "test_f32_copysign_10") (result f32)
+    call $f32_copysign_10)
+
+  (func $f32_copysign_10 (result f32)
+    f32.const 1.0
+    f32.const -0.0
+    f32.copysign)
+
+  (func (export "test_f32_copysign_11") (result f32)
+    call $f32_copysign_11)
+
+  (func $f32_copysign_11 (result f32)
+    f32.const -1.0
+    f32.const 0.0
+    f32.copysign)
+
+  (func (export "test_f32_copysign_12") (result f32)
+    call $f32_copysign_12)
+
+  (func $f32_copysign_12 (result f32)
+    f32.const -1.0
+    f32.const -0.0
+    f32.copysign)
+)
+(;; STDOUT ;;;
+test_f32_abs_1() => f32:1.000000
+test_f32_abs_2() => f32:1.000000
+test_f32_abs_3() => f32:0.000000
+test_f32_abs_4() => f32:0.000000
+test_f32_abs_5() => f32:nan
+test_f32_abs_6() => f32:inf
+test_f32_abs_7() => f32:inf
+test_f32_neg_1() => f32:-1.000000
+test_f32_neg_2() => f32:1.000000
+test_f32_neg_3() => f32:-inf
+test_f32_neg_4() => f32:inf
+test_f32_neg_5() => f32:-0.000000
+test_f32_neg_6() => f32:0.000000
+test_f32_neg_7() => f32:nan
+test_f32_sqrt_1() => f32:1.414214
+test_f32_sqrt_2() => f32:0.000000
+test_f32_sqrt_3() => f32:-0.000000
+test_f32_sqrt_4() => f32:inf
+test_f32_sqrt_5() => f32:-nan
+test_f32_sqrt_6() => f32:nan
+test_f32_add_1() => f32:3.500000
+test_f32_add_2() => f32:-1.000000
+test_f32_add_3() => f32:1.000000
+test_f32_add_4() => f32:nan
+test_f32_add_5() => f32:nan
+test_f32_add_6() => f32:inf
+test_f32_add_7() => f32:-inf
+test_f32_add_8() => f32:-nan
+test_f32_add_9() => f32:inf
+test_f32_add_10() => f32:-inf
+test_f32_sub_1() => f32:-1.000000
+test_f32_sub_2() => f32:-3.000000
+test_f32_sub_3() => f32:1.000000
+test_f32_sub_4() => f32:nan
+test_f32_sub_5() => f32:nan
+test_f32_sub_6() => f32:inf
+test_f32_sub_7() => f32:inf
+test_f32_sub_8() => f32:inf
+test_f32_sub_9() => f32:-inf
+test_f32_sub_10() => f32:-nan
+test_f32_mul_1() => f32:6.000000
+test_f32_mul_2() => f32:-6.000000
+test_f32_mul_3() => f32:0.000000
+test_f32_mul_4() => f32:-0.000000
+test_f32_mul_5() => f32:inf
+test_f32_mul_6() => f32:-inf
+test_f32_mul_7() => f32:-nan
+test_f32_mul_8() => f32:inf
+test_f32_mul_9() => f32:-inf
+test_f32_mul_10() => f32:nan
+test_f32_div_1() => f32:2.000000
+test_f32_div_2() => f32:-2.000000
+test_f32_div_3() => f32:inf
+test_f32_div_4() => f32:-inf
+test_f32_div_5() => f32:inf
+test_f32_div_6() => f32:-inf
+test_f32_div_7() => f32:0.000000
+test_f32_div_8() => f32:-0.000000
+test_f32_div_9() => f32:inf
+test_f32_div_10() => f32:-inf
+test_f32_div_11() => f32:0.000000
+test_f32_div_12() => f32:-0.000000
+test_f32_div_13() => f32:-nan
+test_f32_div_14() => f32:-nan
+test_f32_div_15() => f32:-nan
+test_f32_div_16() => f32:-nan
+test_f32_div_17() => f32:nan
+test_f32_div_18() => f32:nan
+test_f32_copysign_1() => f32:2.000000
+test_f32_copysign_2() => f32:-2.000000
+test_f32_copysign_3() => f32:2.000000
+test_f32_copysign_4() => f32:-2.000000
+test_f32_copysign_5() => f32:0.000000
+test_f32_copysign_6() => f32:-0.000000
+test_f32_copysign_7() => f32:0.000000
+test_f32_copysign_8() => f32:-0.000000
+test_f32_copysign_9() => f32:1.000000
+test_f32_copysign_10() => f32:-1.000000
+test_f32_copysign_11() => f32:1.000000
+test_f32_copysign_12() => f32:-1.000000
+;;; STDOUT ;;)
