@@ -274,7 +274,7 @@ void FunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {
     div_zero_path->Return(div_zero_path->Const(
         static_cast<ResultEnum>(interp::Result::TrapIntegerDivideByZero)));
 
-    TR::IlValue* return_value = b->ConstInt32(0);
+    TR::IlValue* return_value = b->Const(static_cast<T>(0));
 
     TR::IlBuilder* div_no_ovf_path = nullptr;
     b->IfThen(&div_no_ovf_path,
@@ -353,6 +353,32 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::I32RemS:
       EmitIntRemainder<int32_t>(b);
+      break;
+
+    case Opcode::I64Add:
+        EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+          return b->Add(lhs, rhs);
+        });
+        break;
+
+    case Opcode::I64Sub:
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Sub(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64Mul:
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Mul(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64DivS:
+      EmitIntDivide<int64_t>(b);
+      break;
+
+    case Opcode::I64RemS:
+      EmitIntRemainder<int64_t>(b);
       break;
 
     case Opcode::Drop:
