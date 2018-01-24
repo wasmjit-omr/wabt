@@ -51,12 +51,10 @@ def main(args):
                       action='store_true')
   parser.add_argument('--run-all-exports', action='store_true')
   parser.add_argument('--host-print', action='store_true')
-  parser.add_argument('--spec', action='store_true')
   parser.add_argument('-t', '--trace', action='store_true')
   parser.add_argument('file', help='test file.')
   parser.add_argument('--enable-saturating-float-to-int', action='store_true')
   parser.add_argument('--enable-threads', action='store_true')
-  parser.add_argument('--disable-jit', action='store_true')
   parser.add_argument('--trap-on-failed-comp', action='store_true')
   options = parser.parse_args(args)
 
@@ -112,9 +110,9 @@ def main(args):
   interp_tool.verbose = options.print_cmd
   interp_jit_tool.verbose = options.print_cmd
 
-  with utils.TempDirectory(options.out_dir, 'run-interp-') as out_dir:
+  with utils.TempDirectory(options.out_dir, 'run-jit-perform-') as out_dir:
     if not options.file.endswith('.wasm'):
-        new_ext = '.json' if options.spec else '.wasm'
+        new_ext = '.wasm'
         out_file = utils.ChangeDir(
             utils.ChangeExt(options.file, new_ext), out_dir)
         wast_tool.RunWithArgs(options.file, '-o', out_file)
