@@ -1,0 +1,424 @@
+;;; TOOL: run-interp-jit
+(module
+  (func (export "test_alloca_i32")
+    call $alloca_i32)
+
+  (func $alloca_i32 (local i32))
+
+  (func (export "test_alloca_i64")
+    call $alloca_i64)
+
+  (func $alloca_i64 (local i64))
+
+  (func (export "test_alloca_f32")
+    call $alloca_f32)
+
+  (func $alloca_f32 (local f32))
+
+  (func (export "test_alloca_f64")
+    call $alloca_f64)
+
+  (func $alloca_f64 (local f64))
+
+  (func (export "test_alloca_with_dropkeep_i32") (result i32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i32
+    return)
+
+  (func $alloca_with_dropkeep_i32 (result i32) (local i32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i64") (result i64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i64
+    return)
+
+  (func $alloca_with_dropkeep_i64 (result i64) (local i64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f32") (result f32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f32
+    return)
+
+  (func $alloca_with_dropkeep_f32 (result f32) (local f32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f64") (result f64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f64
+    return)
+
+  (func $alloca_with_dropkeep_f64 (result f64) (local f64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i32_i32_0") (result i32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i32_i32_0
+    return)
+
+  (func $alloca_with_dropkeep_i32_i32_0 (result i32) (local i32) (local i32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i64_i32_0") (result i64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i64_i32_0
+    return)
+
+  (func $alloca_with_dropkeep_i64_i32_0 (result i64) (local i64) (local i32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f32_i32_0") (result f32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f32_i32_0
+    return)
+
+  (func $alloca_with_dropkeep_f32_i32_0 (result f32) (local f32) (local i32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f64_i32_0") (result f64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f64_i32_0
+    return)
+
+  (func $alloca_with_dropkeep_f64_i32_0 (result f64) (local f64) (local i32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i32_i32_1") (result i32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i32_i32_1
+    return)
+
+  (func $alloca_with_dropkeep_i32_i32_1 (result i32) (local i32) (local i32)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i64_i32_1") (result i32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i64_i32_1
+    return)
+
+  (func $alloca_with_dropkeep_i64_i32_1 (result i32) (local i64) (local i32)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f32_i32_1") (result i32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f32_i32_1
+    return)
+
+  (func $alloca_with_dropkeep_f32_i32_1 (result i32) (local f32) (local i32)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f64_i32_1") (result i32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f64_i32_1
+    return)
+
+  (func $alloca_with_dropkeep_f64_i32_1 (result i32) (local f64) (local i32)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i32_i64_0") (result i32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i32_i64_0
+    return)
+
+  (func $alloca_with_dropkeep_i32_i64_0 (result i32) (local i32) (local i64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i64_i64_0") (result i64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i64_i64_0
+    return)
+
+  (func $alloca_with_dropkeep_i64_i64_0 (result i64) (local i64) (local i64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f32_i64_0") (result f32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f32_i64_0
+    return)
+
+  (func $alloca_with_dropkeep_f32_i64_0 (result f32) (local f32) (local i64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f64_i64_0") (result f64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f64_i64_0
+    return)
+
+  (func $alloca_with_dropkeep_f64_i64_0 (result f64) (local f64) (local i64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i32_i64_1") (result i64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i32_i64_1
+    return)
+
+  (func $alloca_with_dropkeep_i32_i64_1 (result i64) (local i32) (local i64)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i64_i64_1") (result i64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i64_i64_1
+    return)
+
+  (func $alloca_with_dropkeep_i64_i64_1 (result i64) (local i64) (local i64)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f32_i64_1") (result i64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f32_i64_1
+    return)
+
+  (func $alloca_with_dropkeep_f32_i64_1 (result i64) (local f32) (local i64)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f64_i64_1") (result i64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f64_i64_1
+    return)
+
+  (func $alloca_with_dropkeep_f64_i64_1 (result i64) (local f64) (local i64)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i32_f32_0") (result i32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i32_f32_0
+    return)
+
+  (func $alloca_with_dropkeep_i32_f32_0 (result i32) (local i32) (local f32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i64_f32_0") (result i64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i64_f32_0
+    return)
+
+  (func $alloca_with_dropkeep_i64_f32_0 (result i64) (local i64) (local f32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f32_f32_0") (result f32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f32_f32_0
+    return)
+
+  (func $alloca_with_dropkeep_f32_f32_0 (result f32) (local f32) (local f32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f64_f32_0") (result f64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f64_f32_0
+    return)
+
+  (func $alloca_with_dropkeep_f64_f32_0 (result f64) (local f64) (local f32)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i32_f32_1") (result f32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i32_f32_1
+    return)
+
+  (func $alloca_with_dropkeep_i32_f32_1 (result f32) (local i32) (local f32)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i64_f32_1") (result f32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i64_f32_1
+    return)
+
+  (func $alloca_with_dropkeep_i64_f32_1 (result f32) (local i64) (local f32)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f32_f32_1") (result f32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f32_f32_1
+    return)
+
+  (func $alloca_with_dropkeep_f32_f32_1 (result f32) (local f32) (local f32)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f64_f32_1") (result f32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f64_f32_1
+    return)
+
+  (func $alloca_with_dropkeep_f64_f32_1 (result f32) (local f64) (local f32)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i32_f64_0") (result i32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i32_f64_0
+    return)
+
+  (func $alloca_with_dropkeep_i32_f64_0 (result i32) (local i32) (local f64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i64_f64_0") (result i64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i64_f64_0
+    return)
+
+  (func $alloca_with_dropkeep_i64_f64_0 (result i64) (local i64) (local f64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f32_f64_0") (result f32)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f32_f64_0
+    return)
+
+  (func $alloca_with_dropkeep_f32_f64_0 (result f32) (local f32) (local f64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f64_f64_0") (result f64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f64_f64_0
+    return)
+
+  (func $alloca_with_dropkeep_f64_f64_0 (result f64) (local f64) (local f64)
+    get_local 0
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i32_f64_1") (result f64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i32_f64_1
+    return)
+
+  (func $alloca_with_dropkeep_i32_f64_1 (result f64) (local i32) (local f64)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_i64_f64_1") (result f64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_i64_f64_1
+    return)
+
+  (func $alloca_with_dropkeep_i64_f64_1 (result f64) (local i64) (local f64)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f32_f64_1") (result f64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f32_f64_1
+    return)
+
+  (func $alloca_with_dropkeep_f32_f64_1 (result f64) (local f32) (local f64)
+    get_local 1
+    return)
+
+  (func (export "test_alloca_with_dropkeep_f64_f64_1") (result f64)
+    i32.const 3
+    drop
+    call $alloca_with_dropkeep_f64_f64_1
+    return)
+
+  (func $alloca_with_dropkeep_f64_f64_1 (result f64) (local f64) (local f64)
+    get_local 1
+    return)
+)
+(;; STDOUT ;;;
+test_alloca_i32() =>
+test_alloca_i64() =>
+test_alloca_f32() =>
+test_alloca_f64() =>
+test_alloca_with_dropkeep_i32() => i32:0
+test_alloca_with_dropkeep_i64() => i64:0
+test_alloca_with_dropkeep_f32() => f32:0.000000
+test_alloca_with_dropkeep_f64() => f64:0.000000
+test_alloca_with_dropkeep_i32_i32_0() => i32:0
+test_alloca_with_dropkeep_i64_i32_0() => i64:0
+test_alloca_with_dropkeep_f32_i32_0() => f32:0.000000
+test_alloca_with_dropkeep_f64_i32_0() => f64:0.000000
+test_alloca_with_dropkeep_i32_i32_1() => i32:0
+test_alloca_with_dropkeep_i64_i32_1() => i32:0
+test_alloca_with_dropkeep_f32_i32_1() => i32:0
+test_alloca_with_dropkeep_f64_i32_1() => i32:0
+test_alloca_with_dropkeep_i32_i64_0() => i32:0
+test_alloca_with_dropkeep_i64_i64_0() => i64:0
+test_alloca_with_dropkeep_f32_i64_0() => f32:0.000000
+test_alloca_with_dropkeep_f64_i64_0() => f64:0.000000
+test_alloca_with_dropkeep_i32_i64_1() => i64:0
+test_alloca_with_dropkeep_i64_i64_1() => i64:0
+test_alloca_with_dropkeep_f32_i64_1() => i64:0
+test_alloca_with_dropkeep_f64_i64_1() => i64:0
+test_alloca_with_dropkeep_i32_f32_0() => i32:0
+test_alloca_with_dropkeep_i64_f32_0() => i64:0
+test_alloca_with_dropkeep_f32_f32_0() => f32:0.000000
+test_alloca_with_dropkeep_f64_f32_0() => f64:0.000000
+test_alloca_with_dropkeep_i32_f32_1() => f32:0.000000
+test_alloca_with_dropkeep_i64_f32_1() => f32:0.000000
+test_alloca_with_dropkeep_f32_f32_1() => f32:0.000000
+test_alloca_with_dropkeep_f64_f32_1() => f32:0.000000
+test_alloca_with_dropkeep_i32_f64_0() => i32:0
+test_alloca_with_dropkeep_i64_f64_0() => i64:0
+test_alloca_with_dropkeep_f32_f64_0() => f32:0.000000
+test_alloca_with_dropkeep_f64_f64_0() => f64:0.000000
+test_alloca_with_dropkeep_i32_f64_1() => f64:0.000000
+test_alloca_with_dropkeep_i64_f64_1() => f64:0.000000
+test_alloca_with_dropkeep_f32_f64_1() => f64:0.000000
+test_alloca_with_dropkeep_f64_f64_1() => f64:0.000000
+;;; STDOUT ;;)
