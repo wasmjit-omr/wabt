@@ -531,6 +531,35 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       });
       break;
 
+    case Opcode::InterpAlloca: {
+      auto pInt32 = typeDictionary()->PointerTo(Int32);
+      auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
+      auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
+
+      auto* old_value_stack_top = b->LoadAt(pInt32, stack_top_addr);
+      auto* count = b->ConstInt32(ReadU32(&pc));
+      auto* stack_top =  b->Add(old_value_stack_top, count);
+      b->StoreAt(stack_top_addr, stack_top);
+
+      TR::IlBuilder* overflow_handler = nullptr;
+
+      b->IfThen(&overflow_handler,
+      b->       UnsignedGreaterOrEqualTo(
+                    stack_top,
+      b->           Const(static_cast<int32_t>(thread_->value_stack_.size()))));
+      overflow_handler->Return(
+      overflow_handler->    Const(static_cast<ResultEnum>(interp::Result::TrapValueStackExhausted)));
+
+      TR::IlBuilder* set_zero = nullptr;
+      b->ForLoopUp("i", &set_zero, old_value_stack_top, stack_top, b->Const(1));
+      set_zero->StoreIndirect("Value", "i64",
+      set_zero->              IndexAt(pValueType_, stack_base_addr,
+      set_zero->                      Load("i")),
+      set_zero->              ConstInt64(0));
+
+      break;
+    }
+
     case Opcode::Drop:
       DropKeep(b, 1, 0);
       break;
