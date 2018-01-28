@@ -19,6 +19,7 @@
 #include "ilgen/VirtualMachineState.hpp"
 #include "infra/Assert.hpp"
 
+#include <cmath>
 #include <limits>
 #include <type_traits>
 
@@ -86,6 +87,18 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::IstreamOffset c
   DefineName("WASM_Function");
 
   DefineReturnType(types->toIlType<std::underlying_type<wabt::interp::Result>::type>());
+
+  DefineFunction("f32_sqrt", __FILE__, "0",
+                 reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
+                 Float,
+                 1,
+                 Float);
+  DefineFunction("f32_copysign", __FILE__, "0",
+                 reinterpret_cast<void*>(static_cast<float (*)(float, float)>(std::copysign)),
+                 Float,
+                 2,
+                 Float,
+                 Float);
 }
 
 bool FunctionBuilder::buildIL() {
@@ -229,12 +242,27 @@ const char* FunctionBuilder::TypeFieldName<uint64_t>() const {
   return "i64";
 }
 
+template <>
+const char* FunctionBuilder::TypeFieldName<float>() const {
+  return "f32";
+}
+
+template <>
+const char* FunctionBuilder::TypeFieldName<double>() const {
+  return "f64";
+}
+
 template <typename T, typename TOpHandler>
 void FunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
   auto* rhs = Pop(b, TypeFieldName<T>());
   auto* lhs = Pop(b, TypeFieldName<T>());
 
   Push(b, TypeFieldName<T>(), h(lhs, rhs));
+}
+
+template <typename T, typename TOpHandler>
+void FunctionBuilder::EmitUnaryOp(TR::IlBuilder* b, TOpHandler h) {
+  Push(b, TypeFieldName<T>(), h(Pop(b, TypeFieldName<T>())));
 }
 
 template <typename T>
@@ -327,11 +355,11 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::F32Const:
-      Push(b, "f32", b->ConstInt32(ReadU32(&pc)));
+      Push(b, "f32", b->ConstFloat(ReadUx<float>(&pc)));
       break;
 
     case Opcode::F64Const:
-      Push(b, "f64", b->ConstInt64(ReadU64(&pc)));
+      Push(b, "f64", b->ConstDouble(ReadUx<double>(&pc)));
       break;
 
     case Opcode::I32Add:
@@ -440,6 +468,67 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::I64RemS:
       EmitIntRemainder<int64_t>(b);
+      break;
+
+    case Opcode::F32Abs:
+      EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
+        auto* return_value = b->Copy(value);
+
+        TR::IlBuilder* zero_path = nullptr;
+        TR::IlBuilder* nonzero_path = nullptr;
+        TR::IlBuilder* neg_path = nullptr;
+
+        // We have to check explicitly for 0.0, since abs(-0.0) is 0.0.
+        b->IfThenElse(&zero_path, &nonzero_path, b->EqualTo(value, b->ConstFloat(0)));
+        zero_path->StoreOver(return_value, zero_path->ConstFloat(0));
+
+        nonzero_path->IfThen(&neg_path, nonzero_path->LessThan(value, nonzero_path->ConstFloat(0)));
+        neg_path->StoreOver(return_value, neg_path->Mul(value, neg_path->ConstFloat(-1)));
+
+        return return_value;
+      });
+      break;
+
+    case Opcode::F32Neg:
+      EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
+        return b->Mul(value, b->ConstFloat(-1));
+      });
+      break;
+
+    case Opcode::F32Sqrt:
+      EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
+        return b->Call("f32_sqrt", 1, value);
+      });
+      break;
+
+    case Opcode::F32Add:
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Add(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Sub:
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Sub(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Mul:
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Mul(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Div:
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Div(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Copysign:
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Call("f32_copysign", 2, lhs, rhs);
+      });
       break;
 
     case Opcode::Drop:

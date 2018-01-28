@@ -71,6 +71,9 @@ class FunctionBuilder : public TR::MethodBuilder {
   template <typename T, typename TOpHandler>
   void EmitBinaryOp(TR::IlBuilder* b, TOpHandler h);
 
+  template <typename T, typename TOpHandler>
+  void EmitUnaryOp(TR::IlBuilder* b, TOpHandler h);
+
   template <typename T>
   void EmitIntDivide(TR::IlBuilder* b);
 

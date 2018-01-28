@@ -22,7 +22,7 @@ wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     DefineUnion("Value");
     UnionField("Value", "i32", toIlType<decltype(Value::i32)>());
     UnionField("Value", "i64", toIlType<decltype(Value::i64)>());
-    UnionField("Value", "f32", toIlType<decltype(Value::f32_bits)>());
-    UnionField("Value", "f64", toIlType<decltype(Value::f64_bits)>());
+    UnionField("Value", "f32", toIlType<float>());
+    UnionField("Value", "f64", toIlType<double>());
     CloseUnion("Value");
 }
