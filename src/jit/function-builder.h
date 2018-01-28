@@ -77,6 +77,9 @@ class FunctionBuilder : public TR::MethodBuilder {
   template <typename T>
   void EmitIntRemainder(TR::IlBuilder* b);
 
+  template <typename>
+  TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
+
   std::vector<BytecodeWorkItem> workItems_;
 
   interp::Thread* thread_;

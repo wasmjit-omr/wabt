@@ -288,6 +288,11 @@ void FunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {
   });
 }
 
+template <typename T>
+TR::IlValue* FunctionBuilder::CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount) {
+  return b->And(amount, b->Const(static_cast<T>(sizeof(T) * 8 - 1)));
+}
+
 bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
                            const uint8_t* istream,
                            const uint8_t* pc) {
@@ -353,6 +358,62 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::I32RemS:
       EmitIntRemainder<int32_t>(b);
+      break;
+
+    case Opcode::I32And:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->And(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32Or:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Or(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32Xor:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Xor(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32Shl:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->ShiftL(lhs, CalculateShiftAmount<int32_t>(b, rhs));
+      });
+      break;
+
+    case Opcode::I32ShrS:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->ShiftR(lhs, CalculateShiftAmount<int32_t>(b, rhs));
+      });
+      break;
+
+    case Opcode::I32ShrU:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->UnsignedShiftR(lhs, CalculateShiftAmount<int32_t>(b, rhs));
+      });
+      break;
+
+    case Opcode::I32Rotl:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* amount = CalculateShiftAmount<int32_t>(b, rhs);
+
+        return b->Or(
+        b->          ShiftL(lhs, amount),
+        b->          UnsignedShiftR(lhs, b->Sub(b->ConstInt32(32), amount)));
+      });
+      break;
+
+    case Opcode::I32Rotr:
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* amount = CalculateShiftAmount<int32_t>(b, rhs);
+
+        return b->Or(
+        b->          UnsignedShiftR(lhs, amount),
+        b->          ShiftL(lhs, b->Sub(b->ConstInt32(32), amount)));
+      });
       break;
 
     case Opcode::I64Add:
