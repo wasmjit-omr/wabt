@@ -272,17 +272,17 @@ const char* FunctionBuilder::TypeFieldName<double>() const {
   return "f64";
 }
 
-template <typename T, typename TOpHandler>
+template <typename T, typename TResult, typename TOpHandler>
 void FunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
   auto* rhs = Pop(b, TypeFieldName<T>());
   auto* lhs = Pop(b, TypeFieldName<T>());
 
-  Push(b, TypeFieldName<T>(), h(lhs, rhs));
+  Push(b, TypeFieldName<TResult>(), h(lhs, rhs));
 }
 
-template <typename T, typename TOpHandler>
+template <typename T, typename TResult, typename TOpHandler>
 void FunctionBuilder::EmitUnaryOp(TR::IlBuilder* b, TOpHandler h) {
-  Push(b, TypeFieldName<T>(), h(Pop(b, TypeFieldName<T>())));
+  Push(b, TypeFieldName<TResult>(), h(Pop(b, TypeFieldName<T>())));
 }
 
 template <typename T>
