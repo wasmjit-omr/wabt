@@ -272,6 +272,38 @@ const char* FunctionBuilder::TypeFieldName<double>() const {
   return "f64";
 }
 
+const char* FunctionBuilder::TypeFieldName(Type t) const {
+  switch (t) {
+    case Type::I32:
+      return TypeFieldName<int32_t>();
+    case Type::I64:
+      return TypeFieldName<int64_t>();
+    case Type::F32:
+      return TypeFieldName<float>();
+    case Type::F64:
+      return TypeFieldName<double>();
+    default:
+      TR_ASSERT_FATAL(false, "Invalid primitive type");
+      return nullptr;
+  }
+}
+
+TR::IlValue* FunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValue* v) const {
+  switch (v->type) {
+    case Type::I32:
+      return b->ConstInt32(v->value.i32);
+    case Type::I64:
+      return b->ConstInt64(v->value.i64);
+    case Type::F32:
+      return b->ConstFloat(Bitcast<float>(v->value.f32_bits));
+    case Type::F64:
+      return b->ConstDouble(Bitcast<double>(v->value.f64_bits));
+    default:
+      TR_ASSERT_FATAL(false, "Invalid primitive type");
+      return nullptr;
+  }
+}
+
 template <typename T, typename TResult, typename TOpHandler>
 void FunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
   auto* rhs = Pop(b, TypeFieldName<T>());
@@ -382,6 +414,40 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::F64Const:
       Push(b, "f64", b->ConstDouble(ReadUx<double>(&pc)));
       break;
+
+    case Opcode::GetGlobal: {
+      interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
+
+      // The type of value stored in a global will never change, so we're safe
+      // to use the current type of the global.
+      const char* type_field = TypeFieldName(g->typed_value.type);
+
+      if (g->mutable_) {
+        // TODO(thomasbc): Can the address of a Global change at runtime?
+        auto* addr = b->Const(&g->typed_value.value);
+        Push(b, type_field, b->LoadIndirect("Value", type_field, addr));
+      } else {
+        // With immutable globals, we can just substitute their actual value as
+        // a constant at compile-time.
+        Push(b, type_field, Const(b, &g->typed_value));
+      }
+
+      break;
+    }
+
+    case Opcode::SetGlobal: {
+      interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
+      assert(g->mutable_);
+
+      // See note for get_global
+      const char* type_field = TypeFieldName(g->typed_value.type);
+
+      // TODO(thomasbc): Can the address of a Global change at runtime?
+      auto* addr = b->Const(&g->typed_value.value);
+
+      b->StoreIndirect("Value", type_field, addr, Pop(b, type_field));
+      break;
+    }
 
     case Opcode::GetLocal:
       // note: to work around JitBuilder's lack of support unions as value types,
