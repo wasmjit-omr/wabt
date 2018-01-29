@@ -222,6 +222,26 @@ void FunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t ke
   b->StoreAt(stack_top_addr, new_stack_top);
 }
 
+/**
+ * @brief Generate load from the interpreter stack by an index
+ *
+ * The generate code should be equivalent to:
+ *
+ * return &value_stack_[value_stack_top_ - depth];
+ */
+TR::IlValue* FunctionBuilder::Pick(TR::IlBuilder* b, Index depth) {
+  auto pInt32 = typeDictionary()->PointerTo(Int32);
+  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
+  auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
+
+  auto* offset = b->Sub(
+                 b->    LoadAt(pInt32, stack_top_addr),
+                 b->    ConstInt32(depth));
+  return b->IndexAt(pValueType_,
+                    stack_base_addr,
+                    offset);
+}
+
 template <>
 const char* FunctionBuilder::TypeFieldName<int32_t>() const {
   return "i32";
@@ -360,6 +380,25 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F64Const:
       Push(b, "f64", b->ConstDouble(ReadUx<double>(&pc)));
+      break;
+
+    case Opcode::GetLocal:
+      // note: to work around JitBuilder's lack of support unions as value types,
+      // just copy a field that's the size of the entire union
+      Push(b, "i64", b->LoadIndirect("Value", "i64", Pick(b, ReadU32(&pc))));
+      break;
+
+    case Opcode::SetLocal: {
+      // see note for GetLocal
+      auto* value = Pop(b, "i64");
+      auto* local_addr = Pick(b, ReadU32(&pc));
+      b->StoreIndirect("Value", "i64", local_addr, value);
+      break;
+    }
+
+    case Opcode::TeeLocal:
+      // see note for GetLocal
+      b->StoreIndirect("Value", "i64", Pick(b, ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(b, 1)));
       break;
 
     case Opcode::I32Add:
@@ -531,9 +570,45 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       });
       break;
 
+    case Opcode::InterpAlloca: {
+      auto pInt32 = typeDictionary()->PointerTo(Int32);
+      auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
+      auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
+
+      auto* old_value_stack_top = b->LoadAt(pInt32, stack_top_addr);
+      auto* count = b->ConstInt32(ReadU32(&pc));
+      auto* stack_top =  b->Add(old_value_stack_top, count);
+      b->StoreAt(stack_top_addr, stack_top);
+
+      TR::IlBuilder* overflow_handler = nullptr;
+
+      b->IfThen(&overflow_handler,
+      b->       UnsignedGreaterOrEqualTo(
+                    stack_top,
+      b->           Const(static_cast<int32_t>(thread_->value_stack_.size()))));
+      overflow_handler->Return(
+      overflow_handler->    Const(static_cast<ResultEnum>(interp::Result::TrapValueStackExhausted)));
+
+      TR::IlBuilder* set_zero = nullptr;
+      b->ForLoopUp("i", &set_zero, old_value_stack_top, stack_top, b->Const(1));
+      set_zero->StoreIndirect("Value", "i64",
+      set_zero->              IndexAt(pValueType_, stack_base_addr,
+      set_zero->                      Load("i")),
+      set_zero->              ConstInt64(0));
+
+      break;
+    }
+
     case Opcode::Drop:
       DropKeep(b, 1, 0);
       break;
+
+    case Opcode::InterpDropKeep: {
+      uint32_t drop_count = ReadU32(&pc);
+      uint8_t keep_count = *pc++;
+      DropKeep(b, drop_count, keep_count);
+      break;
+    }
 
     case Opcode::Nop:
       break;

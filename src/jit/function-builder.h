@@ -56,6 +56,20 @@ class FunctionBuilder : public TR::MethodBuilder {
    */
   void DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count);
 
+  /**
+   * @brief Generate load of pointer to a vlue on the interpreter stack by an index
+   * @param b is the builder object used to generate the code
+   * @param depth is the index from the top of the stack
+   * @return and IlValue representing a pointer to the value on the stack
+   *
+   * JitBuilder does not currently represent unions as value types. This a problem
+   * for this function because it cannot simply return an IlValue representing
+   * the union. As workaround, it will generate a load of the *base address* of
+   * the union, instead of loading the union directly. This behaviour differs
+   * from `Thread::Pick()` and users must take this into account.
+   */
+  TR::IlValue* Pick(TR::IlBuilder* b, Index depth);
+
  private:
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;
