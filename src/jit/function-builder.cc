@@ -272,17 +272,17 @@ const char* FunctionBuilder::TypeFieldName<double>() const {
   return "f64";
 }
 
-template <typename T, typename TOpHandler>
+template <typename T, typename TResult, typename TOpHandler>
 void FunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
   auto* rhs = Pop(b, TypeFieldName<T>());
   auto* lhs = Pop(b, TypeFieldName<T>());
 
-  Push(b, TypeFieldName<T>(), h(lhs, rhs));
+  Push(b, TypeFieldName<TResult>(), h(lhs, rhs));
 }
 
-template <typename T, typename TOpHandler>
+template <typename T, typename TResult, typename TOpHandler>
 void FunctionBuilder::EmitUnaryOp(TR::IlBuilder* b, TOpHandler h) {
-  Push(b, TypeFieldName<T>(), h(Pop(b, TypeFieldName<T>())));
+  Push(b, TypeFieldName<TResult>(), h(Pop(b, TypeFieldName<T>())));
 }
 
 template <typename T>
@@ -567,6 +567,42 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::F32Copysign:
       EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Call("f32_copysign", 2, lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Eq:
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->EqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Ne:
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->NotEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Lt:
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->LessThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Le:
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->LessOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Gt:
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->GreaterThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F32Ge:
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 

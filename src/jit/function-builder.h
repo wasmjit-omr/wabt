@@ -82,10 +82,10 @@ class FunctionBuilder : public TR::MethodBuilder {
   template <typename T>
   const char* TypeFieldName() const;
 
-  template <typename T, typename TOpHandler>
+  template <typename T, typename TResult = T, typename TOpHandler>
   void EmitBinaryOp(TR::IlBuilder* b, TOpHandler h);
 
-  template <typename T, typename TOpHandler>
+  template <typename T, typename TResult = T, typename TOpHandler>
   void EmitUnaryOp(TR::IlBuilder* b, TOpHandler h);
 
   template <typename T>
