@@ -1,0 +1,129 @@
+;;; TOOL: run-interp-jit
+(module
+  ;; IMPORTANT: instructions in exported functions run in the interpreter, so
+  ;; they are assumed to work correctly.
+
+  (global $g0 i32 (i32.const 10))
+  (global $g1 i64 (i64.const 10))
+  (global $g2 f32 (f32.const 10.0))
+  (global $g3 f64 (f64.const 10.0))
+
+  (global $mg0 (mut i32) (i32.const 0))
+  (global $mg1 (mut i64) (i64.const 0))
+  (global $mg2 (mut f32) (f32.const 0.0))
+  (global $mg3 (mut f64) (f64.const 0.0))
+
+  (func $get_g0 (result i32)
+    get_global $g0)
+
+  (func $get_g1 (result i64)
+    get_global $g1)
+
+  (func $get_g2 (result f32)
+    get_global $g2)
+
+  (func $get_g3 (result f64)
+    get_global $g3)
+
+  (func $get_mg0 (result i32)
+    get_global $mg0)
+
+  (func $set_mg0 (param $v i32)
+    get_local $v
+    set_global $mg0)
+
+  (func $get_mg1 (result i64)
+    get_global $mg1)
+
+  (func $set_mg1 (param $v i64)
+    get_local $v
+    set_global $mg1)
+
+  (func $get_mg2 (result f32)
+    get_global $mg2)
+
+  (func $set_mg2 (param $v f32)
+    get_local $v
+    set_global $mg2)
+
+  (func $get_mg3 (result f64)
+    get_global $mg3)
+
+  (func $set_mg3 (param $v f64)
+    get_local $v
+    set_global $mg3)
+
+  (func (export "test_get_global_imm_1") (result i32)
+    call $get_g0)
+
+  (func (export "test_get_global_imm_2") (result i64)
+    call $get_g1)
+
+  (func (export "test_get_global_imm_3") (result f32)
+    call $get_g2)
+
+  (func (export "test_get_global_imm_4") (result f64)
+    call $get_g3)
+
+  (func (export "test_get_global_mut_1") (result i32)
+    i32.const 10
+    set_global $mg0
+    call $get_mg0)
+
+  (func (export "test_get_global_mut_2") (result i64)
+    i64.const 10
+    set_global $mg1
+    call $get_mg1)
+
+  (func (export "test_get_global_mut_3") (result f32)
+    f32.const 10.0
+    set_global $mg2
+    call $get_mg2)
+
+  (func (export "test_get_global_mut_4") (result f64)
+    f64.const 10.0
+    set_global $mg3
+    call $get_mg3)
+
+  (func (export "test_set_global_1") (result i32)
+    i32.const 0
+    set_global $mg0
+    i32.const 10
+    call $set_mg0
+    get_global $mg0)
+
+  (func (export "test_set_global_2") (result i64)
+    i64.const 0
+    set_global $mg1
+    i64.const 10
+    call $set_mg1
+    get_global $mg1)
+
+  (func (export "test_set_global_3") (result f32)
+    f32.const 0.0
+    set_global $mg2
+    f32.const 10.0
+    call $set_mg2
+    get_global $mg2)
+
+  (func (export "test_set_global_4") (result f64)
+    f64.const 0.0
+    set_global $mg3
+    f64.const 10.0
+    call $set_mg3
+    get_global $mg3)
+)
+(;; STDOUT ;;;
+test_get_global_imm_1() => i32:10
+test_get_global_imm_2() => i64:10
+test_get_global_imm_3() => f32:10.000000
+test_get_global_imm_4() => f64:10.000000
+test_get_global_mut_1() => i32:10
+test_get_global_mut_2() => i64:10
+test_get_global_mut_3() => f32:10.000000
+test_get_global_mut_4() => f64:10.000000
+test_set_global_1() => i32:10
+test_set_global_2() => i64:10
+test_set_global_3() => f32:10.000000
+test_set_global_4() => f64:10.000000
+;;; STDOUT ;;)
