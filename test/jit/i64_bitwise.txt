@@ -1,0 +1,229 @@
+;;; TOOL: run-interp-jit
+(module
+  (func (export "test_i64_and_1") (result i64)
+    call $i64_and_1)
+
+  (func $i64_and_1 (result i64)
+    i64.const 0x15
+    i64.const 0x13
+    i64.and)
+
+  (func (export "test_i64_and_2") (result i64)
+    call $i64_and_2)
+
+  (func $i64_and_2 (result i64)
+    i64.const 0x0
+    i64.const 0xffffffffffffffff
+    i64.and)
+
+  (func (export "test_i64_or_1") (result i64)
+    call $i64_or_1)
+
+  (func $i64_or_1 (result i64)
+    i64.const 0x15
+    i64.const 0x13
+    i64.or)
+
+  (func (export "test_i64_or_2") (result i64)
+    call $i64_or_2)
+
+  (func $i64_or_2 (result i64)
+    i64.const 0x0
+    i64.const 0xffffffffffffffff
+    i64.or)
+
+  (func (export "test_i64_xor_1") (result i64)
+    call $i64_xor_1)
+
+  (func $i64_xor_1 (result i64)
+    i64.const 0x15
+    i64.const 0x13
+    i64.xor)
+
+  (func (export "test_i64_xor_2") (result i64)
+    call $i64_xor_2)
+
+  (func $i64_xor_2 (result i64)
+    i64.const 0x0
+    i64.const 0xffffffffffffffff
+    i64.xor)
+
+  (func (export "test_i64_shl_1") (result i64)
+    call $i64_shl_1)
+
+  (func $i64_shl_1 (result i64)
+    i64.const 1
+    i64.const 0
+    i64.shl)
+
+  (func (export "test_i64_shl_2") (result i64)
+    call $i64_shl_2)
+
+  (func $i64_shl_2 (result i64)
+    i64.const 1
+    i64.const 3
+    i64.shl)
+
+  (func (export "test_i64_shl_3") (result i64)
+    call $i64_shl_3)
+
+  (func $i64_shl_3 (result i64)
+    i64.const 1
+    i64.const 65
+    i64.shl)
+
+  (func (export "test_i64_shr_s_1") (result i64)
+    call $i64_shr_s_1)
+
+  (func $i64_shr_s_1 (result i64)
+    i64.const 0x10
+    i64.const 0
+    i64.shr_s)
+
+  (func (export "test_i64_shr_s_2") (result i64)
+    call $i64_shr_s_2)
+
+  (func $i64_shr_s_2 (result i64)
+    i64.const 0x10
+    i64.const 3
+    i64.shr_s)
+
+  (func (export "test_i64_shr_s_3") (result i64)
+    call $i64_shr_s_3)
+
+  (func $i64_shr_s_3 (result i64)
+    i64.const 0x10
+    i64.const 65
+    i64.shr_s)
+
+  (func (export "test_i64_shr_s_4") (result i64)
+    call $i64_shr_s_4)
+
+  (func $i64_shr_s_4 (result i64)
+    i64.const -1
+    i64.const 10
+    i64.shr_s)
+
+  (func (export "test_i64_shr_u_1") (result i64)
+    call $i64_shr_u_1)
+
+  (func $i64_shr_u_1 (result i64)
+    i64.const 0x10
+    i64.const 0
+    i64.shr_u)
+
+  (func (export "test_i64_shr_u_2") (result i64)
+    call $i64_shr_u_2)
+
+  (func $i64_shr_u_2 (result i64)
+    i64.const 0x10
+    i64.const 3
+    i64.shr_u)
+
+  (func (export "test_i64_shr_u_3") (result i64)
+    call $i64_shr_u_3)
+
+  (func $i64_shr_u_3 (result i64)
+    i64.const 0x10
+    i64.const 65
+    i64.shr_u)
+
+  (func (export "test_i64_shr_u_4") (result i64)
+    call $i64_shr_u_4)
+
+  (func $i64_shr_u_4 (result i64)
+    i64.const -1
+    i64.const 10
+    i64.shr_u)
+
+  (func (export "test_i64_rotl_1") (result i64)
+    call $i64_rotl_1)
+
+  (func $i64_rotl_1 (result i64)
+    i64.const 0x1
+    i64.const 0
+    i64.rotl)
+
+  (func (export "test_i64_rotl_2") (result i64)
+    call $i64_rotl_2)
+
+  (func $i64_rotl_2 (result i64)
+    i64.const 0x1
+    i64.const 5
+    i64.rotl)
+
+  (func (export "test_i64_rotl_3") (result i64)
+    call $i64_rotl_3)
+
+  (func $i64_rotl_3 (result i64)
+    i64.const 0x1000100010001000
+    i64.const 5
+    i64.rotl)
+
+  (func (export "test_i64_rotl_4") (result i64)
+    call $i64_rotl_4)
+
+  (func $i64_rotl_4 (result i64)
+    i64.const 0x1000100010001000
+    i64.const 65
+    i64.rotl)
+
+  (func (export "test_i64_rotr_1") (result i64)
+    call $i64_rotr_1)
+
+  (func $i64_rotr_1 (result i64)
+    i64.const 0x10
+    i64.const 0
+    i64.rotr)
+
+  (func (export "test_i64_rotr_2") (result i64)
+    call $i64_rotr_2)
+
+  (func $i64_rotr_2 (result i64)
+    i64.const 0x10
+    i64.const 3
+    i64.rotr)
+
+  (func (export "test_i64_rotr_3") (result i64)
+    call $i64_rotr_3)
+
+  (func $i64_rotr_3 (result i64)
+    i64.const 0x0001000100010001
+    i64.const 5
+    i64.rotr)
+
+  (func (export "test_i64_rotr_4") (result i64)
+    call $i64_rotr_4)
+
+  (func $i64_rotr_4 (result i64)
+    i64.const 0x0001000100010001
+    i64.const 65
+    i64.rotr)
+)
+(;; STDOUT ;;;
+test_i64_and_1() => i64:17
+test_i64_and_2() => i64:0
+test_i64_or_1() => i64:23
+test_i64_or_2() => i64:18446744073709551615
+test_i64_xor_1() => i64:6
+test_i64_xor_2() => i64:18446744073709551615
+test_i64_shl_1() => i64:1
+test_i64_shl_2() => i64:8
+test_i64_shl_3() => i64:2
+test_i64_shr_s_1() => i64:16
+test_i64_shr_s_2() => i64:2
+test_i64_shr_s_3() => i64:8
+test_i64_shr_s_4() => i64:18446744073709551615
+test_i64_shr_u_1() => i64:16
+test_i64_shr_u_2() => i64:2
+test_i64_shr_u_3() => i64:8
+test_i64_shr_u_4() => i64:18014398509481983
+test_i64_rotl_1() => i64:1
+test_i64_rotl_2() => i64:32
+test_i64_rotl_3() => i64:562958543486978
+test_i64_rotl_4() => i64:2305878194122661888
+test_i64_rotr_1() => i64:16
+test_i64_rotr_2() => i64:2
+test_i64_rotr_3() => i64:576469548530665472
+test_i64_rotr_4() => i64:9223512776490647552
+;;; STDOUT ;;)
