@@ -1334,10 +1334,14 @@ Result Thread::Run(int num_instructions) {
           if (meta_it != env_->jit_meta_.end()) {
             auto* meta = &meta_it->second;
             if (!meta->tried_jit) {
-              meta->jit_fn = jit::compile(this, meta->wasm_fn);
-              meta->tried_jit = true;
+              meta->num_calls++;
 
-              TRAP_IF(env_->trap_on_failed_comp && meta->jit_fn == nullptr, FailedJITCompilation);
+              if (meta->num_calls >= env_->jit_threshold) {
+                meta->jit_fn = jit::compile(this, meta->wasm_fn);
+                meta->tried_jit = true;
+
+                TRAP_IF(env_->trap_on_failed_comp && meta->jit_fn == nullptr, FailedJITCompilation);
+              }
             }
 
             if (meta->jit_fn) {

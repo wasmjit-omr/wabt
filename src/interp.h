@@ -353,6 +353,7 @@ class Environment {
 
   bool enable_jit = true;
   bool trap_on_failed_comp = false;
+  uint32_t jit_threshold = 1;
 
   Environment();
 
@@ -469,6 +470,7 @@ class Environment {
 
   struct JitMeta {
     DefinedFunc* wasm_fn;
+    uint32_t num_calls = 0;
 
     bool tried_jit = false;
     JITedFunction jit_fn = nullptr;
