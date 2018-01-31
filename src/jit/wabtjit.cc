@@ -20,9 +20,12 @@
 
 #include "Jit.hpp"
 
-wabt::jit::JITedFunction wabt::jit::compile(wabt::interp::Thread* thread, wabt::interp::IstreamOffset offset) {
+namespace wabt {
+namespace jit {
+
+JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   TypeDictionary types;
-  FunctionBuilder builder{thread, offset, &types};
+  FunctionBuilder builder(thread, fn, &types);
   uint8_t* function = nullptr;
 
   if (compileMethodBuilder(&builder, &function) == 0) {
@@ -30,4 +33,7 @@ wabt::jit::JITedFunction wabt::jit::compile(wabt::interp::Thread* thread, wabt::
   } else {
     return nullptr;
   }
+}
+
+}
 }

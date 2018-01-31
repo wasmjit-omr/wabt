@@ -1329,19 +1329,23 @@ Result Thread::Run(int num_instructions) {
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
         if (env_->enable_jit) {
-          jit::JITedFunction f = nullptr;
-          auto fi = env_->jit_compiled_functions_.find(offset);
+          auto meta_it = env_->jit_meta_.find(offset);
 
-          if (fi != env_->jit_compiled_functions_.end()) {
-            f = fi->second;
-          } else {
-            f = jit::compile(this, offset);
-            env_->jit_compiled_functions_.insert({offset, f});
-            TRAP_IF(env_->trap_on_failed_comp && f == nullptr, FailedJITCompilation);
-          }
+          if (meta_it != env_->jit_meta_.end()) {
+            auto* meta = &meta_it->second;
+            if (!meta->tried_jit) {
+              meta->jit_fn = jit::compile(this, meta->wasm_fn);
+              meta->tried_jit = true;
 
-          if (f) {
-            CHECK_TRAP(f());
+              TRAP_IF(env_->trap_on_failed_comp && meta->jit_fn == nullptr, FailedJITCompilation);
+            }
+
+            if (meta->jit_fn) {
+              CHECK_TRAP(meta->jit_fn());
+            } else {
+              CHECK_TRAP(PushCall(pc));
+              GOTO(offset);
+            }
           } else {
             CHECK_TRAP(PushCall(pc));
             GOTO(offset);

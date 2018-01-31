@@ -414,6 +414,11 @@ class Environment {
     return funcs_.back().get();
   }
 
+  void AddJitMetadata(DefinedFunc* fn) {
+    assert(fn->offset != kInvalidIstreamOffset);
+    this->jit_meta_.insert({ fn->offset, JitMeta(fn) });
+  }
+
   template <typename... Args>
   Global* EmplaceBackGlobal(Args&&... args) {
     globals_.emplace_back(std::forward<Args>(args)...);
@@ -462,6 +467,15 @@ class Environment {
   friend class Thread;
   using JITedFunction = wabt::interp::Result (*)();
 
+  struct JitMeta {
+    DefinedFunc* wasm_fn;
+
+    bool tried_jit = false;
+    JITedFunction jit_fn = nullptr;
+
+    JitMeta(DefinedFunc* wasm_fn) : wasm_fn(wasm_fn) {}
+  };
+
   std::vector<std::unique_ptr<Module>> modules_;
   std::vector<FuncSignature> sigs_;
   std::vector<std::unique_ptr<Func>> funcs_;
@@ -473,7 +487,7 @@ class Environment {
   BindingHash registered_module_bindings_;
 
   jit::JitEnvironment jit_env_;
-  std::unordered_map<IstreamOffset, JITedFunction> jit_compiled_functions_;
+  std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
 };
 
 class Thread {
