@@ -50,6 +50,7 @@ static bool s_run_all_exports;
 static bool s_host_print;
 static bool s_disable_jit;
 static bool s_trap_on_failed_comp;
+static uint32_t s_jit_threshold = 1;
 static Features s_features;
 
 static std::unique_ptr<FileStream> s_log_stream;
@@ -116,6 +117,12 @@ static void ParseOptions(int argc, char** argv) {
   parser.AddOption("trap-on-failed-comp",
                    "Trap if a JIT compilation fails",
                    []() { s_trap_on_failed_comp = true; });
+  parser.AddOption('\0', "jit-threshold", "THRESHOLD",
+                   "Number of calls after which to JIT compile a function",
+                   [](const std::string& argument) {
+                     // TODO(thomasbc): validate
+                     s_jit_threshold = atoi(argument.c_str());
+                   });
 
   parser.AddArgument("filename", OptionParser::ArgumentCount::One,
                      [](const char* argument) { s_infile = argument; });
@@ -239,6 +246,8 @@ static void InitEnvironment(Environment* env) {
   if (s_trap_on_failed_comp) {
     env->trap_on_failed_comp = true;
   }
+
+  env->jit_threshold = s_jit_threshold;
 }
 
 static wabt::Result ReadAndRunModule(const char* module_filename) {
