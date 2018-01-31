@@ -729,6 +729,42 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       });
       break;
 
+    case Opcode::F64Eq:
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->EqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Ne:
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->NotEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Lt:
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->LessThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Le:
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->LessOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Gt:
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->GreaterThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Ge:
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->GreaterOrEqualTo(lhs, rhs);
+      });
+      break;
+
     case Opcode::InterpAlloca: {
       auto pInt32 = typeDictionary()->PointerTo(Int32);
       auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
