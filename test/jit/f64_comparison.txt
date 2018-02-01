@@ -1,0 +1,580 @@
+;;; TOOL: run-interp-jit
+(module
+  (func (export "test_f64_eq_1") (result i32)
+    call $f64_eq_1)
+
+  (func $f64_eq_1 (result i32)
+    f64.const 1.0
+    f64.const 1.0
+    f64.eq)
+
+  (func (export "test_f64_eq_2") (result i32)
+    call $f64_eq_2)
+
+  (func $f64_eq_2 (result i32)
+    f64.const 1.0
+    f64.const -1.0
+    f64.eq)
+
+  (func (export "test_f64_eq_3") (result i32)
+    call $f64_eq_3)
+
+  (func $f64_eq_3 (result i32)
+    f64.const 1.0
+    f64.const 3.0
+    f64.eq)
+
+  (func (export "test_f64_eq_4") (result i32)
+    call $f64_eq_4)
+
+  (func $f64_eq_4 (result i32)
+    f64.const 0.0
+    f64.const 0.0
+    f64.eq)
+
+  (func (export "test_f64_eq_5") (result i32)
+    call $f64_eq_5)
+
+  (func $f64_eq_5 (result i32)
+    f64.const -0.0
+    f64.const 0.0
+    f64.eq)
+
+  (func (export "test_f64_eq_6") (result i32)
+    call $f64_eq_6)
+
+  (func $f64_eq_6 (result i32)
+    f64.const nan
+    f64.const 0.0
+    f64.eq)
+
+  (func (export "test_f64_eq_7") (result i32)
+    call $f64_eq_7)
+
+  (func $f64_eq_7 (result i32)
+    f64.const nan
+    f64.const nan
+    f64.eq)
+
+  (func (export "test_f64_eq_8") (result i32)
+    call $f64_eq_8)
+
+  (func $f64_eq_8 (result i32)
+    f64.const inf
+    f64.const inf
+    f64.eq)
+
+  (func (export "test_f64_eq_9") (result i32)
+    call $f64_eq_9)
+
+  (func $f64_eq_9 (result i32)
+    f64.const -inf
+    f64.const -inf
+    f64.eq)
+
+  (func (export "test_f64_eq_10") (result i32)
+    call $f64_eq_10)
+
+  (func $f64_eq_10 (result i32)
+    f64.const inf
+    f64.const -inf
+    f64.eq)
+
+  (func (export "test_f64_ne_1") (result i32)
+    call $f64_ne_1)
+
+  (func $f64_ne_1 (result i32)
+    f64.const 1.0
+    f64.const 1.0
+    f64.ne)
+
+  (func (export "test_f64_ne_2") (result i32)
+    call $f64_ne_2)
+
+  (func $f64_ne_2 (result i32)
+    f64.const 1.0
+    f64.const -1.0
+    f64.ne)
+
+  (func (export "test_f64_ne_3") (result i32)
+    call $f64_ne_3)
+
+  (func $f64_ne_3 (result i32)
+    f64.const 1.0
+    f64.const 3.0
+    f64.ne)
+
+  (func (export "test_f64_ne_4") (result i32)
+    call $f64_ne_4)
+
+  (func $f64_ne_4 (result i32)
+    f64.const 0.0
+    f64.const 0.0
+    f64.ne)
+
+  (func (export "test_f64_ne_5") (result i32)
+    call $f64_ne_5)
+
+  (func $f64_ne_5 (result i32)
+    f64.const -0.0
+    f64.const 0.0
+    f64.ne)
+
+  (func (export "test_f64_ne_6") (result i32)
+    call $f64_ne_6)
+
+  (func $f64_ne_6 (result i32)
+    f64.const nan
+    f64.const 0.0
+    f64.ne)
+
+  (func (export "test_f64_ne_7") (result i32)
+    call $f64_ne_7)
+
+  (func $f64_ne_7 (result i32)
+    f64.const nan
+    f64.const nan
+    f64.ne)
+
+  (func (export "test_f64_ne_8") (result i32)
+    call $f64_ne_8)
+
+  (func $f64_ne_8 (result i32)
+    f64.const inf
+    f64.const inf
+    f64.ne)
+
+  (func (export "test_f64_ne_9") (result i32)
+    call $f64_ne_9)
+
+  (func $f64_ne_9 (result i32)
+    f64.const -inf
+    f64.const -inf
+    f64.ne)
+
+  (func (export "test_f64_ne_10") (result i32)
+    call $f64_ne_10)
+
+  (func $f64_ne_10 (result i32)
+    f64.const inf
+    f64.const -inf
+    f64.ne)
+
+  (func (export "test_f64_lt_1") (result i32)
+    call $f64_lt_1)
+
+  (func $f64_lt_1 (result i32)
+    f64.const 1.0
+    f64.const 1.0
+    f64.lt)
+
+  (func (export "test_f64_lt_2") (result i32)
+    call $f64_lt_2)
+
+  (func $f64_lt_2 (result i32)
+    f64.const 1.0
+    f64.const 1.1
+    f64.lt)
+
+  (func (export "test_f64_lt_3") (result i32)
+    call $f64_lt_3)
+
+  (func $f64_lt_3 (result i32)
+    f64.const 1.0
+    f64.const 0.9
+    f64.lt)
+
+  (func (export "test_f64_lt_4") (result i32)
+    call $f64_lt_4)
+
+  (func $f64_lt_4 (result i32)
+    f64.const 1.0
+    f64.const inf
+    f64.lt)
+
+  (func (export "test_f64_lt_5") (result i32)
+    call $f64_lt_5)
+
+  (func $f64_lt_5 (result i32)
+    f64.const 1.0
+    f64.const -inf
+    f64.lt)
+
+  (func (export "test_f64_lt_6") (result i32)
+    call $f64_lt_6)
+
+  (func $f64_lt_6 (result i32)
+    f64.const inf
+    f64.const inf
+    f64.lt)
+
+  (func (export "test_f64_lt_7") (result i32)
+    call $f64_lt_7)
+
+  (func $f64_lt_7 (result i32)
+    f64.const -inf
+    f64.const inf
+    f64.lt)
+
+  (func (export "test_f64_lt_8") (result i32)
+    call $f64_lt_8)
+
+  (func $f64_lt_8 (result i32)
+    f64.const inf
+    f64.const -inf
+    f64.lt)
+
+  (func (export "test_f64_lt_9") (result i32)
+    call $f64_lt_9)
+
+  (func $f64_lt_9 (result i32)
+    f64.const -inf
+    f64.const -inf
+    f64.lt)
+
+  (func (export "test_f64_lt_10") (result i32)
+    call $f64_lt_10)
+
+  (func $f64_lt_10 (result i32)
+    f64.const nan
+    f64.const 0.0
+    f64.lt)
+
+  (func (export "test_f64_lt_11") (result i32)
+    call $f64_lt_11)
+
+  (func $f64_lt_11 (result i32)
+    f64.const nan
+    f64.const nan
+    f64.lt)
+
+  (func (export "test_f64_le_1") (result i32)
+    call $f64_le_1)
+
+  (func $f64_le_1 (result i32)
+    f64.const 1.0
+    f64.const 1.0
+    f64.le)
+
+  (func (export "test_f64_le_2") (result i32)
+    call $f64_le_2)
+
+  (func $f64_le_2 (result i32)
+    f64.const 1.0
+    f64.const 1.1
+    f64.le)
+
+  (func (export "test_f64_le_3") (result i32)
+    call $f64_le_3)
+
+  (func $f64_le_3 (result i32)
+    f64.const 1.0
+    f64.const 0.9
+    f64.le)
+
+  (func (export "test_f64_le_4") (result i32)
+    call $f64_le_4)
+
+  (func $f64_le_4 (result i32)
+    f64.const 1.0
+    f64.const inf
+    f64.le)
+
+  (func (export "test_f64_le_5") (result i32)
+    call $f64_le_5)
+
+  (func $f64_le_5 (result i32)
+    f64.const 1.0
+    f64.const -inf
+    f64.le)
+
+  (func (export "test_f64_le_6") (result i32)
+    call $f64_le_6)
+
+  (func $f64_le_6 (result i32)
+    f64.const inf
+    f64.const inf
+    f64.le)
+
+  (func (export "test_f64_le_7") (result i32)
+    call $f64_le_7)
+
+  (func $f64_le_7 (result i32)
+    f64.const -inf
+    f64.const inf
+    f64.le)
+
+  (func (export "test_f64_le_8") (result i32)
+    call $f64_le_8)
+
+  (func $f64_le_8 (result i32)
+    f64.const inf
+    f64.const -inf
+    f64.le)
+
+  (func (export "test_f64_le_9") (result i32)
+    call $f64_le_9)
+
+  (func $f64_le_9 (result i32)
+    f64.const -inf
+    f64.const -inf
+    f64.le)
+
+  (func (export "test_f64_le_10") (result i32)
+    call $f64_le_10)
+
+  (func $f64_le_10 (result i32)
+    f64.const nan
+    f64.const 0.0
+    f64.le)
+
+  (func (export "test_f64_le_11") (result i32)
+    call $f64_le_11)
+
+  (func $f64_le_11 (result i32)
+    f64.const nan
+    f64.const nan
+    f64.le)
+
+  (func (export "test_f64_gt_1") (result i32)
+    call $f64_gt_1)
+
+  (func $f64_gt_1 (result i32)
+    f64.const 1.0
+    f64.const 1.0
+    f64.gt)
+
+  (func (export "test_f64_gt_2") (result i32)
+    call $f64_gt_2)
+
+  (func $f64_gt_2 (result i32)
+    f64.const 1.0
+    f64.const 1.1
+    f64.gt)
+
+  (func (export "test_f64_gt_3") (result i32)
+    call $f64_gt_3)
+
+  (func $f64_gt_3 (result i32)
+    f64.const 1.0
+    f64.const 0.9
+    f64.gt)
+
+  (func (export "test_f64_gt_4") (result i32)
+    call $f64_gt_4)
+
+  (func $f64_gt_4 (result i32)
+    f64.const 1.0
+    f64.const inf
+    f64.gt)
+
+  (func (export "test_f64_gt_5") (result i32)
+    call $f64_gt_5)
+
+  (func $f64_gt_5 (result i32)
+    f64.const 1.0
+    f64.const -inf
+    f64.gt)
+
+  (func (export "test_f64_gt_6") (result i32)
+    call $f64_gt_6)
+
+  (func $f64_gt_6 (result i32)
+    f64.const inf
+    f64.const inf
+    f64.gt)
+
+  (func (export "test_f64_gt_7") (result i32)
+    call $f64_gt_7)
+
+  (func $f64_gt_7 (result i32)
+    f64.const -inf
+    f64.const inf
+    f64.gt)
+
+  (func (export "test_f64_gt_8") (result i32)
+    call $f64_gt_8)
+
+  (func $f64_gt_8 (result i32)
+    f64.const inf
+    f64.const -inf
+    f64.gt)
+
+  (func (export "test_f64_gt_9") (result i32)
+    call $f64_gt_9)
+
+  (func $f64_gt_9 (result i32)
+    f64.const -inf
+    f64.const -inf
+    f64.gt)
+
+  (func (export "test_f64_gt_10") (result i32)
+    call $f64_gt_10)
+
+  (func $f64_gt_10 (result i32)
+    f64.const nan
+    f64.const 0.0
+    f64.gt)
+
+  (func (export "test_f64_gt_11") (result i32)
+    call $f64_gt_11)
+
+  (func $f64_gt_11 (result i32)
+    f64.const nan
+    f64.const nan
+    f64.gt)
+
+  (func (export "test_f64_ge_1") (result i32)
+    call $f64_ge_1)
+
+  (func $f64_ge_1 (result i32)
+    f64.const 1.0
+    f64.const 1.0
+    f64.ge)
+
+  (func (export "test_f64_ge_2") (result i32)
+    call $f64_ge_2)
+
+  (func $f64_ge_2 (result i32)
+    f64.const 1.0
+    f64.const 1.1
+    f64.ge)
+
+  (func (export "test_f64_ge_3") (result i32)
+    call $f64_ge_3)
+
+  (func $f64_ge_3 (result i32)
+    f64.const 1.0
+    f64.const 0.9
+    f64.ge)
+
+  (func (export "test_f64_ge_4") (result i32)
+    call $f64_ge_4)
+
+  (func $f64_ge_4 (result i32)
+    f64.const 1.0
+    f64.const inf
+    f64.ge)
+
+  (func (export "test_f64_ge_5") (result i32)
+    call $f64_ge_5)
+
+  (func $f64_ge_5 (result i32)
+    f64.const 1.0
+    f64.const -inf
+    f64.ge)
+
+  (func (export "test_f64_ge_6") (result i32)
+    call $f64_ge_6)
+
+  (func $f64_ge_6 (result i32)
+    f64.const inf
+    f64.const inf
+    f64.ge)
+
+  (func (export "test_f64_ge_7") (result i32)
+    call $f64_ge_7)
+
+  (func $f64_ge_7 (result i32)
+    f64.const -inf
+    f64.const inf
+    f64.ge)
+
+  (func (export "test_f64_ge_8") (result i32)
+    call $f64_ge_8)
+
+  (func $f64_ge_8 (result i32)
+    f64.const inf
+    f64.const -inf
+    f64.ge)
+
+  (func (export "test_f64_ge_9") (result i32)
+    call $f64_ge_9)
+
+  (func $f64_ge_9 (result i32)
+    f64.const -inf
+    f64.const -inf
+    f64.ge)
+
+  (func (export "test_f64_ge_10") (result i32)
+    call $f64_ge_10)
+
+  (func $f64_ge_10 (result i32)
+    f64.const nan
+    f64.const 0.0
+    f64.ge)
+
+  (func (export "test_f64_ge_11") (result i32)
+    call $f64_ge_11)
+
+  (func $f64_ge_11 (result i32)
+    f64.const nan
+    f64.const nan
+    f64.ge)
+)
+(;; STDOUT ;;;
+test_f64_eq_1() => i32:1
+test_f64_eq_2() => i32:0
+test_f64_eq_3() => i32:0
+test_f64_eq_4() => i32:1
+test_f64_eq_5() => i32:1
+test_f64_eq_6() => i32:0
+test_f64_eq_7() => i32:0
+test_f64_eq_8() => i32:1
+test_f64_eq_9() => i32:1
+test_f64_eq_10() => i32:0
+test_f64_ne_1() => i32:0
+test_f64_ne_2() => i32:1
+test_f64_ne_3() => i32:1
+test_f64_ne_4() => i32:0
+test_f64_ne_5() => i32:0
+test_f64_ne_6() => i32:0
+test_f64_ne_7() => i32:0
+test_f64_ne_8() => i32:0
+test_f64_ne_9() => i32:0
+test_f64_ne_10() => i32:1
+test_f64_lt_1() => i32:0
+test_f64_lt_2() => i32:1
+test_f64_lt_3() => i32:0
+test_f64_lt_4() => i32:1
+test_f64_lt_5() => i32:0
+test_f64_lt_6() => i32:0
+test_f64_lt_7() => i32:1
+test_f64_lt_8() => i32:0
+test_f64_lt_9() => i32:0
+test_f64_lt_10() => i32:0
+test_f64_lt_11() => i32:0
+test_f64_le_1() => i32:1
+test_f64_le_2() => i32:1
+test_f64_le_3() => i32:0
+test_f64_le_4() => i32:1
+test_f64_le_5() => i32:0
+test_f64_le_6() => i32:1
+test_f64_le_7() => i32:1
+test_f64_le_8() => i32:0
+test_f64_le_9() => i32:1
+test_f64_le_10() => i32:0
+test_f64_le_11() => i32:0
+test_f64_gt_1() => i32:0
+test_f64_gt_2() => i32:0
+test_f64_gt_3() => i32:1
+test_f64_gt_4() => i32:0
+test_f64_gt_5() => i32:1
+test_f64_gt_6() => i32:0
+test_f64_gt_7() => i32:0
+test_f64_gt_8() => i32:1
+test_f64_gt_9() => i32:0
+test_f64_gt_10() => i32:0
+test_f64_gt_11() => i32:0
+test_f64_ge_1() => i32:1
+test_f64_ge_2() => i32:0
+test_f64_ge_3() => i32:1
+test_f64_ge_4() => i32:0
+test_f64_ge_5() => i32:1
+test_f64_ge_6() => i32:1
+test_f64_ge_7() => i32:0
+test_f64_ge_8() => i32:1
+test_f64_ge_9() => i32:1
+test_f64_ge_10() => i32:0
+test_f64_ge_11() => i32:0
+;;; STDOUT ;;)
