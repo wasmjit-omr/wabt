@@ -29,7 +29,7 @@ namespace jit {
 
 class FunctionBuilder : public TR::MethodBuilder {
  public:
-  FunctionBuilder(interp::Thread* thread, interp::IstreamOffset const offset, TypeDictionary* types);
+  FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn, TypeDictionary* types);
   bool buildIL() override;
 
   /**
@@ -104,7 +104,7 @@ class FunctionBuilder : public TR::MethodBuilder {
   std::vector<BytecodeWorkItem> workItems_;
 
   interp::Thread* thread_;
-  interp::IstreamOffset const offset_;
+  interp::DefinedFunc* fn_;
 
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;

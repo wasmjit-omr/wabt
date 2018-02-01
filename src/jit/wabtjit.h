@@ -23,9 +23,9 @@
 namespace wabt {
 namespace jit {
 
-using JITedFunction = wabt::interp::Result (*)();
+using JITedFunction = interp::Result (*)();
 
-JITedFunction compile(wabt::interp::Thread* thread, wabt::interp::IstreamOffset offset);
+JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn);
 
 }
 }

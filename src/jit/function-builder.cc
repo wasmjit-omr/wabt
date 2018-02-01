@@ -76,10 +76,10 @@ inline Opcode ReadOpcodeAt(const uint8_t* pc) {
   return ReadOpcode(&pc);
 }
 
-FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::IstreamOffset const offset, TypeDictionary* types)
+FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn, TypeDictionary* types)
     : TR::MethodBuilder(types),
       thread_(thread),
-      offset_(offset),
+      fn_(fn),
       valueType_(types->LookupUnion("Value")),
       pValueType_(types->PointerTo(types->LookupUnion("Value"))) {
   DefineLine(__LINE__);
@@ -106,8 +106,8 @@ bool FunctionBuilder::buildIL() {
 
   const uint8_t* istream = thread_->GetIstream();
 
-  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(ReadOpcodeAt(&istream[offset_]).GetName())),
-                          &istream[offset_]);
+  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(ReadOpcodeAt(&istream[fn_->offset]).GetName())),
+                          &istream[fn_->offset]);
   AppendBuilder(workItems_[0].builder);
 
   int32_t next_index;
