@@ -550,6 +550,72 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       });
       break;
 
+    case Opcode::I32Eqz:
+      EmitUnaryOp<int32_t, int>(b, [&](TR::IlValue* val) {
+        return b->EqualTo(val, b->ConstInt32(0));
+      });
+      break;
+
+    case Opcode::I32Eq:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->EqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32Ne:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->NotEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32LtS:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->LessThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32LtU:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->UnsignedLessThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32GtS:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->GreaterThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32GtU:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->UnsignedGreaterThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32LeS:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->LessOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32LeU:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->UnsignedLessOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32GeS:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->GreaterOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I32GeU:
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->UnsignedGreaterOrEqualTo(lhs, rhs);
+      });
+      break;
+
     case Opcode::I64Add:
         EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
           return b->Add(lhs, rhs);
