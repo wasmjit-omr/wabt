@@ -1,0 +1,92 @@
+;;; TOOL: run-interp-jit
+(module
+  (func $brif_always_true (result i32)
+    block $exit
+      i32.const 1
+      br_if $exit
+      i32.const 0
+      return
+    end
+    i32.const 1)
+
+  (func (export "test_brif_always_true") (result i32)
+    call $brif_always_true)
+
+  (func $brif_always_false (result i32)
+    block $exit
+      i32.const 0
+      br_if $exit
+      i32.const 0
+      return
+    end
+    i32.const 1)
+
+  (func (export "test_brif_always_false") (result i32)
+    call $brif_always_false)
+
+  (func $brif_with_arg (param i32) (result i32)
+    block $exit
+      get_local 0
+      br_if $exit
+      i32.const 0
+      return
+    end
+    i32.const 1)
+
+  (func (export "test_brif_with_arg_0") (result i32)
+    i32.const 0
+    call $brif_with_arg)
+
+  (func (export "test_brif_with_arg_1") (result i32)
+    i32.const 1
+    call $brif_with_arg)
+
+  (func $if_always_true (result i32)
+    i32.const 1
+    if
+      i32.const 1
+      return
+    end
+    i32.const 0)
+
+  (func (export "test_if_always_true") (result i32)
+    call $if_always_true)
+
+  (func $if_always_false (result i32)
+    i32.const 0
+    if
+      i32.const 1
+      return
+    end
+    i32.const 0)
+
+  (func (export "test_if_always_false") (result i32)
+    call $if_always_false)
+
+  (func $if_with_arg (param i32) (result i32)
+    get_local 0
+    if
+      i32.const 1
+      return
+    end
+    i32.const 0)
+
+  (func (export "test_if_with_arg_0") (result i32)
+    i32.const 0
+    call $if_with_arg)
+
+  (func (export "test_if_with_arg_1") (result i32)
+    i32.const 1
+    call $if_with_arg)
+)
+(;; STDOUT ;;;
+test_brif_always_true() => i32:1
+test_brif_always_false() => i32:0
+test_brif_with_arg_0() => i32:0
+test_brif_with_arg_1() => i32:1
+test_if_always_true() => i32:1
+test_if_always_false() => i32:0
+test_if_with_arg_0() => i32:0
+test_if_with_arg_1() => i32:1
+;;; STDOUT ;;)
+

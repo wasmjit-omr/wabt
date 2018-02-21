@@ -408,6 +408,9 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       return true;
     }
 
+    // case Opcode::BrIf: This opcode is never generated as it's always
+    // transformed into a BrUnless. So, there's no need to handle it.
+
     case Opcode::Return:
       b->Return(b->Const(static_cast<ResultEnum>(interp::Result::Ok)));
       return true;
@@ -874,6 +877,24 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       set_zero->                      Load("i")),
       set_zero->              ConstInt64(0));
 
+      break;
+    }
+
+    case Opcode::InterpBrUnless: {
+      auto target = &istream[ReadU32(&pc)];
+      auto condition = Pop(b, "i32");
+      auto it = std::find_if(workItems_.begin(), workItems_.end(), [&](const BytecodeWorkItem& b) {
+        return target == b.pc;
+      });
+      if (it != workItems_.end()) {
+        b->IfCmpEqualZero(&it->builder, condition);
+      } else {
+        int32_t next_index = static_cast<int32_t>(workItems_.size());
+        workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
+                                                      const_cast<char*>(ReadOpcodeAt(target).GetName())),
+                                target);
+        b->IfCmpEqualZero(&workItems_[next_index].builder, condition);
+      }
       break;
     }
 
