@@ -391,6 +391,23 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
+    case Opcode::Br: {
+      auto target = &istream[ReadU32(&pc)];
+      auto it = std::find_if(workItems_.cbegin(), workItems_.cend(), [&](const BytecodeWorkItem& b) {
+        return target == b.pc;
+      });
+      if (it != workItems_.cend()) {
+        b->AddFallThroughBuilder(it->builder);
+      } else {
+        int32_t next_index = static_cast<int32_t>(workItems_.size());
+        workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
+                                                      const_cast<char*>(ReadOpcodeAt(target).GetName())),
+                                target);
+        b->AddFallThroughBuilder(workItems_[next_index].builder);
+      }
+      return true;
+    }
+
     case Opcode::Return:
       b->Return(b->Const(static_cast<ResultEnum>(interp::Result::Ok)));
       return true;
@@ -884,6 +901,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
                                                 const_cast<char*>(ReadOpcodeAt(pc).GetName())),
                           pc);
   b->AddFallThroughBuilder(workItems_[next_index].builder);
+
   return true;
 }
 

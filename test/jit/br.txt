@@ -1,0 +1,53 @@
+;;; TOOL: run-interp
+(module
+  (func $br_1_level (result i32)
+    block
+      br 0
+      i32.const 0
+      return
+    end
+    i32.const 1
+    return)
+
+  (func (export "test_br_1_level") (result i32)
+    call $br_1_level
+    return)
+
+  (func $br_2_level (result i32)
+    block
+      block
+        br 1
+        i32.const -1
+        return
+      end
+      i32.const 0
+      return
+    end
+    i32.const 1
+    return)
+
+  (func (export "test_br_2_level") (result i32)
+    call $br_2_level
+    return)
+
+  (func $br_exit_loop (result i32)
+    block $exit
+      loop
+        br $exit
+        i32.const 0
+        return
+      end
+    end
+    i32.const 1)
+
+  (func (export "test_br_exit_loop") (result i32)
+    call $br_exit_loop
+    return)
+
+)
+(;; STDOUT ;;;
+test_br_1_level() => i32:1
+test_br_2_level() => i32:1
+test_br_exit_loop() => i32:1
+;;; STDOUT ;;)
+
