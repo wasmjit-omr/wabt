@@ -1,0 +1,153 @@
+;;; TOOL: run-interp-jit
+(module
+  (func $i32_callee (result i32)
+    i32.const 3)
+
+  (func $i32_caller (result i32)
+    call $i32_callee)
+
+  (func (export "test_i32_call") (result i32)
+    call $i32_caller)
+
+  (func $i64_callee (result i64)
+    i64.const 3)
+
+  (func $i64_caller (result i64)
+    call $i64_callee)
+
+  (func (export "test_i64_call") (result i64)
+    call $i64_caller)
+
+  (func $f32_callee (result f32)
+    f32.const 3)
+
+  (func $f32_caller (result f32)
+    call $f32_callee)
+
+  (func (export "test_f32_call") (result f32)
+    call $f32_caller)
+
+  (func $f64_callee (result f64)
+    f64.const 3)
+
+  (func $f64_caller (result f64)
+    call $f64_callee)
+
+  (func (export "test_f64_call") (result f64)
+    call $f64_caller)
+
+  (func $i32_id_callee (param i32) (result i32)
+    get_local 0)
+
+  (func $i32_id_caller (param i32) (result i32)
+    get_local 0
+    call $i32_id_callee)
+
+  (func (export "test_i32_id_call_0") (result i32)
+    i32.const 0
+    call $i32_id_caller)
+
+  (func (export "test_i32_id_call_1") (result i32)
+    i32.const 1
+    call $i32_id_caller)
+
+  (func (export "test_i32_id_call_2") (result i32)
+    i32.const -1
+    call $i32_id_caller)
+
+  (func (export "test_i32_id_call_3") (result i32)
+    i32.const -3
+    call $i32_id_caller)
+
+  (func $i64_id_callee (param i64) (result i64)
+    get_local 0)
+
+  (func $i64_id_caller (param i64) (result i64)
+    get_local 0
+    call $i64_id_callee)
+
+  (func (export "test_i64_id_call_0") (result i64)
+    i64.const 0
+    call $i64_id_caller)
+
+  (func (export "test_i64_id_call_1") (result i64)
+    i64.const 1
+    call $i64_id_caller)
+
+  (func (export "test_i64_id_call_2") (result i64)
+    i64.const -1
+    call $i64_id_caller)
+
+  (func (export "test_i64_id_call_3") (result i64)
+    i64.const -3
+    call $i64_id_caller)
+
+  (func $f32_id_callee (param f32) (result f32)
+    get_local 0)
+
+  (func $f32_id_caller (param f32) (result f32)
+    get_local 0
+    call $f32_id_callee)
+
+  (func (export "test_f32_id_call_0") (result f32)
+    f32.const 0.0
+    call $f32_id_caller)
+
+  (func (export "test_f32_id_call_1") (result f32)
+    f32.const 1.0
+    call $f32_id_caller)
+
+  (func (export "test_f32_id_call_2") (result f32)
+    f32.const -1.0
+    call $f32_id_caller)
+
+  (func (export "test_f32_id_call_3") (result f32)
+    f32.const -3.14159
+    call $f32_id_caller)
+
+  (func $f64_id_callee (param f64) (result f64)
+    get_local 0)
+
+  (func $f64_id_caller (param f64) (result f64)
+    get_local 0
+    call $f64_id_callee)
+
+  (func (export "test_f64_id_call_0") (result f64)
+    f64.const 0.0
+    call $f64_id_caller)
+
+  (func (export "test_f64_id_call_1") (result f64)
+    f64.const 1.0
+    call $f64_id_caller)
+
+  (func (export "test_f64_id_call_2") (result f64)
+    f64.const -1.0
+    call $f64_id_caller)
+
+  (func (export "test_f64_id_call_3") (result f64)
+    f64.const -3.14159
+    call $f64_id_caller)
+)
+(;; STDOUT ;;;
+test_i32_call() => i32:3
+test_i64_call() => i64:3
+test_f32_call() => f32:3.000000
+test_f64_call() => f64:3.000000
+test_i32_id_call_0() => i32:0
+test_i32_id_call_1() => i32:1
+test_i32_id_call_2() => i32:4294967295
+test_i32_id_call_3() => i32:4294967293
+test_i64_id_call_0() => i64:0
+test_i64_id_call_1() => i64:1
+test_i64_id_call_2() => i64:18446744073709551615
+test_i64_id_call_3() => i64:18446744073709551613
+test_f32_id_call_0() => f32:0.000000
+test_f32_id_call_1() => f32:1.000000
+test_f32_id_call_2() => f32:-1.000000
+test_f32_id_call_3() => f32:-3.141590
+test_f64_id_call_0() => f64:0.000000
+test_f64_id_call_1() => f64:1.000000
+test_f64_id_call_2() => f64:-1.000000
+test_f64_id_call_3() => f64:-3.141590
+;;; STDOUT ;;)
+

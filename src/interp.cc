@@ -1269,7 +1269,7 @@ Result Thread::Run(int num_instructions) {
       }
 
       case Opcode::Return:
-        if (call_stack_top_ == 0) {
+        if (call_stack_top_ == 0 || call_stack_top_ == last_jit_frame_) {
           result = Result::Returned;
           goto exit_loop;
         }

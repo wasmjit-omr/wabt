@@ -24,6 +24,8 @@
 
 #include "src/interp.h"
 
+#include <type_traits>
+
 namespace wabt {
 namespace jit {
 
@@ -100,6 +102,10 @@ class FunctionBuilder : public TR::MethodBuilder {
 
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
+
+  using Result_t = std::underlying_type<wabt::interp::Result>::type;
+
+  static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
 
   std::vector<BytecodeWorkItem> workItems_;
 

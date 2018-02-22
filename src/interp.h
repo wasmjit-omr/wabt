@@ -466,6 +466,7 @@ class Environment {
 
  private:
   friend class Thread;
+  friend class wabt::jit::FunctionBuilder;
   using JITedFunction = wabt::interp::Result (*)();
 
   struct JitMeta {
@@ -591,6 +592,7 @@ class Thread {
   std::vector<IstreamOffset> call_stack_;
   uint32_t value_stack_top_ = 0;
   uint32_t call_stack_top_ = 0;
+  uint32_t last_jit_frame_ = 0;
   IstreamOffset pc_ = 0;
 };
 

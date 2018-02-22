@@ -15,13 +15,13 @@
  */
 
 #include "function-builder.h"
+#include "wabtjit.h"
 #include "src/interp.h"
 #include "ilgen/VirtualMachineState.hpp"
 #include "infra/Assert.hpp"
 
 #include <cmath>
 #include <limits>
-#include <type_traits>
 
 namespace wabt {
 namespace jit {
@@ -76,6 +76,62 @@ inline Opcode ReadOpcodeAt(const uint8_t* pc) {
   return ReadOpcode(&pc);
 }
 
+#define CHECK_TRAP_IN_HELPER(...)                \
+  do {                                           \
+    wabt::interp::Result result = (__VA_ARGS__); \
+    if (result != wabt::interp::Result::Ok) {    \
+      return static_cast<Result_t>(result);      \
+    }                                            \
+  } while (0)
+
+FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc) {
+  // no need to check if JIT was enabled since we can only get here it was
+  auto meta_it = th->env_->jit_meta_.find(offset);
+
+  auto call_interp = [&]() {
+    th->set_pc(offset);
+    auto last_jit_frame = th->last_jit_frame_;
+    th->last_jit_frame_ = th->call_stack_top_;
+    wabt::interp::Result result = wabt::interp::Result::Ok;
+    while (result == wabt::interp::Result::Ok) {
+      result = th->Run(1000);
+    }
+    th->last_jit_frame_ = last_jit_frame;
+    return result;
+  };
+
+  CHECK_TRAP_IN_HELPER(th->PushCall(current_pc));
+  if (meta_it != th->env_->jit_meta_.end()) {
+    auto meta = &meta_it->second;
+    if (!meta->tried_jit) {
+      meta->num_calls++;
+
+      if (meta->num_calls >= th->env_->jit_threshold) {
+        meta->jit_fn = jit::compile(th, meta->wasm_fn);
+        meta->tried_jit = true;
+
+        if (th->env_->trap_on_failed_comp && meta->jit_fn == nullptr)
+          return static_cast<Result_t>(wabt::interp::Result::TrapFailedJITCompilation);
+      }
+    }
+
+    if (meta->jit_fn) {
+      CHECK_TRAP_IN_HELPER(meta->jit_fn());
+    } else {
+      auto result = call_interp();
+      if (result != wabt::interp::Result::Returned)
+        return static_cast<Result_t>(result);
+    }
+  } else {
+    auto result = call_interp();
+    if (result != wabt::interp::Result::Returned)
+      return static_cast<Result_t>(result);
+  }
+  th->PopCall();
+
+  return static_cast<Result_t>(wabt::interp::Result::Ok);
+}
+
 FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn, TypeDictionary* types)
     : TR::MethodBuilder(types),
       thread_(thread),
@@ -86,7 +142,7 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
   DefineFile(__FILE__);
   DefineName("WASM_Function");
 
-  DefineReturnType(types->toIlType<std::underlying_type<wabt::interp::Result>::type>());
+  DefineReturnType(types->toIlType<Result_t>());
 
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
@@ -99,6 +155,13 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  2,
                  Float,
                  Float);
+  DefineFunction("CallHelper", __FILE__, "0",
+                 reinterpret_cast<void*>(CallHelper),
+                 types->toIlType<Result_t>(),
+                 3,
+                 types->toIlType<void*>(),
+                 types->toIlType<wabt::interp::IstreamOffset>(),
+                 types->PointerTo(Int8));
 }
 
 bool FunctionBuilder::buildIL() {
@@ -487,6 +550,27 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // see note for GetLocal
       b->StoreIndirect("Value", "i64", Pick(b, ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(b, 1)));
       break;
+
+    case Opcode::Call: {
+      auto th_addr = b->ConstAddress(thread_);
+      auto offset = b->ConstInt32(ReadU32(&pc));
+      auto current_pc = b->Const(pc);
+
+      b->Store("result",
+      b->      Call("CallHelper", 3, th_addr, offset, current_pc));
+
+      TR::IlBuilder* trap_handler = nullptr;
+
+      b->IfThen(&trap_handler,
+      b->       NotEqualTo(
+      b->                  Load("result"),
+      b->                  Const(static_cast<Result_t>(wabt::interp::Result::Ok))));
+
+      trap_handler->Return(
+      trap_handler->       Load("result"));
+
+      break;
+    }
 
     case Opcode::I32Add:
       EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
