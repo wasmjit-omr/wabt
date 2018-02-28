@@ -16,6 +16,7 @@
 
 #include "function-builder.h"
 #include "wabtjit.h"
+#include "src/cast.h"
 #include "src/interp.h"
 #include "ilgen/VirtualMachineState.hpp"
 #include "infra/Assert.hpp"
@@ -132,6 +133,10 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
   return static_cast<Result_t>(wabt::interp::Result::Ok);
 }
 
+void FunctionBuilder::CallHostHelper(wabt::interp::Thread* th, Index func_index) {
+  th->CallHost(cast<wabt::interp::HostFunc>(th->env_->funcs_[func_index].get()));
+}
+
 FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn, TypeDictionary* types)
     : TR::MethodBuilder(types),
       thread_(thread),
@@ -162,6 +167,12 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  types->toIlType<void*>(),
                  types->toIlType<wabt::interp::IstreamOffset>(),
                  types->PointerTo(Int8));
+  DefineFunction("CallHostHelper", __FILE__, "0",
+                 reinterpret_cast<void*>(CallHostHelper),
+                 NoType,
+                 2,
+                 types->toIlType<void*>(),
+                 types->toIlType<Index>());
 }
 
 bool FunctionBuilder::buildIL() {
@@ -569,6 +580,14 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       trap_handler->Return(
       trap_handler->       Load("result"));
 
+      break;
+    }
+
+    case Opcode::InterpCallHost: {
+      Index func_index = ReadU32(&pc);
+      b->Call("CallHostHelper", 2,
+      b->     ConstAddress(thread_),
+      b->     ConstInt32(func_index));
       break;
     }
 

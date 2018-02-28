@@ -107,6 +107,8 @@ class FunctionBuilder : public TR::MethodBuilder {
 
   static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
 
+  static void CallHostHelper(wabt::interp::Thread* th, Index func_index);
+
   std::vector<BytecodeWorkItem> workItems_;
 
   interp::Thread* thread_;
