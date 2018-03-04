@@ -1,0 +1,316 @@
+;;; TOOL: run-interp-jit
+(module
+  (func (export "test_i64_eqz_1") (result i32)
+    call $i64_eqz_1)
+
+  (func $i64_eqz_1 (result i32)
+    i64.const 0
+    i64.eqz)
+
+  (func (export "test_i64_eqz_2") (result i32)
+    call $i64_eqz_2)
+
+  (func $i64_eqz_2 (result i32)
+    i64.const -1
+    i64.eqz)
+
+  (func (export "test_i64_eqz_3") (result i32)
+    call $i64_eqz_3)
+
+  (func $i64_eqz_3 (result i32)
+    i64.const 1
+    i64.eqz)
+
+  (func (export "test_i64_eq_1") (result i32)
+    call $i64_eq_1)
+
+  (func $i64_eq_1 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.eq)
+
+  (func (export "test_i64_eq_2") (result i32)
+    call $i64_eq_2)
+
+  (func $i64_eq_2 (result i32)
+    i64.const 0xffffffffffffffff
+    i64.const 0
+    i64.eq)
+
+  (func (export "test_i64_eq_3") (result i32)
+    call $i64_eq_3)
+
+  (func $i64_eq_3 (result i32)
+    i64.const 0xffffffffffffffff
+    i64.const 0xffffffffffffffff
+    i64.eq)
+
+  (func (export "test_i64_eq_4") (result i32)
+    call $i64_eq_4)
+
+  (func $i64_eq_4 (result i32)
+    i64.const 33
+    i64.const 32
+    i64.eq)
+
+  (func (export "test_i64_ne_1") (result i32)
+    call $i64_ne_1)
+
+  (func $i64_ne_1 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.ne)
+
+  (func (export "test_i64_ne_2") (result i32)
+    call $i64_ne_2)
+
+  (func $i64_ne_2 (result i32)
+    i64.const 0xffffffffffffffff
+    i64.const 0
+    i64.ne)
+
+  (func (export "test_i64_ne_3") (result i32)
+    call $i64_ne_3)
+
+  (func $i64_ne_3 (result i32)
+    i64.const 0xffffffffffffffff
+    i64.const 0xffffffffffffffff
+    i64.ne)
+
+  (func (export "test_i64_ne_4") (result i32)
+    call $i64_ne_4)
+
+  (func $i64_ne_4 (result i32)
+    i64.const 33
+    i64.const 32
+    i64.ne)
+
+  (func (export "test_i64_lt_s_1") (result i32)
+    call $i64_lt_s_1)
+
+  (func $i64_lt_s_1 (result i32)
+    i64.const -1
+    i64.const 1
+    i64.lt_s)
+
+  (func (export "test_i64_lt_s_2") (result i32)
+    call $i64_lt_s_2)
+
+  (func $i64_lt_s_2 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.lt_s)
+
+  (func (export "test_i64_lt_s_3") (result i32)
+    call $i64_lt_s_3)
+
+  (func $i64_lt_s_3 (result i32)
+    i64.const 1
+    i64.const -1
+    i64.lt_s)
+
+  (func (export "test_i64_lt_u_1") (result i32)
+    call $i64_lt_u_1)
+
+  (func $i64_lt_u_1 (result i32)
+    i64.const 0xffffffffffffffff
+    i64.const 1
+    i64.lt_u)
+
+  (func (export "test_i64_lt_u_2") (result i32)
+    call $i64_lt_u_2)
+
+  (func $i64_lt_u_2 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.lt_u)
+
+  (func (export "test_i64_lt_u_3") (result i32)
+    call $i64_lt_u_3)
+
+  (func $i64_lt_u_3 (result i32)
+    i64.const 1
+    i64.const 0xffffffffffffffff
+    i64.lt_u)
+
+  (func (export "test_i64_gt_s_1") (result i32)
+    call $i64_gt_s_1)
+
+  (func $i64_gt_s_1 (result i32)
+    i64.const -1
+    i64.const 1
+    i64.gt_s)
+
+  (func (export "test_i64_gt_s_2") (result i32)
+    call $i64_gt_s_2)
+
+  (func $i64_gt_s_2 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.gt_s)
+
+  (func (export "test_i64_gt_s_3") (result i32)
+    call $i64_gt_s_3)
+
+  (func $i64_gt_s_3 (result i32)
+    i64.const 1
+    i64.const -1
+    i64.gt_s)
+
+  (func (export "test_i64_gt_u_1") (result i32)
+    call $i64_gt_u_1)
+
+  (func $i64_gt_u_1 (result i32)
+    i64.const 0xffffffffffffffff
+    i64.const 1
+    i64.gt_u)
+
+  (func (export "test_i64_gt_u_2") (result i32)
+    call $i64_gt_u_2)
+
+  (func $i64_gt_u_2 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.gt_u)
+
+  (func (export "test_i64_gt_u_3") (result i32)
+    call $i64_gt_u_3)
+
+  (func $i64_gt_u_3 (result i32)
+    i64.const 1
+    i64.const 0xffffffffffffffff
+    i64.gt_u)
+
+  (func (export "test_i64_le_s_1") (result i32)
+    call $i64_le_s_1)
+
+  (func $i64_le_s_1 (result i32)
+    i64.const -1
+    i64.const 1
+    i64.le_s)
+
+  (func (export "test_i64_le_s_2") (result i32)
+    call $i64_le_s_2)
+
+  (func $i64_le_s_2 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.le_s)
+
+  (func (export "test_i64_le_s_3") (result i32)
+    call $i64_le_s_3)
+
+  (func $i64_le_s_3 (result i32)
+    i64.const 1
+    i64.const -1
+    i64.le_s)
+
+  (func (export "test_i64_le_u_1") (result i32)
+    call $i64_le_u_1)
+
+  (func $i64_le_u_1 (result i32)
+    i64.const 0xffffffffffffffff
+    i64.const 1
+    i64.le_u)
+
+  (func (export "test_i64_le_u_2") (result i32)
+    call $i64_le_u_2)
+
+  (func $i64_le_u_2 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.le_u)
+
+  (func (export "test_i64_le_u_3") (result i32)
+    call $i64_le_u_3)
+
+  (func $i64_le_u_3 (result i32)
+    i64.const 1
+    i64.const 0xffffffffffffffff
+    i64.le_u)
+
+  (func (export "test_i64_ge_s_1") (result i32)
+    call $i64_ge_s_1)
+
+  (func $i64_ge_s_1 (result i32)
+    i64.const -1
+    i64.const 1
+    i64.ge_s)
+
+  (func (export "test_i64_ge_s_2") (result i32)
+    call $i64_ge_s_2)
+
+  (func $i64_ge_s_2 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.ge_s)
+
+  (func (export "test_i64_ge_s_3") (result i32)
+    call $i64_ge_s_3)
+
+  (func $i64_ge_s_3 (result i32)
+    i64.const 1
+    i64.const -1
+    i64.ge_s)
+
+  (func (export "test_i64_ge_u_1") (result i32)
+    call $i64_ge_u_1)
+
+  (func $i64_ge_u_1 (result i32)
+    i64.const 0xffffffffffffffff
+    i64.const 1
+    i64.ge_u)
+
+  (func (export "test_i64_ge_u_2") (result i32)
+    call $i64_ge_u_2)
+
+  (func $i64_ge_u_2 (result i32)
+    i64.const 0
+    i64.const 0
+    i64.ge_u)
+
+  (func (export "test_i64_ge_u_3") (result i32)
+    call $i64_ge_u_3)
+
+  (func $i64_ge_u_3 (result i32)
+    i64.const 1
+    i64.const 0xffffffffffffffff
+    i64.ge_u)
+)
+(;; STDOUT ;;;
+test_i64_eqz_1() => i32:1
+test_i64_eqz_2() => i32:0
+test_i64_eqz_3() => i32:0
+test_i64_eq_1() => i32:1
+test_i64_eq_2() => i32:0
+test_i64_eq_3() => i32:1
+test_i64_eq_4() => i32:0
+test_i64_ne_1() => i32:0
+test_i64_ne_2() => i32:1
+test_i64_ne_3() => i32:0
+test_i64_ne_4() => i32:1
+test_i64_lt_s_1() => i32:1
+test_i64_lt_s_2() => i32:0
+test_i64_lt_s_3() => i32:0
+test_i64_lt_u_1() => i32:0
+test_i64_lt_u_2() => i32:0
+test_i64_lt_u_3() => i32:1
+test_i64_gt_s_1() => i32:0
+test_i64_gt_s_2() => i32:0
+test_i64_gt_s_3() => i32:1
+test_i64_gt_u_1() => i32:1
+test_i64_gt_u_2() => i32:0
+test_i64_gt_u_3() => i32:0
+test_i64_le_s_1() => i32:1
+test_i64_le_s_2() => i32:1
+test_i64_le_s_3() => i32:0
+test_i64_le_u_1() => i32:0
+test_i64_le_u_2() => i32:1
+test_i64_le_u_3() => i32:1
+test_i64_ge_s_1() => i32:0
+test_i64_ge_s_2() => i32:1
+test_i64_ge_s_3() => i32:1
+test_i64_ge_u_1() => i32:1
+test_i64_ge_u_2() => i32:1
+test_i64_ge_u_3() => i32:0
+;;; STDOUT ;;)
