@@ -802,6 +802,72 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       });
       break;
 
+    case Opcode::I64Eqz:
+      EmitUnaryOp<int64_t, int>(b, [&](TR::IlValue* val) {
+        return b->EqualTo(val, b->ConstInt64(0));
+      });
+      break;
+
+    case Opcode::I64Eq:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->EqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64Ne:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->NotEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64LtS:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->LessThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64LtU:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->UnsignedLessThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64GtS:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->GreaterThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64GtU:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->UnsignedGreaterThan(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64LeS:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->LessOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64LeU:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->UnsignedLessOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64GeS:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->GreaterOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::I64GeU:
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->UnsignedGreaterOrEqualTo(lhs, rhs);
+      });
+      break;
+
     case Opcode::F32Abs:
       EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
         auto* return_value = b->Copy(value);
