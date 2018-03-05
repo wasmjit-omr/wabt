@@ -25,6 +25,7 @@
 #include <limits>
 
 namespace wabt {
+
 namespace jit {
 
 using ResultEnum = std::underlying_type<wabt::interp::Result>::type;
@@ -84,6 +85,13 @@ inline Opcode ReadOpcodeAt(const uint8_t* pc) {
       return static_cast<Result_t>(result);      \
     }                                            \
   } while (0)
+#define TRAP(type) return static_cast<Result_t>(wabt::interp::Result::Trap##type)
+#define TRAP_UNLESS(cond, type) TRAP_IF(!(cond), type)
+#define TRAP_IF(cond, type)  \
+  do {                       \
+    if (WABT_UNLIKELY(cond)) \
+      TRAP(type);            \
+  } while (0)
 
 FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc) {
   // no need to check if JIT was enabled since we can only get here it was
@@ -133,6 +141,27 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
   return static_cast<Result_t>(wabt::interp::Result::Ok);
 }
 
+
+FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc) {
+  using namespace wabt::interp;
+  auto* env = th->env_;
+  Table* table = &env->tables_[table_index];
+  TRAP_IF(entry_index >= table->func_indexes.size(), UndefinedTableIndex);
+  Index func_index = table->func_indexes[entry_index];
+  TRAP_IF(func_index == kInvalidIndex, UninitializedTableElement);
+  Func* func = env->funcs_[func_index].get();
+  TRAP_UNLESS(env->FuncSignaturesAreEqual(func->sig_index, sig_index),
+              IndirectCallSignatureMismatch);
+  if (func->is_host) {
+    th->CallHost(cast<HostFunc>(func));
+  } else {
+    auto result = CallHelper(th, cast<DefinedFunc>(func)->offset, current_pc);
+    if (result != static_cast<Result_t>(interp::Result::Ok))
+      return result;
+  }
+  return static_cast<Result_t>(interp::Result::Ok);
+}
+
 void FunctionBuilder::CallHostHelper(wabt::interp::Thread* th, Index func_index) {
   th->CallHost(cast<wabt::interp::HostFunc>(th->env_->funcs_[func_index].get()));
 }
@@ -166,6 +195,15 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  3,
                  types->toIlType<void*>(),
                  types->toIlType<wabt::interp::IstreamOffset>(),
+                 types->PointerTo(Int8));
+  DefineFunction("CallIndirectHelper", __FILE__, "0",
+                 reinterpret_cast<void*>(CallIndirectHelper),
+                 types->toIlType<Result_t>(),
+                 5,
+                 types->toIlType<void*>(),
+                 types->toIlType<Index>(),
+                 types->toIlType<Index>(),
+                 types->toIlType<Index>(),
                  types->PointerTo(Int8));
   DefineFunction("CallHostHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallHostHelper),
@@ -569,6 +607,29 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
       b->Store("result",
       b->      Call("CallHelper", 3, th_addr, offset, current_pc));
+
+      TR::IlBuilder* trap_handler = nullptr;
+
+      b->IfThen(&trap_handler,
+      b->       NotEqualTo(
+      b->                  Load("result"),
+      b->                  Const(static_cast<Result_t>(wabt::interp::Result::Ok))));
+
+      trap_handler->Return(
+      trap_handler->       Load("result"));
+
+      break;
+    }
+
+    case Opcode::CallIndirect: {
+      auto th_addr = b->ConstAddress(thread_);
+      auto table_index = b->ConstInt32(ReadU32(&pc));
+      auto sig_index = b->ConstInt32(ReadU32(&pc));
+      auto entry_index = Pop(b, "i32");
+      auto current_pc = b->Const(pc);
+
+      b->Store("result",
+      b->      Call("CallIndirectHelper", 5, th_addr, table_index, sig_index, entry_index, current_pc));
 
       TR::IlBuilder* trap_handler = nullptr;
 
