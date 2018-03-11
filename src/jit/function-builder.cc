@@ -717,6 +717,30 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->  LoadAt(typeDictionary()->PointerTo(Double), EmitMemoryPreAccess<double>(b, &pc)));
       break;
 
+    case Opcode::I32Store: {
+      auto value = Pop(b, "i32");
+      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::I64Store: {
+      auto value = Pop(b, "i64");
+      b->StoreAt(EmitMemoryPreAccess<int64_t>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::F32Store: {
+      auto value = Pop(b, "f32");
+      b->StoreAt(EmitMemoryPreAccess<float>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::F64Store: {
+      auto value = Pop(b, "f64");
+      b->StoreAt(EmitMemoryPreAccess<double>(b, &pc), value);
+      break;
+    }
+
     case Opcode::I32Add:
       EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Add(lhs, rhs);
