@@ -1224,11 +1224,31 @@ Result Thread::CallHost(HostFunc* func) {
   return Result::Ok;
 }
 
+class TempPc {
+  public:
+    TempPc(Thread* thread)
+      : thread(thread),
+        istream(thread->env()->istream().data.data()),
+        pc(&istream[thread->pc()]) {}
+    TempPc(const TempPc&) = delete;
+    ~TempPc() { Commit(); }
+
+    TempPc& operator=(const TempPc&) = delete;
+
+    void Commit() { thread->set_pc(pc - istream); }
+
+    Thread* thread;
+    const uint8_t* istream;
+    const uint8_t* pc;
+};
+
 Result Thread::Run(int num_instructions) {
   Result result = Result::Ok;
 
-  const uint8_t* istream = GetIstream();
-  const uint8_t* pc = &istream[pc_];
+  TempPc tpc(this);
+  const uint8_t*& istream = tpc.istream;
+  const uint8_t*& pc = tpc.pc;
+
   for (int i = 0; i < num_instructions; ++i) {
     Opcode opcode = ReadOpcode(&pc);
     assert(!opcode.IsInvalid());
@@ -2248,7 +2268,6 @@ Result Thread::Run(int num_instructions) {
   }
 
 exit_loop:
-  pc_ = pc - istream;
   return result;
 }
 
