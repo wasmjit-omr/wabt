@@ -1291,6 +1291,20 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
+    case Opcode::F32DemoteF64: {
+      auto* value = Pop(b, "f64");
+      Push(b, "f32",
+      b->  ConvertTo(Float, value));
+      break;
+    }
+
+    case Opcode::F64PromoteF32: {
+      auto* value = Pop(b, "f32");
+      Push(b, "f64",
+      b->  ConvertTo(Double, value));
+      break;
+    }
+
     case Opcode::InterpAlloca: {
       auto pInt32 = typeDictionary()->PointerTo(Int32);
       auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
