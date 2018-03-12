@@ -50,6 +50,7 @@ static bool s_run_all_exports;
 static bool s_host_print;
 static bool s_disable_jit;
 static bool s_trap_on_failed_comp;
+static bool s_no_stack_trace;
 static uint32_t s_jit_threshold = 1;
 static Features s_features;
 
@@ -123,6 +124,9 @@ static void ParseOptions(int argc, char** argv) {
                      // TODO(thomasbc): validate
                      s_jit_threshold = atoi(argument.c_str());
                    });
+  parser.AddOption("no-stack-trace",
+                   "Don't print a stack trace if a trap occurs",
+                   []() { s_no_stack_trace = true; });
 
   parser.AddArgument("filename", OptionParser::ArgumentCount::One,
                      [](const char* argument) { s_infile = argument; });
@@ -130,6 +134,7 @@ static void ParseOptions(int argc, char** argv) {
 }
 
 static void RunAllExports(interp::Module* module,
+                          Environment* env,
                           Executor* executor,
                           RunVerbosity verbose) {
   TypedValues args;
@@ -139,6 +144,9 @@ static void RunAllExports(interp::Module* module,
     if (verbose == RunVerbosity::Verbose) {
       WriteCall(s_stdout_stream.get(), string_view(), export_.name, args,
                 exec_result.values, exec_result.result);
+      if (!s_no_stack_trace && exec_result.result != interp::Result::Ok) {
+        exec_result.PrintCallStack(s_stdout_stream.get(), env);
+      }
     }
   }
 }
@@ -263,10 +271,13 @@ static wabt::Result ReadAndRunModule(const char* module_filename) {
     ExecResult exec_result = executor.RunStartFunction(module);
     if (exec_result.result == interp::Result::Ok) {
       if (s_run_all_exports)
-        RunAllExports(module, &executor, RunVerbosity::Verbose);
+        RunAllExports(module, &env, &executor, RunVerbosity::Verbose);
     } else {
       WriteResult(s_stdout_stream.get(), "error running start function",
                   exec_result.result);
+      if (!s_no_stack_trace) {
+        exec_result.PrintCallStack(s_stdout_stream.get(), &env);
+      }
     }
   }
   return result;

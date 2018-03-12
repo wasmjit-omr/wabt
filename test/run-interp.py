@@ -91,6 +91,7 @@ def main(args):
           options.enable_saturating_float_to_int,
       '--enable-threads': options.enable_threads,
       '--disable-jit': options.disable_jit,
+      '--no-stack-trace': not options.spec
   })
 
   wast_tool.verbose = options.print_cmd
