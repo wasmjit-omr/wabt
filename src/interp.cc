@@ -1366,6 +1366,8 @@ Result Thread::Run(int num_instructions) {
             }
 
             if (meta->jit_fn) {
+              CHECK_TRAP(PushCall(pc));
+
               auto result = meta->jit_fn();
               if (result != Result::Ok) {
                 // We don't want to overwrite the pc of the JITted function if it traps
@@ -1373,6 +1375,8 @@ Result Thread::Run(int num_instructions) {
 
                 return result;
               }
+
+              PopCall();
             } else {
               CHECK_TRAP(PushCall(pc));
               GOTO(offset);
