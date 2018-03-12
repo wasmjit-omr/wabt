@@ -1305,6 +1305,36 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
+    case Opcode::I32Extend8S: {
+      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int8, Pop(b, "i32")));
+      Push(b, "i32", value);
+      break;
+    }
+
+    case Opcode::I32Extend16S: {
+      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int16, Pop(b, "i32")));
+      Push(b, "i32", value);
+      break;
+    }
+
+    case Opcode::I64Extend8S: {
+      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int8, Pop(b, "i32")));
+      Push(b, "i32", value);
+      break;
+    }
+
+    case Opcode::I64Extend16S: {
+      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int16, Pop(b, "i32")));
+      Push(b, "i32", value);
+      break;
+    }
+
+    case Opcode::I64Extend32S: {
+      auto* value = b->ConvertTo(Int64, b->ConvertTo(Int32, Pop(b, "i64")));
+      Push(b, "i64", value);
+      break;
+    }
+
     case Opcode::InterpAlloca: {
       auto pInt32 = typeDictionary()->PointerTo(Int32);
       auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
