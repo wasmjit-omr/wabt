@@ -40,7 +40,7 @@ class FunctionBuilder : public TR::MethodBuilder {
    * @param type is the name of the field in the Value union corresponding to the type of the value being pushed
    * @param value is the IlValue representing the value being pushed
    */
-  void Push(TR::IlBuilder* b, const char* type, TR::IlValue* value);
+  void Push(TR::IlBuilder* b, const char* type, TR::IlValue* value, const uint8_t* pc);
 
   /**
    * @brief Generate pop from the interpreter stack
@@ -89,19 +89,23 @@ class FunctionBuilder : public TR::MethodBuilder {
   TR::IlValue* Const(TR::IlBuilder* b, const interp::TypedValue* v) const;
 
   template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitBinaryOp(TR::IlBuilder* b, TOpHandler h);
+  void EmitBinaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h);
 
   template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitUnaryOp(TR::IlBuilder* b, TOpHandler h);
+  void EmitUnaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h);
 
   template <typename T>
-  void EmitIntDivide(TR::IlBuilder* b);
+  void EmitIntDivide(TR::IlBuilder* b, const uint8_t* pc);
 
   template <typename T>
-  void EmitIntRemainder(TR::IlBuilder* b);
+  void EmitIntRemainder(TR::IlBuilder* b, const uint8_t* pc);
 
   template <typename T>
   TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc);
+
+  void EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
+  void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
+  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result, const uint8_t* pc);
 
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);

@@ -1236,6 +1236,7 @@ class TempPc {
     TempPc& operator=(const TempPc&) = delete;
 
     void Commit() { thread->set_pc(pc - istream); }
+    void Reload() { pc = istream + thread->pc(); }
 
     Thread* thread;
     const uint8_t* istream;
@@ -1365,7 +1366,13 @@ Result Thread::Run(int num_instructions) {
             }
 
             if (meta->jit_fn) {
-              CHECK_TRAP(meta->jit_fn());
+              auto result = meta->jit_fn();
+              if (result != Result::Ok) {
+                // We don't want to overwrite the pc of the JITted function if it traps
+                tpc.Reload();
+
+                return result;
+              }
             } else {
               CHECK_TRAP(PushCall(pc));
               GOTO(offset);
