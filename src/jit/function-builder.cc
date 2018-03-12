@@ -141,7 +141,6 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
   return static_cast<Result_t>(wabt::interp::Result::Ok);
 }
 
-
 FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc) {
   using namespace wabt::interp;
   auto* env = th->env_;
@@ -164,6 +163,16 @@ FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thre
 
 void FunctionBuilder::CallHostHelper(wabt::interp::Thread* th, Index func_index) {
   th->CallHost(cast<wabt::interp::HostFunc>(th->env_->funcs_[func_index].get()));
+}
+
+void* FunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size) {
+  auto* memory = &th->env_->memories_[memory_id];
+
+  if (address + size > memory->data.size()) {
+    return nullptr;
+  } else {
+    return memory->data.data() + address;
+  }
 }
 
 FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn, TypeDictionary* types)
@@ -211,6 +220,14 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  2,
                  types->toIlType<void*>(),
                  types->toIlType<Index>());
+  DefineFunction("MemoryTranslationHelper", __FILE__, "0",
+                 reinterpret_cast<void*>(MemoryTranslationHelper),
+                 types->toIlType<void*>(),
+                 4,
+                 types->toIlType<void*>(),
+                 types->toIlType<uint32_t>(),
+                 types->toIlType<uint64_t>(),
+                 types->toIlType<uint32_t>());
 }
 
 bool FunctionBuilder::buildIL() {
@@ -481,6 +498,30 @@ void FunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {
 }
 
 template <typename T>
+TR::IlValue* FunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc) {
+  auto th_addr = b->ConstAddress(thread_);
+  auto mem_id = b->ConstInt32(ReadU32(pc));
+  auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
+
+  auto address = b->Call("MemoryTranslationHelper",
+                         4,
+                         th_addr,
+                         mem_id,
+                         b->Add(b->UnsignedConvertTo(Int64, Pop(b, "i32")), offset),
+                         b->ConstInt32(sizeof(T)));
+
+  TR::IlBuilder* trap_handler = nullptr;
+
+  b->IfThen(&trap_handler,
+  b->       EqualTo(address, b->ConstAddress(nullptr)));
+
+  trap_handler->Return(
+  trap_handler->       Const(static_cast<Result_t>(interp::Result::TrapMemoryAccessOutOfBounds)));
+
+  return address;
+}
+
+template <typename T>
 TR::IlValue* FunctionBuilder::CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount) {
   return b->UnsignedConvertTo(Int32,
          b->                  And(amount, b->Const(static_cast<T>(sizeof(T) * 8 - 1))));
@@ -649,6 +690,54 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->Call("CallHostHelper", 2,
       b->     ConstAddress(thread_),
       b->     ConstInt32(func_index));
+      break;
+    }
+
+    case Opcode::I32Load:
+      Push(b,
+           "i32",
+      b->  LoadAt(typeDictionary()->PointerTo(Int32), EmitMemoryPreAccess<int32_t>(b, &pc)));
+      break;
+
+    case Opcode::I64Load:
+      Push(b,
+           "i64",
+      b->  LoadAt(typeDictionary()->PointerTo(Int64), EmitMemoryPreAccess<int64_t>(b, &pc)));
+      break;
+
+    case Opcode::F32Load:
+      Push(b,
+           "f32",
+      b->  LoadAt(typeDictionary()->PointerTo(Float), EmitMemoryPreAccess<float>(b, &pc)));
+      break;
+
+    case Opcode::F64Load:
+      Push(b,
+           "f64",
+      b->  LoadAt(typeDictionary()->PointerTo(Double), EmitMemoryPreAccess<double>(b, &pc)));
+      break;
+
+    case Opcode::I32Store: {
+      auto value = Pop(b, "i32");
+      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::I64Store: {
+      auto value = Pop(b, "i64");
+      b->StoreAt(EmitMemoryPreAccess<int64_t>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::F32Store: {
+      auto value = Pop(b, "f32");
+      b->StoreAt(EmitMemoryPreAccess<float>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::F64Store: {
+      auto value = Pop(b, "f64");
+      b->StoreAt(EmitMemoryPreAccess<double>(b, &pc), value);
       break;
     }
 

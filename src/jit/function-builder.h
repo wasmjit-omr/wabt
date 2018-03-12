@@ -100,6 +100,9 @@ class FunctionBuilder : public TR::MethodBuilder {
   template <typename T>
   void EmitIntRemainder(TR::IlBuilder* b);
 
+  template <typename T>
+  TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc);
+
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 
@@ -110,6 +113,8 @@ class FunctionBuilder : public TR::MethodBuilder {
   static Result_t CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc);
 
   static void CallHostHelper(wabt::interp::Thread* th, Index func_index);
+
+  static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
 
   std::vector<BytecodeWorkItem> workItems_;
 

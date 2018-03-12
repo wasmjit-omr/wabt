@@ -1,0 +1,298 @@
+;;; TOOL: run-interp-jit
+(module
+  (memory 1)
+
+  (func $i32_load (param i32) (result i32)
+    get_local 0
+    i32.load)
+
+  (func $i32_load_off (param i32) (result i32)
+    get_local 0
+    i32.load offset=4)
+
+  (func (export "test_i32_load_1") (result i32)
+    i32.const 0
+    i32.const 0xff00ff00
+    i32.store
+    i32.const 0
+    call $i32_load)
+
+  (func (export "test_i32_load_2") (result i32)
+    i32.const 0xfffc
+    i32.const 0xff00ff00
+    i32.store
+    i32.const 0xfffc
+    call $i32_load)
+
+  (func (export "test_i32_load_3") (result i32)
+    i32.const 4
+    i32.const 0x00ff00ff
+    i32.store
+    i32.const 0
+    call $i32_load_off)
+
+  (func (export "test_i32_load_4") (result i32)
+    i32.const 0xfffc
+    i32.const 0x00ff00ff
+    i32.store
+    i32.const 0xfff8
+    call $i32_load_off)
+
+  (func (export "test_i32_load_5") (result i32)
+    i32.const 3
+    i32.const 0xaabbccdd
+    i32.store
+    i32.const 3
+    call $i32_load)
+
+  (func (export "test_i32_load_6") (result i32)
+    i32.const 0x10000
+    call $i32_load)
+
+  (func (export "test_i32_load_7") (result i32)
+    i32.const 0xfffd
+    call $i32_load)
+
+  (func (export "test_i32_load_8") (result i32)
+    i32.const 0xfff9
+    call $i32_load_off)
+
+  (func (export "test_i32_load_9") (result i32)
+    i32.const 0xffffffff
+    call $i32_load)
+
+  (func (export "test_i32_load_10") (result i32)
+    i32.const 0xffffffff
+    call $i32_load_off)
+
+  (func $i64_load (param i32) (result i64)
+    get_local 0
+    i64.load)
+
+  (func $i64_load_off (param i32) (result i64)
+    get_local 0
+    i64.load offset=8)
+
+  (func (export "test_i64_load_1") (result i64)
+    i32.const 0
+    i64.const 0xff00ff00ff00ff00
+    i64.store
+    i32.const 0
+    call $i64_load)
+
+  (func (export "test_i64_load_2") (result i64)
+    i32.const 0xfff8
+    i64.const 0xff00ff00ff00ff00
+    i64.store
+    i32.const 0xfff8
+    call $i64_load)
+
+  (func (export "test_i64_load_3") (result i64)
+    i32.const 8
+    i64.const 0x00ff00ff00ff00ff
+    i64.store
+    i32.const 0
+    call $i64_load_off)
+
+  (func (export "test_i64_load_4") (result i64)
+    i32.const 0xfff8
+    i64.const 0x00ff00ff00ff00ff
+    i64.store
+    i32.const 0xfff0
+    call $i64_load_off)
+
+  (func (export "test_i64_load_5") (result i64)
+    i32.const 3
+    i64.const 0xaabbccddddccbbaa
+    i64.store
+    i32.const 3
+    call $i64_load)
+
+  (func (export "test_i64_load_6") (result i64)
+    i32.const 0x10000
+    call $i64_load)
+
+  (func (export "test_i64_load_7") (result i64)
+    i32.const 0xfff9
+    call $i64_load)
+
+  (func (export "test_i64_load_8") (result i64)
+    i32.const 0xfff1
+    call $i64_load_off)
+
+  (func (export "test_i64_load_9") (result i64)
+    i32.const 0xffffffff
+    call $i64_load)
+
+  (func (export "test_i64_load_10") (result i64)
+    i32.const 0xffffffff
+    call $i64_load_off)
+
+  (func $f32_load (param i32) (result f32)
+    get_local 0
+    f32.load)
+
+  (func $f32_load_off (param i32) (result f32)
+    get_local 0
+    f32.load offset=4)
+
+  (func (export "test_f32_load_1") (result f32)
+    i32.const 0
+    f32.const -4.5
+    f32.store
+    i32.const 0
+    call $f32_load)
+
+  (func (export "test_f32_load_2") (result f32)
+    i32.const 0xfffc
+    f32.const -4.5
+    f32.store
+    i32.const 0xfffc
+    call $f32_load)
+
+  (func (export "test_f32_load_3") (result f32)
+    i32.const 4
+    f32.const 4.5
+    f32.store
+    i32.const 0
+    call $f32_load_off)
+
+  (func (export "test_f32_load_4") (result f32)
+    i32.const 0xfffc
+    f32.const 4.5
+    f32.store
+    i32.const 0xfff8
+    call $f32_load_off)
+
+  (func (export "test_f32_load_5") (result f32)
+    i32.const 3
+    f32.const -inf
+    f32.store
+    i32.const 3
+    call $f32_load)
+
+  (func (export "test_f32_load_6") (result f32)
+    i32.const 0x10000
+    call $f32_load)
+
+  (func (export "test_f32_load_7") (result f32)
+    i32.const 0xfffd
+    call $f32_load)
+
+  (func (export "test_f32_load_8") (result f32)
+    i32.const 0xfff9
+    call $f32_load_off)
+
+  (func (export "test_f32_load_9") (result f32)
+    i32.const 0xffffffff
+    call $f32_load)
+
+  (func (export "test_f32_load_10") (result f32)
+    i32.const 0xffffffff
+    call $f32_load_off)
+
+  (func $f64_load (param i32) (result f64)
+    get_local 0
+    f64.load)
+
+  (func $f64_load_off (param i32) (result f64)
+    get_local 0
+    f64.load offset=8)
+
+  (func (export "test_f64_load_1") (result f64)
+    i32.const 0
+    f64.const -4.5
+    f64.store
+    i32.const 0
+    call $f64_load)
+
+  (func (export "test_f64_load_2") (result f64)
+    i32.const 0xfff8
+    f64.const -4.5
+    f64.store
+    i32.const 0xfff8
+    call $f64_load)
+
+  (func (export "test_f64_load_3") (result f64)
+    i32.const 8
+    f64.const 4.5
+    f64.store
+    i32.const 0
+    call $f64_load_off)
+
+  (func (export "test_f64_load_4") (result f64)
+    i32.const 0xfff8
+    f64.const 4.5
+    f64.store
+    i32.const 0xfff0
+    call $f64_load_off)
+
+  (func (export "test_f64_load_5") (result f64)
+    i32.const 3
+    f64.const -inf
+    f64.store
+    i32.const 3
+    call $f64_load)
+
+  (func (export "test_f64_load_6") (result f64)
+    i32.const 0x10000
+    call $f64_load)
+
+  (func (export "test_f64_load_7") (result f64)
+    i32.const 0xfff9
+    call $f64_load)
+
+  (func (export "test_f64_load_8") (result f64)
+    i32.const 0xfff1
+    call $f64_load_off)
+
+  (func (export "test_f64_load_9") (result f64)
+    i32.const 0xffffffff
+    call $f64_load)
+
+  (func (export "test_f64_load_10") (result f64)
+    i32.const 0xffffffff
+    call $f64_load_off)
+)
+(;; STDOUT ;;;
+test_i32_load_1() => i32:4278255360
+test_i32_load_2() => i32:4278255360
+test_i32_load_3() => i32:16711935
+test_i32_load_4() => i32:16711935
+test_i32_load_5() => i32:2864434397
+test_i32_load_6() => error: out of bounds memory access
+test_i32_load_7() => error: out of bounds memory access
+test_i32_load_8() => error: out of bounds memory access
+test_i32_load_9() => error: out of bounds memory access
+test_i32_load_10() => error: out of bounds memory access
+test_i64_load_1() => i64:18374966859414961920
+test_i64_load_2() => i64:18374966859414961920
+test_i64_load_3() => i64:71777214294589695
+test_i64_load_4() => i64:71777214294589695
+test_i64_load_5() => i64:12302652060373662634
+test_i64_load_6() => error: out of bounds memory access
+test_i64_load_7() => error: out of bounds memory access
+test_i64_load_8() => error: out of bounds memory access
+test_i64_load_9() => error: out of bounds memory access
+test_i64_load_10() => error: out of bounds memory access
+test_f32_load_1() => f32:-4.500000
+test_f32_load_2() => f32:-4.500000
+test_f32_load_3() => f32:4.500000
+test_f32_load_4() => f32:4.500000
+test_f32_load_5() => f32:-inf
+test_f32_load_6() => error: out of bounds memory access
+test_f32_load_7() => error: out of bounds memory access
+test_f32_load_8() => error: out of bounds memory access
+test_f32_load_9() => error: out of bounds memory access
+test_f32_load_10() => error: out of bounds memory access
+test_f64_load_1() => f64:-4.500000
+test_f64_load_2() => f64:-4.500000
+test_f64_load_3() => f64:4.500000
+test_f64_load_4() => f64:4.500000
+test_f64_load_5() => f64:-inf
+test_f64_load_6() => error: out of bounds memory access
+test_f64_load_7() => error: out of bounds memory access
+test_f64_load_8() => error: out of bounds memory access
+test_f64_load_9() => error: out of bounds memory access
+test_f64_load_10() => error: out of bounds memory access
+;;; STDOUT ;;)
