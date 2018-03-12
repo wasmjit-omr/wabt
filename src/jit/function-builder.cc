@@ -693,6 +693,76 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
+    case Opcode::I32Load8S:
+      Push(b,
+           "i32",
+      b->  ConvertTo(Int32,
+      b->            LoadAt(typeDictionary()->PointerTo(Int8), EmitMemoryPreAccess<int8_t>(b, &pc))));
+      break;
+
+    case Opcode::I32Load8U:
+      Push(b,
+           "i32",
+      b->  UnsignedConvertTo(Int32,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int8), EmitMemoryPreAccess<int8_t>(b, &pc))));
+      break;
+
+    case Opcode::I32Load16S:
+      Push(b,
+           "i32",
+      b->  ConvertTo(Int32,
+      b->            LoadAt(typeDictionary()->PointerTo(Int16), EmitMemoryPreAccess<int16_t>(b, &pc))));
+      break;
+
+    case Opcode::I32Load16U:
+      Push(b,
+           "i32",
+      b->  UnsignedConvertTo(Int32,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int16), EmitMemoryPreAccess<int16_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load8S:
+      Push(b,
+           "i64",
+      b->  ConvertTo(Int64,
+      b->            LoadAt(typeDictionary()->PointerTo(Int8), EmitMemoryPreAccess<int8_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load8U:
+      Push(b,
+           "i64",
+      b->  UnsignedConvertTo(Int64,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int8), EmitMemoryPreAccess<int8_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load16S:
+      Push(b,
+           "i64",
+      b->  ConvertTo(Int64,
+      b->            LoadAt(typeDictionary()->PointerTo(Int16), EmitMemoryPreAccess<int16_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load16U:
+      Push(b,
+           "i64",
+      b->  UnsignedConvertTo(Int64,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int16), EmitMemoryPreAccess<int16_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load32S:
+      Push(b,
+           "i64",
+      b->  ConvertTo(Int64,
+      b->            LoadAt(typeDictionary()->PointerTo(Int32), EmitMemoryPreAccess<int32_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load32U:
+      Push(b,
+           "i64",
+      b->  UnsignedConvertTo(Int64,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int32), EmitMemoryPreAccess<int32_t>(b, &pc))));
+      break;
+
     case Opcode::I32Load:
       Push(b,
            "i32",
