@@ -252,6 +252,9 @@ struct DefinedFunc : Func {
 
   static bool classof(const Func* func) { return !func->is_host; }
 
+  std::string dbg_name_ = "???";
+  bool has_dbg_name_ = false;
+
   IstreamOffset offset;
   Index local_decl_count;
   Index local_count;
