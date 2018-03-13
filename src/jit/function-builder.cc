@@ -1335,6 +1335,54 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
+    case Opcode::F32ConvertSI32: {
+      auto* value = b->ConvertTo(Float, Pop(b, "i32"));
+      Push(b, "f32", value);
+      break;
+    }
+
+    case Opcode::F32ConvertUI32: {
+      auto* value = b->UnsignedConvertTo(Float, Pop(b, "i32"));
+      Push(b, "f32", value);
+      break;
+    }
+
+    case Opcode::F32ConvertSI64: {
+      auto* value = b->ConvertTo(Float, Pop(b, "i64"));
+      Push(b, "f32", value);
+      break;
+    }
+
+    case Opcode::F32ConvertUI64: {
+      auto* value = b->UnsignedConvertTo(Float, Pop(b, "i64"));
+      Push(b, "f32", value);
+      break;
+    }
+
+    case Opcode::F64ConvertSI32: {
+      auto* value = b->ConvertTo(Double, Pop(b, "i32"));
+      Push(b, "f64", value);
+      break;
+    }
+
+    case Opcode::F64ConvertUI32: {
+      auto* value = b->UnsignedConvertTo(Double, Pop(b, "i32"));
+      Push(b, "f64", value);
+      break;
+    }
+
+    case Opcode::F64ConvertSI64: {
+      auto* value = b->ConvertTo(Double, Pop(b, "i64"));
+      Push(b, "f64", value);
+      break;
+    }
+
+    case Opcode::F64ConvertUI64: {
+      auto* value = b->UnsignedConvertTo(Double, Pop(b, "i64"));
+      Push(b, "f64", value);
+      break;
+    }
+
     case Opcode::InterpAlloca: {
       auto pInt32 = typeDictionary()->PointerTo(Int32);
       auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
