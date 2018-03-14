@@ -1224,11 +1224,32 @@ Result Thread::CallHost(HostFunc* func) {
   return Result::Ok;
 }
 
+class TempPc {
+  public:
+    TempPc(Thread* thread)
+      : thread(thread),
+        istream(thread->env()->istream().data.data()),
+        pc(&istream[thread->pc()]) {}
+    TempPc(const TempPc&) = delete;
+    ~TempPc() { Commit(); }
+
+    TempPc& operator=(const TempPc&) = delete;
+
+    void Commit() { thread->set_pc(pc - istream); }
+    void Reload() { pc = istream + thread->pc(); }
+
+    Thread* thread;
+    const uint8_t* istream;
+    const uint8_t* pc;
+};
+
 Result Thread::Run(int num_instructions) {
   Result result = Result::Ok;
 
-  const uint8_t* istream = GetIstream();
-  const uint8_t* pc = &istream[pc_];
+  TempPc tpc(this);
+  const uint8_t*& istream = tpc.istream;
+  const uint8_t*& pc = tpc.pc;
+
   for (int i = 0; i < num_instructions; ++i) {
     Opcode opcode = ReadOpcode(&pc);
     assert(!opcode.IsInvalid());
@@ -1345,7 +1366,17 @@ Result Thread::Run(int num_instructions) {
             }
 
             if (meta->jit_fn) {
-              CHECK_TRAP(meta->jit_fn());
+              CHECK_TRAP(PushCall(pc));
+
+              auto result = meta->jit_fn();
+              if (result != Result::Ok) {
+                // We don't want to overwrite the pc of the JITted function if it traps
+                tpc.Reload();
+
+                return result;
+              }
+
+              PopCall();
             } else {
               CHECK_TRAP(PushCall(pc));
               GOTO(offset);
@@ -2248,7 +2279,6 @@ Result Thread::Run(int num_instructions) {
   }
 
 exit_loop:
-  pc_ = pc - istream;
   return result;
 }
 
@@ -3119,6 +3149,35 @@ void Environment::DisassembleModule(Stream* stream, Module* module) {
               defined_module->istream_end);
 }
 
+static void PrintCallFrame(Stream* s, Environment* e, IstreamOffset pc) {
+  DefinedFunc* best_fn = nullptr;
+
+  for (Index i = 0; i < e->GetFuncCount(); i++) {
+    Func* fn = e->GetFunc(i);
+
+    if (fn->is_host) continue;
+
+    DefinedFunc* dfn = cast<DefinedFunc>(fn);
+
+    if (dfn->offset > pc) continue;
+    if (best_fn && best_fn->offset > dfn->offset) continue;
+
+    best_fn = dfn;
+  }
+
+  if (best_fn) {
+    s->Writef("  at %s [@%u]\n", best_fn->dbg_name_.c_str(), pc);
+  } else {
+    s->Writef("  at ??? [@%u]\n", pc);
+  }
+}
+
+void ExecResult::PrintCallStack(Stream* s, Environment* e) {
+  for (auto it = call_stack.rbegin(); it != call_stack.rend(); ++it) {
+    PrintCallFrame(s, e, *it);
+  }
+}
+
 Executor::Executor(Environment* env,
                    Stream* trace_stream,
                    const Thread::Options& options)
@@ -3137,6 +3196,9 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
     if (exec_result.result == Result::Ok)
       CopyResults(sig, &exec_result.values);
   }
+
+  exec_result.call_stack.assign(thread_.call_stack_.begin(), thread_.call_stack_.begin() + thread_.call_stack_top_);
+  exec_result.call_stack.push_back(thread_.pc_);
 
   thread_.Reset();
   return exec_result;

@@ -252,6 +252,9 @@ struct DefinedFunc : Func {
 
   static bool classof(const Func* func) { return !func->is_host; }
 
+  std::string dbg_name_ = "???";
+  bool has_dbg_name_ = false;
+
   IstreamOffset offset;
   Index local_decl_count;
   Index local_count;
@@ -526,6 +529,7 @@ class Thread {
 
  private:
   friend class wabt::jit::FunctionBuilder;
+  friend class Executor;
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
 
   Memory* ReadMemory(const uint8_t** pc);
@@ -602,8 +606,11 @@ struct ExecResult {
   ExecResult(Result result, const TypedValues& values)
       : result(result), values(values) {}
 
+  void PrintCallStack(Stream*, Environment*);
+
   Result result = Result::Ok;
   TypedValues values;
+  std::vector<IstreamOffset> call_stack;
 };
 
 class Executor {

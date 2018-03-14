@@ -209,6 +209,9 @@ class BinaryReaderInterp : public BinaryReaderNop {
   wabt::Result OnInitExprI32ConstExpr(Index index, uint32_t value) override;
   wabt::Result OnInitExprI64ConstExpr(Index index, uint64_t value) override;
 
+  wabt::Result OnFunctionNamesCount(Index count) override;
+  wabt::Result OnFunctionName(Index index, string_view name) override;
+
  private:
   Label* GetLabel(Index depth);
   Label* TopLabel();
@@ -935,9 +938,19 @@ wabt::Result BinaryReaderInterp::OnExport(Index index,
                                           Index item_index,
                                           string_view name) {
   switch (kind) {
-    case ExternalKind::Func:
+    case ExternalKind::Func: {
       item_index = TranslateFuncIndexToEnv(item_index);
+      Func* fn = env_->GetFunc(item_index);
+      if (!fn->is_host) {
+        DefinedFunc* dfn = cast<DefinedFunc>(fn);
+
+        if (!dfn->has_dbg_name_) {
+          dfn->dbg_name_ = name.to_string();
+          dfn->has_dbg_name_ = true;
+        }
+      }
       break;
+    }
 
     case ExternalKind::Table:
       item_index = module_->table_index;
@@ -1520,6 +1533,28 @@ wabt::Result BinaryReaderInterp::EndModule() {
   for (DataSegmentInfo& info : data_segment_infos_) {
     memcpy(info.dst_data, info.src_data, info.size);
   }
+  return wabt::Result::Ok;
+}
+
+wabt::Result BinaryReaderInterp::OnFunctionNamesCount(Index count) {
+  if (count > func_index_mapping_.size()) {
+    PrintError("expected function name count (%" PRIindex
+               ") <= function count (%" PRIzd ")",
+               count, func_index_mapping_.size());
+    return wabt::Result::Error;
+  }
+  return wabt::Result::Ok;
+}
+
+wabt::Result BinaryReaderInterp::OnFunctionName(Index index, string_view name) {
+  Func* func = GetFuncByModuleIndex(index);
+  if (name.empty() || func->is_host)
+    return wabt::Result::Ok;
+
+  DefinedFunc* dfn = cast<DefinedFunc>(func);
+
+  dfn->dbg_name_ = std::string("$") + name.to_string();
+  dfn->has_dbg_name_ = true;
   return wabt::Result::Ok;
 }
 

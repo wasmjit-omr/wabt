@@ -34,4 +34,5 @@ options:
       --disable-jit                           Prevent just in time compilation
       --trap-on-failed-comp                   Trap if a JIT compilation fails
       --jit-threshold=THRESHOLD               Number of calls after which to JIT compile a function
+      --no-stack-trace                        Don't print a stack trace if a trap occurs
 ;;; STDOUT ;;)
