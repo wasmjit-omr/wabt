@@ -693,6 +693,76 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
+    case Opcode::I32Load8S:
+      Push(b,
+           "i32",
+      b->  ConvertTo(Int32,
+      b->            LoadAt(typeDictionary()->PointerTo(Int8), EmitMemoryPreAccess<int8_t>(b, &pc))));
+      break;
+
+    case Opcode::I32Load8U:
+      Push(b,
+           "i32",
+      b->  UnsignedConvertTo(Int32,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int8), EmitMemoryPreAccess<int8_t>(b, &pc))));
+      break;
+
+    case Opcode::I32Load16S:
+      Push(b,
+           "i32",
+      b->  ConvertTo(Int32,
+      b->            LoadAt(typeDictionary()->PointerTo(Int16), EmitMemoryPreAccess<int16_t>(b, &pc))));
+      break;
+
+    case Opcode::I32Load16U:
+      Push(b,
+           "i32",
+      b->  UnsignedConvertTo(Int32,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int16), EmitMemoryPreAccess<int16_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load8S:
+      Push(b,
+           "i64",
+      b->  ConvertTo(Int64,
+      b->            LoadAt(typeDictionary()->PointerTo(Int8), EmitMemoryPreAccess<int8_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load8U:
+      Push(b,
+           "i64",
+      b->  UnsignedConvertTo(Int64,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int8), EmitMemoryPreAccess<int8_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load16S:
+      Push(b,
+           "i64",
+      b->  ConvertTo(Int64,
+      b->            LoadAt(typeDictionary()->PointerTo(Int16), EmitMemoryPreAccess<int16_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load16U:
+      Push(b,
+           "i64",
+      b->  UnsignedConvertTo(Int64,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int16), EmitMemoryPreAccess<int16_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load32S:
+      Push(b,
+           "i64",
+      b->  ConvertTo(Int64,
+      b->            LoadAt(typeDictionary()->PointerTo(Int32), EmitMemoryPreAccess<int32_t>(b, &pc))));
+      break;
+
+    case Opcode::I64Load32U:
+      Push(b,
+           "i64",
+      b->  UnsignedConvertTo(Int64,
+      b->                    LoadAt(typeDictionary()->PointerTo(Int32), EmitMemoryPreAccess<int32_t>(b, &pc))));
+      break;
+
     case Opcode::I32Load:
       Push(b,
            "i32",
@@ -716,6 +786,36 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
            "f64",
       b->  LoadAt(typeDictionary()->PointerTo(Double), EmitMemoryPreAccess<double>(b, &pc)));
       break;
+
+    case Opcode::I32Store8: {
+      auto value = b->ConvertTo(Int8, Pop(b, "i32"));
+      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::I32Store16: {
+      auto value = b->ConvertTo(Int16, Pop(b, "i32"));
+      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::I64Store8: {
+      auto value = b->ConvertTo(Int8, Pop(b, "i64"));
+      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::I64Store16: {
+      auto value = b->ConvertTo(Int16, Pop(b, "i64"));
+      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
+      break;
+    }
+
+    case Opcode::I64Store32: {
+      auto value = b->ConvertTo(Int32, Pop(b, "i64"));
+      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
+      break;
+    }
 
     case Opcode::I32Store: {
       auto value = Pop(b, "i32");
@@ -1169,6 +1269,119 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
+
+    case Opcode::I32WrapI64: {
+      auto* value = Pop(b, "i64");
+      Push(b, "i32",
+      b->  ConvertTo(Int32, value));
+      break;
+    }
+
+    case Opcode::I64ExtendSI32: {
+      auto* value = Pop(b, "i32");
+      Push(b, "i64",
+      b->  ConvertTo(Int64, value));
+      break;
+    }
+
+    case Opcode::I64ExtendUI32: {
+      auto* value = Pop(b, "i32");
+      Push(b, "i64",
+      b->  UnsignedConvertTo(Int64, value));
+      break;
+    }
+
+    case Opcode::F32DemoteF64: {
+      auto* value = Pop(b, "f64");
+      Push(b, "f32",
+      b->  ConvertTo(Float, value));
+      break;
+    }
+
+    case Opcode::F64PromoteF32: {
+      auto* value = Pop(b, "f32");
+      Push(b, "f64",
+      b->  ConvertTo(Double, value));
+      break;
+    }
+
+    case Opcode::I32Extend8S: {
+      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int8, Pop(b, "i32")));
+      Push(b, "i32", value);
+      break;
+    }
+
+    case Opcode::I32Extend16S: {
+      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int16, Pop(b, "i32")));
+      Push(b, "i32", value);
+      break;
+    }
+
+    case Opcode::I64Extend8S: {
+      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int8, Pop(b, "i32")));
+      Push(b, "i32", value);
+      break;
+    }
+
+    case Opcode::I64Extend16S: {
+      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int16, Pop(b, "i32")));
+      Push(b, "i32", value);
+      break;
+    }
+
+    case Opcode::I64Extend32S: {
+      auto* value = b->ConvertTo(Int64, b->ConvertTo(Int32, Pop(b, "i64")));
+      Push(b, "i64", value);
+      break;
+    }
+
+    case Opcode::F32ConvertSI32: {
+      auto* value = b->ConvertTo(Float, Pop(b, "i32"));
+      Push(b, "f32", value);
+      break;
+    }
+
+    case Opcode::F32ConvertUI32: {
+      auto* value = b->UnsignedConvertTo(Float, Pop(b, "i32"));
+      Push(b, "f32", value);
+      break;
+    }
+
+    case Opcode::F32ConvertSI64: {
+      auto* value = b->ConvertTo(Float, Pop(b, "i64"));
+      Push(b, "f32", value);
+      break;
+    }
+
+    case Opcode::F32ConvertUI64: {
+      auto* value = b->UnsignedConvertTo(Float, Pop(b, "i64"));
+      Push(b, "f32", value);
+      break;
+    }
+
+    case Opcode::F64ConvertSI32: {
+      auto* value = b->ConvertTo(Double, Pop(b, "i32"));
+      Push(b, "f64", value);
+      break;
+    }
+
+    case Opcode::F64ConvertUI32: {
+      auto* value = b->UnsignedConvertTo(Double, Pop(b, "i32"));
+      Push(b, "f64", value);
+      break;
+    }
+
+    case Opcode::F64ConvertSI64: {
+      auto* value = b->ConvertTo(Double, Pop(b, "i64"));
+      Push(b, "f64", value);
+      break;
+    }
+
+    case Opcode::F64ConvertUI64: {
+      auto* value = b->UnsignedConvertTo(Double, Pop(b, "i64"));
+      Push(b, "f64", value);
+      break;
+    }
 
     case Opcode::InterpAlloca: {
       auto pInt32 = typeDictionary()->PointerTo(Int32);
