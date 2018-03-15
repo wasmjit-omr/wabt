@@ -1186,6 +1186,36 @@ ValueTypeRep<T> Xchg(ValueTypeRep<T> lhs_rep, ValueTypeRep<T> rhs_rep) {
   return rhs_rep;
 }
 
+bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn) {
+  if (!enable_jit) {
+    *fn = nullptr;
+    return false;
+  }
+
+  auto meta_it = jit_meta_.find(offset);
+
+  if (meta_it != jit_meta_.end()) {
+    auto* meta = &meta_it->second;
+    if (!meta->tried_jit) {
+      meta->num_calls++;
+
+      if (meta->num_calls >= jit_threshold) {
+        meta->jit_fn = jit::compile(t, meta->wasm_fn);
+        meta->tried_jit = true;
+      } else {
+        *fn = nullptr;
+        return false;
+      }
+    }
+
+    *fn = meta->jit_fn;
+    return trap_on_failed_comp || *fn;
+  } else {
+    *fn = nullptr;
+    return trap_on_failed_comp;
+  }
+}
+
 bool Environment::FuncSignaturesAreEqual(Index sig_index_0,
                                          Index sig_index_1) const {
   if (sig_index_0 == sig_index_1)
@@ -1349,42 +1379,21 @@ Result Thread::Run(int num_instructions) {
 
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
-        if (env_->enable_jit) {
-          auto meta_it = env_->jit_meta_.find(offset);
+        Environment::JITedFunction jit_fn;
 
-          if (meta_it != env_->jit_meta_.end()) {
-            auto* meta = &meta_it->second;
-            if (!meta->tried_jit) {
-              meta->num_calls++;
+        if (env_->TryJit(this, offset, &jit_fn)) {
+          TRAP_IF(!jit_fn, FailedJITCompilation);
+          CHECK_TRAP(PushCall(pc));
 
-              if (meta->num_calls >= env_->jit_threshold) {
-                meta->jit_fn = jit::compile(this, meta->wasm_fn);
-                meta->tried_jit = true;
+          auto result = jit_fn();
+          if (result != Result::Ok) {
+            // We don't want to overwrite the pc of the JITted function if it traps
+            tpc.Reload();
 
-                TRAP_IF(env_->trap_on_failed_comp && meta->jit_fn == nullptr, FailedJITCompilation);
-              }
-            }
-
-            if (meta->jit_fn) {
-              CHECK_TRAP(PushCall(pc));
-
-              auto result = meta->jit_fn();
-              if (result != Result::Ok) {
-                // We don't want to overwrite the pc of the JITted function if it traps
-                tpc.Reload();
-
-                return result;
-              }
-
-              PopCall();
-            } else {
-              CHECK_TRAP(PushCall(pc));
-              GOTO(offset);
-            }
-          } else {
-            CHECK_TRAP(PushCall(pc));
-            GOTO(offset);
+            return result;
           }
+
+          PopCall();
         } else {
           CHECK_TRAP(PushCall(pc));
           GOTO(offset);
@@ -1406,8 +1415,26 @@ Result Thread::Run(int num_instructions) {
         if (func->is_host) {
           CallHost(cast<HostFunc>(func));
         } else {
-          CHECK_TRAP(PushCall(pc));
-          GOTO(cast<DefinedFunc>(func)->offset);
+          auto* dfn = cast<DefinedFunc>(func);
+          Environment::JITedFunction jit_fn;
+
+          if (env_->TryJit(this, dfn->offset, &jit_fn)) {
+            TRAP_IF(!jit_fn, FailedJITCompilation);
+            CHECK_TRAP(PushCall(pc));
+
+            auto result = jit_fn();
+            if (result != Result::Ok) {
+              // We don't want to overwrite the pc of the JITted function if it traps
+              tpc.Reload();
+
+              return result;
+            }
+
+            PopCall();
+          } else {
+            CHECK_TRAP(PushCall(pc));
+            GOTO(dfn->offset);
+          }
         }
         break;
       }

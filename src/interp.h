@@ -341,6 +341,7 @@ struct HostModule : Module {
   std::unique_ptr<HostImportDelegate> import_delegate;
 };
 
+class Thread;
 class Environment {
  public:
   // Used to track and reset the state of the environment.
@@ -481,6 +482,8 @@ class Environment {
 
     JitMeta(DefinedFunc* wasm_fn) : wasm_fn(wasm_fn) {}
   };
+
+  bool TryJit(Thread* t, IstreamOffset offset, JITedFunction* fn);
 
   std::vector<std::unique_ptr<Module>> modules_;
   std::vector<FuncSignature> sigs_;
