@@ -1,4 +1,4 @@
-;;; TOOL: run-interp
+;;; TOOL: run-interp-jit
 (module
   (type $v_i (func (result i32)))
   (func $zero (type $v_i) 
