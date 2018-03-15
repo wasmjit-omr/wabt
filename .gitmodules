@@ -9,4 +9,4 @@
 	url = https://github.com/dabeaz/ply
 [submodule "third_party/omr"]
 	path = third_party/omr
-	url = https://github.com/eclipse/omr.git
+	url = https://github.com/wasmjit-omr/omr.git
