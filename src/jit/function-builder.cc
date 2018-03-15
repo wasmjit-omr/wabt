@@ -1512,6 +1512,30 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
+    case Opcode::F32ReinterpretI32: {
+      auto* value = b->CoerceTo(Float, Pop(b, "i32"));
+      Push(b, "f32", value, pc);
+      break;
+    }
+
+    case Opcode::I32ReinterpretF32: {
+      auto* value = b->CoerceTo(Int32, Pop(b, "f32"));
+      Push(b, "i32", value, pc);
+      break;
+    }
+
+    case Opcode::F64ReinterpretI64: {
+      auto* value = b->CoerceTo(Double, Pop(b, "i64"));
+      Push(b, "f64", value, pc);
+      break;
+    }
+
+    case Opcode::I64ReinterpretF64: {
+      auto* value = b->CoerceTo(Int64, Pop(b, "f64"));
+      Push(b, "i64", value, pc);
+      break;
+    }
+
     case Opcode::InterpAlloca: {
       auto pInt32 = typeDictionary()->PointerTo(Int32);
       auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);

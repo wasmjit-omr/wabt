@@ -1,0 +1,40 @@
+;;; TOOL: run-interp-jit
+(module
+  (func $f32_reinterpret_i32 (param i32) (result f32)
+    get_local 0
+    f32.reinterpret/i32)
+
+  (func $i32_reinterpret_f32 (param f32) (result i32)
+    get_local 0
+    i32.reinterpret/f32)
+
+  (func $f64_reinterpret_i64 (param i64) (result f64)
+    get_local 0
+    f64.reinterpret/i64)
+
+  (func $i64_reinterpret_f64 (param f64) (result i64)
+    get_local 0
+    i64.reinterpret/f64)
+
+  (func (export "f32_reinterpret_i32_0") (result f32)
+    i32.const 0x40900000
+    call $f32_reinterpret_i32)
+
+  (func (export "i32_reinterpret_f32_0") (result i32)
+    f32.const -3.5
+    call $i32_reinterpret_f32)
+
+  (func (export "f64_reinterpret_i64_0") (result f64)
+    i64.const 0x405f480000000000
+    call $f64_reinterpret_i64)
+
+  (func (export "i64_reinterpret_f64_0") (result i64)
+    f64.const 1.375e10
+    call $i64_reinterpret_f64)
+)
+(;; STDOUT ;;;
+f32_reinterpret_i32_0() => f32:4.500000
+i32_reinterpret_f32_0() => i32:3227516928
+f64_reinterpret_i64_0() => f64:125.125000
+i64_reinterpret_f64_0() => i64:4758506566875873280
+;;; STDOUT ;;)
