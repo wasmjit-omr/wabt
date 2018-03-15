@@ -1,4 +1,4 @@
-;;; TOOL: run-interp
+;;; TOOL: run-interp-jit
 (module
   (func $br_1_level (result i32)
     block
