@@ -196,6 +196,17 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  2,
                  Float,
                  Float);
+  DefineFunction("f64_sqrt", __FILE__, "0",
+                 reinterpret_cast<void*>(static_cast<double (*)(double)>(std::sqrt)),
+                 Double,
+                 1,
+                 Double);
+  DefineFunction("f64_copysign", __FILE__, "0",
+                 reinterpret_cast<void*>(static_cast<double (*)(double, double)>(std::copysign)),
+                 Double,
+                 2,
+                 Double,
+                 Double);
   DefineFunction("CallHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallHelper),
                  types->toIlType<Result_t>(),
@@ -1283,6 +1294,67 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::F32Ge:
       EmitBinaryOp<float, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Abs:
+      EmitUnaryOp<double>(b, pc, [&](TR::IlValue* value) {
+        auto* return_value = b->Copy(value);
+
+        TR::IlBuilder* zero_path = nullptr;
+        TR::IlBuilder* nonzero_path = nullptr;
+        TR::IlBuilder* neg_path = nullptr;
+
+        // We have to check explicitly for 0.0, since abs(-0.0) is 0.0.
+        b->IfThenElse(&zero_path, &nonzero_path, b->EqualTo(value, b->ConstDouble(0)));
+        zero_path->StoreOver(return_value, zero_path->ConstDouble(0));
+
+        nonzero_path->IfThen(&neg_path, nonzero_path->LessThan(value, nonzero_path->ConstDouble(0)));
+        neg_path->StoreOver(return_value, neg_path->Mul(value, neg_path->ConstDouble(-1)));
+
+        return return_value;
+      });
+      break;
+
+    case Opcode::F64Neg:
+      EmitUnaryOp<double>(b, pc, [&](TR::IlValue* value) {
+        return b->Mul(value, b->ConstDouble(-1));
+      });
+      break;
+
+    case Opcode::F64Sqrt:
+      EmitUnaryOp<double>(b, pc, [&](TR::IlValue* value) {
+        return b->Call("f64_sqrt", 1, value);
+      });
+      break;
+
+    case Opcode::F64Add:
+      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Add(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Sub:
+      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Sub(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Mul:
+      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Mul(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Div:
+      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Div(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Copysign:
+      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->Call("f64_copysign", 2, lhs, rhs);
       });
       break;
 
