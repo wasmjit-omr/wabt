@@ -181,7 +181,7 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
       pValueType_(types->PointerTo(types->LookupUnion("Value"))) {
   DefineLine(__LINE__);
   DefineFile(__FILE__);
-  DefineName("WASM_Function");
+  DefineName(fn->dbg_name_.c_str());
 
   DefineReturnType(types->toIlType<Result_t>());
 
