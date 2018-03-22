@@ -151,7 +151,9 @@ FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thre
   TRAP_UNLESS(env->FuncSignaturesAreEqual(func->sig_index, sig_index),
               IndirectCallSignatureMismatch);
   if (func->is_host) {
-    th->CallHost(cast<HostFunc>(func));
+    auto result = static_cast<Result_t>(th->CallHost(cast<HostFunc>(func)));
+    if (result != static_cast<Result_t>(interp::Result::Ok))
+      return result;
   } else {
     auto result = CallHelper(th, cast<DefinedFunc>(func)->offset, current_pc);
     if (result != static_cast<Result_t>(interp::Result::Ok))
@@ -160,8 +162,8 @@ FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thre
   return static_cast<Result_t>(interp::Result::Ok);
 }
 
-void FunctionBuilder::CallHostHelper(wabt::interp::Thread* th, Index func_index) {
-  th->CallHost(cast<wabt::interp::HostFunc>(th->env_->funcs_[func_index].get()));
+FunctionBuilder::Result_t FunctionBuilder::CallHostHelper(wabt::interp::Thread* th, Index func_index) {
+  return static_cast<Result_t>(th->CallHost(cast<wabt::interp::HostFunc>(th->env_->funcs_[func_index].get())));
 }
 
 void* FunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size) {
@@ -226,7 +228,7 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  types->PointerTo(Int8));
   DefineFunction("CallHostHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallHostHelper),
-                 NoType,
+                 types->toIlType<Result_t>(),
                  2,
                  types->toIlType<void*>(),
                  types->toIlType<Index>());
@@ -797,9 +799,14 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::InterpCallHost: {
       Index func_index = ReadU32(&pc);
-      b->Call("CallHostHelper", 2,
-      b->     ConstAddress(thread_),
-      b->     ConstInt32(func_index));
+
+      b->Store("result",
+      b->      Call("CallHostHelper", 2,
+      b->           ConstAddress(thread_),
+      b->           ConstInt32(func_index)));
+
+      EmitCheckTrap(b, b->Load("result"), pc);
+
       break;
     }
 

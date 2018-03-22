@@ -124,7 +124,7 @@ class FunctionBuilder : public TR::MethodBuilder {
 
   static Result_t CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc);
 
-  static void CallHostHelper(wabt::interp::Thread* th, Index func_index);
+  static Result_t CallHostHelper(wabt::interp::Thread* th, Index func_index);
 
   static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
 

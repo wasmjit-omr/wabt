@@ -1413,7 +1413,7 @@ Result Thread::Run(int num_instructions) {
         TRAP_UNLESS(env_->FuncSignaturesAreEqual(func->sig_index, sig_index),
                     IndirectCallSignatureMismatch);
         if (func->is_host) {
-          CallHost(cast<HostFunc>(func));
+          CHECK_TRAP(CallHost(cast<HostFunc>(func)));
         } else {
           auto* dfn = cast<DefinedFunc>(func);
           Environment::JITedFunction jit_fn;
@@ -1441,7 +1441,7 @@ Result Thread::Run(int num_instructions) {
 
       case Opcode::InterpCallHost: {
         Index func_index = ReadU32(&pc);
-        CallHost(cast<HostFunc>(env_->funcs_[func_index].get()));
+        CHECK_TRAP(CallHost(cast<HostFunc>(env_->funcs_[func_index].get())));
         break;
       }
 
