@@ -107,6 +107,14 @@ class FunctionBuilder : public TR::MethodBuilder {
   void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
   void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result, const uint8_t* pc);
 
+  template <typename F>
+  TR::IlValue* EmitIsNan(TR::IlBuilder* b, TR::IlValue* value);
+
+  template <typename ToType, typename FromType>
+  void EmitTruncation(TR::IlBuilder* b, const uint8_t* pc);
+  template <typename ToType, typename FromType>
+  void EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc);
+
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 

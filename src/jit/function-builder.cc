@@ -23,6 +23,7 @@
 
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
 namespace wabt {
 
@@ -544,6 +545,94 @@ void FunctionBuilder::EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::I
 
   b->IfThen(&trap_handler, condition);
   EmitTrap(trap_handler, result, pc);
+}
+
+template <>
+TR::IlValue* FunctionBuilder::EmitIsNan<float>(TR::IlBuilder* b, TR::IlValue* value) {
+  return b->GreaterThan(
+         b->           And(
+         b->               CoerceTo(Int32, value),
+         b->               ConstInt32(0x7fffffffU)),
+         b->           ConstInt32(0x7f800000U));
+}
+
+template <>
+TR::IlValue* FunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue* value) {
+  return b->GreaterThan(
+         b->           And(
+         b->               CoerceTo(Int64, value),
+         b->               ConstInt64(0x7fffffffffffffffULL)),
+         b->           ConstInt64(0x7ff0000000000000ULL));
+}
+
+template <typename ToType, typename FromType>
+void FunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc) {
+  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+
+  auto* value = Pop(b, TypeFieldName<FromType>());
+
+  // TRAP_IF is NaN
+  EmitTrapIf(b,
+             EmitIsNan<FromType>(b, value),
+  b->        Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)),
+             pc);
+
+  // TRAP_UNLESS conversion is in range
+  EmitTrapIf(b,
+  b->        Or(
+  b->           LessThan(value,
+  b->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))),
+  b->           GreaterThan(value,
+  b->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max())))),
+  b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)),
+             pc);
+
+  auto* target_type = b->typeDictionary()->toIlType<ToType>();
+
+  // this could be optimized using templates or constant expressions,
+  // but the compiler should be able to simplify this anyways
+  auto* new_value = std::is_unsigned<ToType>::value ? b->UnsignedConvertTo(target_type, value)
+                                                    : b->ConvertTo(target_type, value);
+
+  Push(b, TypeFieldName<ToType>(), new_value, pc);
+}
+
+/**
+ * @brief Special case of EmitTruncation for unsigned integers as target type
+ *
+ * This function is designed to handle the case of truncating to an unsigned integer type.
+ * When the target type is an unsigned integer type smaller than 64-bits, the floating-point
+ * value can be safely truncated to a *signed* 64-bit integer and then converted to
+ * the target type.
+ */
+template <typename ToType, typename FromType>
+void FunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc) {
+  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+  static_assert(std::is_integral<ToType>::value, "ToType in EmitUnsignedTruncation call must be an integer type");
+  static_assert(std::is_unsigned<ToType>::value, "ToType in EmitUnsignedTruncation call must be unsigned");
+
+  auto* value = Pop(b, TypeFieldName<FromType>());
+
+  // TRAP_IF is NaN
+  EmitTrapIf(b,
+             EmitIsNan<FromType>(b, value),
+  b->        Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)),
+             pc);
+
+  // TRAP_UNLESS conversion is in range
+  EmitTrapIf(b,
+  b->        Or(
+  b->           LessThan(value,
+  b->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))),
+  b->           GreaterThan(value,
+  b->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max())))),
+  b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)),
+             pc);
+
+  auto* target_type = b->typeDictionary()->toIlType<ToType>();
+  auto* new_value = b->UnsignedConvertTo(target_type, b->ConvertTo(Int64, value));
+
+  Push(b, TypeFieldName<ToType>(), new_value, pc);
 }
 
 template <typename T>
@@ -1535,6 +1624,40 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       Push(b, "i64", value, pc);
       break;
     }
+
+    case Opcode::I32TruncSF32:
+      EmitTruncation<int32_t, float>(b, pc);
+      break;
+
+    case Opcode::I32TruncUF32:
+      EmitUnsignedTruncation<uint32_t, float>(b, pc);
+      break;
+
+    case Opcode::I32TruncSF64:
+      EmitTruncation<int32_t, double>(b, pc);
+      break;
+
+    case Opcode::I32TruncUF64:
+      EmitUnsignedTruncation<uint32_t, double>(b, pc);
+      break;
+
+    case Opcode::I64TruncSF32:
+      EmitTruncation<int64_t, float>(b, pc);
+      break;
+
+//    UNSIGNED TYPE NOT HANDLED
+//    case Opcode::I64TruncUF32:
+//      EmitTruncation<uint64_t, float>(b, pc);
+//      break;
+
+    case Opcode::I64TruncSF64:
+      EmitTruncation<int64_t, double>(b, pc);
+      break;
+
+//    UNSIGNED TYPE NOT HANDLED
+//    case Opcode::I64TruncUF64:
+//      EmitTruncation<uint64_t, double>(b, pc);
+//      break;
 
     case Opcode::InterpAlloca: {
       auto pInt32 = typeDictionary()->PointerTo(Int32);

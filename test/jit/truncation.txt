@@ -1,0 +1,124 @@
+;;; TOOL: run-interp-jit
+(module
+  ;; i32
+  (func $i32_trunc_s_f32 (param f32) (result i32)
+    get_local 0
+    i32.trunc_s/f32)
+  (func $i32_trunc_s_f64 (param f64) (result i32)
+    get_local 0
+    i32.trunc_s/f64)
+  (func $i32_trunc_u_f32 (param f32) (result i32)
+    get_local 0
+    i32.trunc_u/f32)
+  (func $i32_trunc_u_f64 (param f64) (result i32)
+    get_local 0
+    i32.trunc_u/f64)
+
+  (func (export "i32_trunc_s_f32_test_0") (result i32)
+    f32.const -100.12345 
+    call $i32_trunc_s_f32)
+  (func (export "i32_trunc_u_f32_test_0") (result i32)
+    f32.const 3e9
+    call $i32_trunc_u_f32)
+  (func (export "i32_trunc_s_f64_test_0") (result i32)
+    f64.const -100.12345 
+    call $i32_trunc_s_f64)
+  (func (export "i32_trunc_u_f64_test_0") (result i32)
+    f64.const 3e9
+    call $i32_trunc_u_f64)
+
+  (func (export "i32_trunc_s_f32_test_1") (result i32)
+    f32.const nan 
+    call $i32_trunc_s_f32)
+  (func (export "i32_trunc_s_f64_test_1") (result i32)
+    f64.const nan 
+    call $i32_trunc_s_f64)
+
+  (func (export "i32_trunc_s_f32_test_2") (result i32)
+    f32.const inf 
+    call $i32_trunc_s_f32)
+  (func (export "i32_trunc_s_f32_test_3") (result i32)
+    f32.const -inf 
+    call $i32_trunc_s_f32)
+  (func (export "i32_trunc_s_f64_test_2") (result i32)
+    f64.const inf 
+    call $i32_trunc_s_f64)
+  (func (export "i32_trunc_s_f64_test_3") (result i32)
+    f64.const -inf 
+    call $i32_trunc_s_f64)
+
+  ;; i64
+  (func $i64_trunc_s_f32 (param f32) (result i64)
+    get_local 0
+    i64.trunc_s/f32)
+  (func $i64_trunc_s_f64 (param f64) (result i64)
+    get_local 0
+    i64.trunc_s/f64)
+  (func $i64_trunc_u_f32 (param f32) (result i64)
+    get_local 0
+    i64.trunc_u/f32)
+  (func $i64_trunc_u_f64 (param f64) (result i64)
+    get_local 0
+    i64.trunc_u/f64)
+
+  (func (export "i64_trunc_s_f32_test_0") (result i32)
+     f32.const -100.12345
+     call $i64_trunc_s_f32 
+     i64.const -100
+     i64.eq)
+  ;;(func (export "i64_trunc_u_f32_test_0") (result i32)
+  ;;   f32.const 3e9
+  ;;   call $i64_trunc_u_f32
+  ;;   i64.const 3000000000
+  ;;   i64.eq)
+  (func (export "i64_trunc_s_f64_test_0") (result i32)
+     f64.const -100.12345
+     call $i64_trunc_s_f64
+     i64.const -100
+     i64.eq)
+  ;;(func (export "i64_trunc_u_f64_test_0") (result i32)
+  ;;   f64.const 3e9
+  ;;   call $i64_trunc_u_f64
+  ;;   i64.const 3000000000
+  ;;   i64.eq)
+
+  (func (export "i64_trunc_s_f32_test_1") (result i64)
+    f32.const nan 
+    call $i64_trunc_s_f32)
+  (func (export "i64_trunc_s_f64_test_1") (result i64)
+    f64.const nan 
+    call $i64_trunc_s_f64)
+
+  (func (export "i64_trunc_s_f32_test_2") (result i64)
+    f32.const inf 
+    call $i64_trunc_s_f32)
+  (func (export "i64_trunc_s_f32_test_3") (result i64)
+    f32.const -inf 
+    call $i64_trunc_s_f32)
+  (func (export "i64_trunc_s_f64_test_2") (result i64)
+    f64.const inf 
+    call $i64_trunc_s_f64)
+  (func (export "i64_trunc_s_f64_test_3") (result i64)
+    f64.const -inf 
+    call $i64_trunc_s_f64)
+)
+(;; STDOUT ;;;
+i32_trunc_s_f32_test_0() => i32:4294967196
+i32_trunc_u_f32_test_0() => i32:3000000000
+i32_trunc_s_f64_test_0() => i32:4294967196
+i32_trunc_u_f64_test_0() => i32:3000000000
+i32_trunc_s_f32_test_1() => error: invalid conversion to integer
+i32_trunc_s_f64_test_1() => error: invalid conversion to integer
+i32_trunc_s_f32_test_2() => error: integer overflow
+i32_trunc_s_f32_test_3() => error: integer overflow
+i32_trunc_s_f64_test_2() => error: integer overflow
+i32_trunc_s_f64_test_3() => error: integer overflow
+i64_trunc_s_f32_test_0() => i32:1
+i64_trunc_s_f64_test_0() => i32:1
+i64_trunc_s_f32_test_1() => error: invalid conversion to integer
+i64_trunc_s_f64_test_1() => error: invalid conversion to integer
+i64_trunc_s_f32_test_2() => error: integer overflow
+i64_trunc_s_f32_test_3() => error: integer overflow
+i64_trunc_s_f64_test_2() => error: integer overflow
+i64_trunc_s_f64_test_3() => error: integer overflow
+;;; STDOUT ;;)
