@@ -36,7 +36,6 @@ set(OMR_THREAD ON CACHE BOOL "")
 set(OMR_TEST_COMPILER OFF CACHE BOOL "")
 set(OMR_OMRSIG OFF CACHE BOOL "")
 set(OMR_FVTEST OFF CACHE BOOL "")
-set(OMR_GLUE ${CMAKE_SOURCE_DIR}/example/glue)
 set(OMR_GC_SEGREGATED_HEAP OFF CACHE BOOL "")
 set(OMR_GC_MODRON_SCAVENGER OFF CACHE BOOL "")
 set(OMR_GC_MODRON_CONCURRENT_MARK OFF CACHE BOOL "")
@@ -271,6 +270,7 @@ function(add_omr)
   # files.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 
+  add_subdirectory(third_party/omr/example/glue EXCLUDE_FROM_ALL)
   add_subdirectory(third_party/omr EXCLUDE_FROM_ALL)
 endfunction()
 
