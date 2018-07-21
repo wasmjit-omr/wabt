@@ -243,7 +243,7 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
 }
 
 bool FunctionBuilder::buildIL() {
-  setVMState(new OMR::VirtualMachineState());
+  setVMState(new TR::VirtualMachineState());
 
   const uint8_t* istream = thread_->GetIstream();
 
