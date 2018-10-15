@@ -1196,17 +1196,8 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
 
   if (meta_it != jit_meta_.end()) {
     auto* meta = &meta_it->second;
-    if (!meta->tried_jit) {
-      meta->num_calls++;
 
-      if (meta->num_calls >= jit_threshold) {
-        meta->jit_fn = jit::compile(t, meta->wasm_fn);
-        meta->tried_jit = true;
-      } else {
-        *fn = nullptr;
-        return false;
-      }
-    }
+    // YOUR CODE HERE
 
     *fn = meta->jit_fn;
     return trap_on_failed_comp || *fn;
@@ -1379,21 +1370,16 @@ Result Thread::Run(int num_instructions) {
 
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
-        Environment::JITedFunction jit_fn;
 
-        if (env_->TryJit(this, offset, &jit_fn)) {
-          TRAP_IF(!jit_fn, FailedJITCompilation);
-          CHECK_TRAP(PushCall(pc));
+        if (false) {
 
-          auto result = jit_fn();
-          if (result != Result::Ok) {
+          if (true) {
             // We don't want to overwrite the pc of the JITted function if it traps
             tpc.Reload();
 
             return result;
           }
 
-          PopCall();
         } else {
           CHECK_TRAP(PushCall(pc));
           GOTO(offset);
