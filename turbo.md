@@ -1,15 +1,22 @@
-# TURBO: Boost WABT Performance using JitBuilder, SPLASH 2018
+# TURBO18: Boost WABT Performance using JitBuilder
 
-## Dispatching the JIT
+## WABT Overview
 
-### Calling the OMR compiler from JitBuilder
+
+## JitBuilder Overview
+
+* * *
+
+## Part 1: Dispatching the JIT
+
+### Exercise 1: Calling the OMR Compiler from JitBuilder
 
 #### Background
 
-The main task envolved in creating a JIT compiler using JitBuilder is to
+The main task involved in creating a JIT compiler using JitBuilder is to
 translate the VM/interpreter's representation of functions into the OMR
-compiler's Intermediate Langauge (IL); a process known as IL generation. In
-JitBuilder, IL generation is implemented by subclassing `MethodBuilder` and
+compiler's Intermediate Language (known as TR IL), a process known as IL generation. In
+JitBuilder, IL generation is implemented by subclassing `OMR::MethodBuilder` and
 overriding the required functions. To actually compile a function/method,
 `compileMethodBuilder()` is called with an instance of the `MethodBuilder`
 subclass, an instance of a `TypeDictionary` (an object used to describe
@@ -23,7 +30,7 @@ A subclass of `TypeDictionary` is also implemented as
 `wabt::jit::TypeDictionary`. In later sections, you will complete parts of
 `FunctionBuilder` to practice generating IL using JitBuilder.
 
-#### The task
+#### Your Task
 
 Complete the implementation of `wabt::jit::compile()`.
 
@@ -31,18 +38,18 @@ Complete the implementation of `wabt::jit::compile()`.
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   TypeDictionary types;
   FunctionBuilder builder(thread, fn, &types);
-  
+
   // YOUR CODE HERE
-  
+
   return nullptr;
 }
 ```
 
-Given and interpreter "thread" and a defined function object, `compile()` will
+Given an interpreter "thread" and a defined function object, `compile()` will
 (unconditionally) invoke the JIT compiler and return the entry point to the
 generated body. If JIT compilation fails, `nullptr` is returned instead.
 
-#### What to do
+#### What To Do
 
 Complete `compile()` by:
 
@@ -53,23 +60,8 @@ of the variable used to store the entry point as arguments
 - returning the entry point cast to `JITedFunction` if `compileMethodBuilder()`
 returns `0`, `nullptr` (or `NULL`) otherwise
 
-#### Possible Solution
 
-```c++
-JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
-  TypeDictionary types;
-  FunctionBuilder builder(thread, fn, &types);
-  uint8_t* function = nullptr;
-
-  if (compileMethodBuilder(&builder, &function) == 0) {
-    return reinterpret_cast<JITedFunction>(function);
-  } else {
-    return nullptr;
-  }
-}
-```
-
-### Deciding when to compile
+### Exercise 2: Deciding When To Compile
 
 #### Background
 
@@ -101,7 +93,7 @@ struct JitMeta {
 };
 ```
 
-### The task
+#### Your Task
 
 Complete the implementation of `Environment::TryJit()`.
 
@@ -147,12 +139,12 @@ If compilation succeeds, the `jit_fn` field of the function's metadata and the
 variable pointed to by the `fn` parameter are set to the entry point returned by
 `jit::compile()`.
 
-#### What to do
+#### What To Do
 
 - check `meta->tried_jit` is false, indicating that we have never tried to
 compile this function
-- increment `meta->num_calls` (the number of times this function has been called
-- check if `meta->num_calls` greater than `jit_threshold`
+- increment `meta->num_calls` (the number of times this function has been called)
+- check if `meta->num_calls` is greater than `jit_threshold`
 - if it is
     - call `jit::compile(t, meta->wasm_fn)`
     - assign the returned value to `meta->jit_fn`
@@ -161,41 +153,8 @@ compile this function
     - set the variable pointed to be `fn` to `nullptr`
     - return false to indicate compilation failure
 
-#### Possible Solution
 
-```c++
-bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn) {
-  if (!enable_jit) {
-    *fn = nullptr;
-    return false;
-  }
-
-  auto meta_it = jit_meta_.find(offset);
-
-  if (meta_it != jit_meta_.end()) {
-    JitMeta* meta = &meta_it->second;
-    if (!meta->tried_jit) {
-      meta->num_calls++;
-
-      if (meta->num_calls >= jit_threshold) {
-        meta->jit_fn = jit::compile(t, meta->wasm_fn);
-        meta->tried_jit = true;
-      } else {
-        *fn = nullptr;
-        return false;
-      }
-    }
-
-    *fn = meta->jit_fn;
-    return trap_on_failed_comp || *fn;
-  } else {
-    *fn = nullptr;
-    return trap_on_failed_comp;
-  }
-}
-```
-
-### Where to compile
+### Exercise 3: Where To Compile
 
 #### Background
 
@@ -205,7 +164,7 @@ these calls where the interpreter handles calls. When a program is about to
 call a function, the interpreter will invoke the JIT and, if compilation
 succeeds, call the entry point returned by the JIT.
 
-#### The task
+#### Your Task
 
 Complete the WABT interpreter's handling of the `Call` opcode to call `TryJit()`
 and to call the entry point to the compiled body when successful.
@@ -215,7 +174,7 @@ and to call the entry point to the compiled body when successful.
          IstreamOffset offset = ReadU32(&pc);
 
          if (false) {
-           
+
            if (true) {
              // We don't want to overwrite the pc of the JITted function if it traps
              tpc.Reload();
@@ -248,7 +207,7 @@ When the interpreter encounters a `Call` instruction, it proceeds as follows:
     - jump to the offset
 - break out of the case
 
-#### What to do
+#### What To Do
 
 - Add a local variable of type `Environment::JITedFunction` to store the entry
 point to the JIT compiled function body
@@ -266,38 +225,13 @@ the address of the variable to store the entry point to the JIT compiled body
         - *(no modifications to the body of the `if` needed)*
     - after the `if`, call `PopCall()` to pop the pc from the call stack
 
-#### Possible Solution
+* * *
 
-```c++
-       case Opcode::Call: {
-         IstreamOffset offset = ReadU32(&pc);
-         Environment::JITedFunction jit_fn;
+## Part 2: Generate TR IL
 
-         if (env_->TryJit(this, offset, &jit_fn)) {
-           TRAP_IF(!jit_fn, FailedJITCompilation);
-           CHECK_TRAP(PushCall(pc));
+### Exercise 4: Implement `buildIL()`
 
-           auto result = jit_fn();
-           if (result != Result::Ok) {
-             // We don't want to overwrite the pc of the JITted function if it traps
-             tpc.Reload();
-
-             return result;
-           }
-
-           PopCall();
-         } else {
-           CHECK_TRAP(PushCall(pc));
-           GOTO(offset);
-         }
-         break;
-       }
-
-```
-
-## Implement buildIL()
-
-### Background
+#### Background
 
 `buildIL()` is the function called by the OMR compiler to generate IL. It should
 return `true` when IL generation succeeds, `false` otherwise. A JitBuilder JIT
@@ -315,7 +249,7 @@ The work list keeps track of which opcodes from the function still need to be
 handled. Internally, the JIT will call `AppendBuilder()` every time a new
 instruction is encountered that requires IL generation.
 
-### The task
+#### Your Task
 
 Complete the implementation of `FunctionBuilder::buildIL()`.
 
@@ -360,7 +294,7 @@ generation for an instruction fails, the function returns false.
 Once IL is successfully generated for all instructions, `buildIL()` returns
 true.
 
-### What to do
+#### What To Do
 
 - in a loop, call `GetNextBytecodeFromWorklist()`
 - break out of the loop if the returned index is -1
@@ -373,34 +307,11 @@ true.
 - if `Emit()` returns false, `buildIL()` should also return false
 - change the `return false` at the end of `buildIL()` to `return true`
 
-### Possible Solution
+* * *
 
-```c++
-bool FunctionBuilder::buildIL() {
-  setVMState(new TR::VirtualMachineState());
+## Part 3: Implement a few WASM opcodes
 
-  const uint8_t* istream = thread_->GetIstream();
-
-  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(ReadOpcodeAt(&istream[fn_->offset]).GetName())),
-                          &istream[fn_->offset]);
-  AppendBuilder(workItems_[0].builder);
-
-  int32_t next_index;
-
-  while ((next_index = GetNextBytecodeFromWorklist()) != -1) {
-    auto& work_item = workItems_[next_index];
-
-    if (!Emit(work_item.builder, istream, work_item.pc))
-      return false;
-  }
-
-  return true;
-}
-```
-
-## Implement a few opcodes
-
-### `Return`
+### Exercise 5: Implement `Return`
 
 #### Background
 
@@ -424,7 +335,7 @@ operation services take as arguments and return instances of `IlValue`. Memory
 load operations produce `IlValue` instances while memory store operations take
 an instance as argument.
 
-#### The task
+#### Your Task
 
 Implement IL generation for the `Return` opcode.
 
@@ -438,7 +349,7 @@ The generated IL must represent "return the value `interp::Result::Ok`".
 Because not other instructions from the function are expected to be executed,
 `Emit()` can simply return true after successfully generating IL for `Return`.
 
-#### What to do
+#### What To Do
 
 - static cast the enum value `interp::Result::Ok` to the underlying integer type
 `Result_t`
@@ -448,15 +359,8 @@ Because not other instructions from the function are expected to be executed,
 passing the `IlValue` instance as argument
 - change `return false` to `return true` :)
 
-#### Possible Solution
 
-```c++
-case Opcode::Return:
-  b->Return(b->Const(static_cast<Result_t>(interp::Result::Ok)));
-  return true;
-```
-
-### `i32.add`, `i32.sub`, `i32.mul`
+### Exercise 6: Implement `i32.add`, `i32.sub`, `i32.mul`
 
 #### Background
 
@@ -531,7 +435,7 @@ IL for the operation. The lambda is given as arguments the IlValues
 corresponding to the operation operands and is expected to return the IlValue
 corresponding to the result: `IlValue* lambda(IlValue* lhs, IlValue* rhs)`.
 
-#### What to do
+#### What To Do
 
 - pop the RHS by calling `Pop()` with `b` and `TypeFieldName<int32_t>()` (or
 "i32") as arguments
@@ -552,29 +456,8 @@ as second and third arguments, respectively, and a lambda function that:
     - returns the resulting `IlValue` instance
 - `break` out of the `switch`
 
-#### Possible Solution
 
-```c++
-case Opcode::I32Add:
-  EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-    return b->Add(lhs, rhs);
-  });
-  break;
-
-case Opcode::I32Sub:
-  EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-    return b->Sub(lhs, rhs);
-  });
-  break;
-
-case Opcode::I32Mul:
-  EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-    return b->Mul(lhs, rhs);
-  });
-  break;
-```
-
-### `Call`
+### Exercise 7: Implement `Call`
 
 #### Background
 
@@ -614,7 +497,7 @@ DefineFunction("CallHelper", __FILE__, "0",          // the name of the helper (
 
 Registered functions can then be called using the `Call()` services.
 
-#### The task
+#### Your Task
 
 Complete IL generation for the `Call` opcode.
 
@@ -659,7 +542,7 @@ by this point, there is no need to update the pc, which can be indicated to
 Finally, the code must break out of the `switch` statement to handle execution
 of the next instruction.
 
-#### What to do
+#### What To Do
 
 - call the `Call()` JitBuilder service, saving the returned value, and passing
 as arguments:
@@ -677,7 +560,145 @@ as arguments:
     - `nullptr` since the pc does not need to be updated
 - change the `return false` to `break`
 
-#### Possible Solution
+* * *
+
+## Exercise Solutions
+
+### Exercise 1: Calling the OMR Compiler from JitBuilder
+
+```c++
+JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
+  TypeDictionary types;
+  FunctionBuilder builder(thread, fn, &types);
+  uint8_t* function = nullptr;
+
+  if (compileMethodBuilder(&builder, &function) == 0) {
+    return reinterpret_cast<JITedFunction>(function);
+  } else {
+    return nullptr;
+  }
+}
+```
+
+### Exercise 2: Deciding When To Compile
+
+```c++
+bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn) {
+  if (!enable_jit) {
+    *fn = nullptr;
+    return false;
+  }
+
+  auto meta_it = jit_meta_.find(offset);
+
+  if (meta_it != jit_meta_.end()) {
+    JitMeta* meta = &meta_it->second;
+    if (!meta->tried_jit) {
+      meta->num_calls++;
+
+      if (meta->num_calls >= jit_threshold) {
+        meta->jit_fn = jit::compile(t, meta->wasm_fn);
+        meta->tried_jit = true;
+      } else {
+        *fn = nullptr;
+        return false;
+      }
+    }
+
+    *fn = meta->jit_fn;
+    return trap_on_failed_comp || *fn;
+  } else {
+    *fn = nullptr;
+    return trap_on_failed_comp;
+  }
+}
+```
+
+### Exercise 3: Where To Compile
+
+```c++
+       case Opcode::Call: {
+         IstreamOffset offset = ReadU32(&pc);
+         Environment::JITedFunction jit_fn;
+
+         if (env_->TryJit(this, offset, &jit_fn)) {
+           TRAP_IF(!jit_fn, FailedJITCompilation);
+           CHECK_TRAP(PushCall(pc));
+
+           auto result = jit_fn();
+           if (result != Result::Ok) {
+             // We don't want to overwrite the pc of the JITted function if it traps
+             tpc.Reload();
+
+             return result;
+           }
+
+           PopCall();
+         } else {
+           CHECK_TRAP(PushCall(pc));
+           GOTO(offset);
+         }
+         break;
+       }
+
+```
+
+### Exercise 4: Implement `buildIL()`
+
+```c++
+bool FunctionBuilder::buildIL() {
+  setVMState(new TR::VirtualMachineState());
+
+  const uint8_t* istream = thread_->GetIstream();
+
+  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(ReadOpcodeAt(&istream[fn_->offset]).GetName())),
+                          &istream[fn_->offset]);
+  AppendBuilder(workItems_[0].builder);
+
+  int32_t next_index;
+
+  while ((next_index = GetNextBytecodeFromWorklist()) != -1) {
+    auto& work_item = workItems_[next_index];
+
+    if (!Emit(work_item.builder, istream, work_item.pc))
+      return false;
+  }
+
+  return true;
+}
+```
+
+### Exercise 5: Implement `Return`
+
+```c++
+case Opcode::Return:
+  b->Return(b->Const(static_cast<Result_t>(interp::Result::Ok)));
+  return true;
+```
+
+### Exercise 6: Implement `i32.add`, `i32.sub`, `i32.mul`
+
+```c++
+case Opcode::I32Add:
+  EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+    return b->Add(lhs, rhs);
+  });
+  break;
+
+case Opcode::I32Sub:
+  EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+    return b->Sub(lhs, rhs);
+  });
+  break;
+
+case Opcode::I32Mul:
+  EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+    return b->Mul(lhs, rhs);
+  });
+  break;
+```
+
+### Exercise 7: Implement `Call`
 
 ```c++
 case Opcode::Call: {
