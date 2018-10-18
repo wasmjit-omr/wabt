@@ -32,7 +32,8 @@ A subclass of `TypeDictionary` is also implemented as
 
 #### Your Task
 
-Complete the implementation of `wabt::jit::compile()`.
+In `wasmjit-omr/src/jit/wabtjit.cc`, complete the implementation
+of `wabt::jit::compile()`.
 
 ```c++
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
@@ -95,7 +96,8 @@ struct JitMeta {
 
 #### Your Task
 
-Complete the implementation of `Environment::TryJit()`.
+In `wasmjit-omr/src/interp.cc`, complete the implementation
+of `Environment::TryJit()`.
 
 ```c++
 bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn) {
@@ -166,8 +168,9 @@ succeeds, call the entry point returned by the JIT.
 
 #### Your Task
 
-Complete the WABT interpreter's handling of the `Call` opcode to call `TryJit()`
-and to call the entry point to the compiled body when successful.
+In `wasmjit-omr/src/interp.cc`, complete the WABT interpreter's handling of the
+`Call` opcode to call `TryJit()` and to call the entry point to the compiled
+body when successful.
 
 ```c++
        case Opcode::Call: {
@@ -251,7 +254,8 @@ instruction is encountered that requires IL generation.
 
 #### Your Task
 
-Complete the implementation of `FunctionBuilder::buildIL()`.
+In `wasmjit-omr/src/jit/function-builder.cc`, complete the implementation
+of `FunctionBuilder::buildIL()`.
 
 ```c++
 bool FunctionBuilder::buildIL() {
@@ -337,7 +341,8 @@ an instance as argument.
 
 #### Your Task
 
-Implement IL generation for the `Return` opcode.
+In `wasmjit-omr/src/jit/function-builder.cc`, implement IL generation for the
+`Return` opcode.
 
 ```c++
 case Opcode::Return:
@@ -388,7 +393,8 @@ other types to the template function will result in a build error.
 
 #### The task
 
-Implement the 32-bit integer `Add`, `Sub`, and `Mul` opcodes.
+In `wasmjit-omr/src/jit/function-builder.cc`, implement the 32-bit integer
+`Add`, `Sub`, and `Mul` opcodes.
 
 ```c++
 case Opcode::I32Add:
@@ -499,7 +505,8 @@ Registered functions can then be called using the `Call()` services.
 
 #### Your Task
 
-Complete IL generation for the `Call` opcode.
+In `wasmjit-omr/src/jit/function-builder.cc`, complete IL generation for the
+`Call` opcode.
 
 ```c++
 case Opcode::Call: {
