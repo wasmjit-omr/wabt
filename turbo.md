@@ -640,6 +640,64 @@ as arguments:
 
 * * *
 
+## BONUS Part 4: Set a different JIT compilation threshold
+
+As was previously discussed, the JIT compiler will only compile a function after
+it has been called a fixed number of times. By default, the current
+implementation uses a threshold of 1, so functions will only be compiled after
+being called once. In many applications, it's useful to be able to configure
+the threshold. For example, the call-count threshold for JIT compilation can
+be configured for `libc-interp` using the `--jit-threshold` option. For example:
+
+```sh
+env time ./libc-interp mandelbrot.wasm --jit-threshold 2
+```
+
+will compiled functions after they have been called twice.
+
+Try varying the threshold and see if you can find the "optimal" value for the
+Mandelbrot example we've been using.
+
+## BONUS Part 5: Generate a verbose log
+
+A useful feature of the OMR compiler is its ability to log what it's compiling.
+The functionality can be triggered in JitBuilder-based compilers by setting
+(or exporting) the `TR_Options` environment variable to `verbose`. For example:
+
+```sh
+TR_Options=verbose env time ./libc-interp mandelbrot.wasm
+```
+
+Try experimenting with different JIT thresholds and see how the output changes.
+What different functions get compiled?
+
+Note: `TR_Options` is a general way of passing options to the OMR compiler.
+
+## BONUS Part 6: Generate a trace log
+
+In addition to tracking what is being compiled, the OMR compiler also logs what
+the compiler is doing *while compiling* each function. As an example, run
+the Mandelbrot example with `TR_Options` set as follows:
+
+```sh
+TR_Options=traceIlGen,traceFull,log=trtrace.log ./libc-interp mandelbrot.wasm
+```
+
+The `traceIlGen` option will cause the OMR compiler (and JitBuilder) to trace
+IL generation. `traceFull` (which, un-intuitively, doesn't actually trace
+everything) causes a few important steps of compilation to be traced. Among
+other things, it provides information such as what optimizations are executed
+and how the IL is transformed by each pass. Finally, `log=trtrace.log` will
+cause the OMR compiler to dump the trace log to a file called `trtrace.log`.
+Try opening the file in a text editor. **(Warning: it is possible for this file
+to contain a few *million* lines!)**
+
+For information about what the content of the log file means, take a look at the
+`Compilation Log` section of the `ProblemDetermination.md` file in the OMR
+compiler documentation directory (`third_party/omr/doc/compiler/`).
+
+* * *
+
 ## Exercise Solutions
 
 ### Exercise 1: Calling the OMR Compiler from JitBuilder
@@ -674,7 +732,7 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
     if (!meta->tried_jit) {
       meta->num_calls++;
 
-      if (meta->num_calls >= jit_threshold) {
+      if (meta->num_calls > jit_threshold) {
         meta->jit_fn = jit::compile(t, meta->wasm_fn);
         meta->tried_jit = true;
       } else {
