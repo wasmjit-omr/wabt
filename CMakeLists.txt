@@ -278,6 +278,12 @@ add_omr()
 add_subdirectory(src/jit)
 target_link_libraries(libwabt PUBLIC wabtjit)
 
+# libc-interp executable
+add_executable(libc-interp libc-interp/libc-interp.cpp libc-interp/syscall.cpp)
+target_link_libraries(libc-interp PRIVATE libwabt)
+target_include_directories(libc-interp PRIVATE libc-interp/)
+file(COPY libc-interp/mandelbrot.wasm DESTINATION ./)
+
 if (NOT EMSCRIPTEN)
   if (CODE_COVERAGE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \"-fprofile-arcs -ftest-coverage\"")
