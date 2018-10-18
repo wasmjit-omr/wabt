@@ -7,6 +7,77 @@
 
 * * *
 
+## Part 0: Building and running the project
+
+Start by cloning the repository `https://github.com/wasmjit-omr/wasmjit-omr.git`
+and checking out the `turbo` branch:
+
+```sh
+git clone --recursive https://github.com/wasmjit-omr/wasmjit-omr.git
+cd wasmjit-omr
+git checkout turbo
+```
+
+Next, build the project:
+
+```sh
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..     # optionally with -GNinja
+make libc-interp                        # or ninja libc-interp
+env time ./libc-interp mandelbrot.wasm
+```
+
+Run and time the execution of the `mandelbrot.wasm` example using the
+`libc-interp` tool. You should see output similar to:
+
+```
+$ env time ./libc-interp mandelbrot.wasm
+                                                                                
+                                                                                
+                                                       *                        
+                                                     ****                       
+                                                     ****                       
+                                             *        **                        
+                                             **  ************                   
+                                             ********************               
+                                             *******************                
+                                            *********************               
+                                          *************************             
+                                  *       ************************              
+                               ********  *************************              
+                              ********** *************************              
+                             *********** ************************               
+            ***************************************************                 
+                             *********** ************************               
+                              ********** *************************              
+                               ********  *************************              
+                                  *       ************************              
+                                          *************************             
+                                            *********************               
+                                             *******************                
+                                             ********************               
+                                             **  ************                   
+                                             *        **                        
+                                                     ****                       
+                                                     ****                       
+                                                       *                        
+                                                                                
+exit_group(0) called
+_start() => error: host function trapped
+  at $_Exit [@7383]
+  at $exit [@7947]
+  at $__libc_start_main [@7202]
+  at $_start_c [@436]
+  at $_start [@127]
+21.35user 0.01system 0:21.37elapsed 99%CPU (0avgtext+0avgdata 3172maxresident)k
+0inputs+0outputs (0major+916minor)pagefaults 0swaps
+```
+
+Note that the error status reported is expected!
+
+* * *
+
 ## Part 1: Dispatching the JIT
 
 ### Exercise 1: Calling the OMR Compiler from JitBuilder
