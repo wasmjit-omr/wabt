@@ -502,6 +502,13 @@ interp::Result SyscallHandler::HandleMunmap(uint32_t address, uint32_t size, uin
 }
 
 interp::Result SyscallHandler::HandleLlseek(int fd, uint32_t off_hi, uint32_t off_lo, uint32_t result, uint32_t whence, uint32_t* return_value) {
+
+/**
+ * lseek64 is not available in all build environments.  It is not needed for the
+ * TURBO workshop materials so simply disable this function.  Issue wasmjit-omr/libc-interp#1
+ * was opened to track the proper implementation.
+ */
+#if 0
   uint64_t result_val = lseek64(
       fd,
       (static_cast<uint64_t>(off_hi) << 32) | static_cast<uint64_t>(off_lo),
@@ -511,6 +518,9 @@ interp::Result SyscallHandler::HandleLlseek(int fd, uint32_t off_hi, uint32_t of
   CHECK_TRAP(CopyToMemory(reinterpret_cast<void*>(&result_val), result, sizeof(uint64_t)));
 
   return interp::Result::Ok;
+#endif
+
+  return interp::Result::TrapHostTrapped;
 }
 
 interp::Result SyscallHandler::HandleReadv(int fd, uint32_t vecs, uint32_t num_vecs, uint32_t* return_value) {
@@ -615,12 +625,22 @@ interp::Result SyscallHandler::HandleMmap(uint32_t address,
 }
 
 interp::Result SyscallHandler::HandleClockGetTime(uint32_t clock_id, uint32_t res, uint32_t* return_value) {
+
+/**
+ * clock_gettime is not available in all build environments.  It is not needed for the
+ * TURBO workshop materials so simply disable this function.  Issue wasmjit-omr/libc-interp#1
+ * was opened to track the proper implementation.
+ */
+#if 0
   timespec* res_p;
 
   CHECK_TRAP(GetMemoryAddress(res, sizeof(timespec), reinterpret_cast<void**>(&res_p)));
   *return_value = clock_gettime(clock_id, res_p);
 
   return interp::Result::Ok;
+#endif
+
+  return interp::Result::TrapHostTrapped;
 }
 
 void LibcHostImportDelegate::PrintError(const ErrorCallback& callback, const char* format, ...) {
