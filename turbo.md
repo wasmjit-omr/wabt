@@ -5,20 +5,27 @@
 
 ## JitBuilder Overview
 
+
+## Tutorial Setup
+
 * * *
 
 ## Part 0: Building and running the project
 
 Start by cloning the repository `https://github.com/wasmjit-omr/wasmjit-omr.git`
-and checking out the `turbo` branch:
+and checking out the `turbo` branch.  Depending on your network connection, this
+step should take approximately 25 seconds.
 
 ```sh
 git clone --recursive https://github.com/wasmjit-omr/wasmjit-omr.git
 cd wasmjit-omr
 git checkout turbo
+git submodule sync -- third_party/omr
+git submodule update -- third_party/omr   # updated OMR for TURBO tutorial
 ```
 
-Next, build the project:
+Next, build the project.  This step typically takes around 7 minutes depending
+on your build machine and development environment.
 
 ```sh
 mkdir build
@@ -33,36 +40,36 @@ Run and time the execution of the `mandelbrot.wasm` example using the
 
 ```
 $ env time ./libc-interp mandelbrot.wasm
-                                                                                
-                                                                                
-                                                       *                        
-                                                     ****                       
-                                                     ****                       
-                                             *        **                        
-                                             **  ************                   
-                                             ********************               
-                                             *******************                
-                                            *********************               
-                                          *************************             
-                                  *       ************************              
-                               ********  *************************              
-                              ********** *************************              
-                             *********** ************************               
-            ***************************************************                 
-                             *********** ************************               
-                              ********** *************************              
-                               ********  *************************              
-                                  *       ************************              
-                                          *************************             
-                                            *********************               
-                                             *******************                
-                                             ********************               
-                                             **  ************                   
-                                             *        **                        
-                                                     ****                       
-                                                     ****                       
-                                                       *                        
-                                                                                
+
+
+                                                       *
+                                                     ****
+                                                     ****
+                                             *        **
+                                             **  ************
+                                             ********************
+                                             *******************
+                                            *********************
+                                          *************************
+                                  *       ************************
+                               ********  *************************
+                              ********** *************************
+                             *********** ************************
+            ***************************************************
+                             *********** ************************
+                              ********** *************************
+                               ********  *************************
+                                  *       ************************
+                                          *************************
+                                            *********************
+                                             *******************
+                                             ********************
+                                             **  ************
+                                             *        **
+                                                     ****
+                                                     ****
+                                                       *
+
 exit_group(0) called
 _start() => error: host function trapped
   at $_Exit [@7383]
@@ -142,7 +149,7 @@ the JIT compiler is invoked. Compiling too often can mean a VM spends more time
 compiling than executing application code.
 
 A simple way to limit what/when functions get compiled is to only compile
-function if they have been called a fixed number of times; a so-called "counted
+functions if they have been called a fixed number of times; a so-called "counted
 compilation".
 
 Another thing that VMs must handle is the case when JIT compilation fails. The
@@ -150,12 +157,12 @@ JIT may fail to compile a function if, for example, the function uses a
 language feature not supported by the compiler. In such cases, the function
 must always be interpreted.
 
-`JitMeta` is a struct used to keep track of information about WebAssembly
+`wabt::interp::JitMeta` is a WABT struct used to keep track of information about WebAssembly
 functions that is useful for controlling JIT compilation:
 
 ```
 struct JitMeta {
-  DefinedFunc* wasm_fn;    // pointer to objection for the wasm function
+  DefinedFunc* wasm_fn;    // pointer to description object for the wasm function
   uint32_t num_calls = 0;  // the number of times the function has been called
 
   bool tried_jit = false;          // whether we've already tried JITing this function
