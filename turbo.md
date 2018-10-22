@@ -6,7 +6,29 @@
 ## JitBuilder Overview
 
 
-## Tutorial Setup
+## How to Complete the Tutorial
+
+The means by which you complete this tutorial are up to you!
+
+The best way to make the most of this tutorial is to go through each exercise and
+complete the code yourself by following the hints provided and diving into the
+JitBuilder and wasm-jit codebases.
+
+Solutions for each exercise are provided at the end of this tutorial booklet that
+you can either cut-and-paste or type in directly.  Typing the solutions in yourself
+may give you more pause to think about the details of the solution.  A cut-and-paste
+approach will allow you to complete this tutorial very quickly and allow you to get
+a high-level overview of the steps in involved in integrating a JIT compiler in a
+runtime.
+
+## Prerequisites
+
+To complete this tutorial you will need:
+
+* A laptop (Linux, Windows, or macOS)
+* a C++11 toolchain (gcc, Clang, or Microsoft Visual C++)
+* CMake 2.6+, and a supported backend build system (make, Ninja)
+* git
 
 * * *
 
@@ -94,23 +116,23 @@ Note that the error status reported is expected!
 The main task involved in creating a JIT compiler using JitBuilder is to
 translate the VM/interpreter's representation of functions into the OMR
 compiler's Intermediate Language (known as TR IL), a process known as IL generation. In
-JitBuilder, IL generation is implemented by subclassing `OMR::MethodBuilder` and
+JitBuilder, IL generation is implemented by subclassing `OMR::MethodBuilder` ([`third_party/omr/compiler/ilgen/OMRMethodBuilder.hpp`](https://github.com/eclipse/omr/blob/3123e6d913318d74e0f0ecacd9de96533874e1fc/compiler/ilgen/OMRMethodBuilder.hpp#L47)) and
 overriding the required functions. To actually compile a function/method,
-`compileMethodBuilder()` is called with an instance of the `MethodBuilder`
+`compileMethodBuilder()` is called with an instance of the `OMR::MethodBuilder`
 subclass, an instance of a `TypeDictionary` (an object used to describe
 non-primitive types to JitBuilder), and a pointer to a variable in which the
 entry point to a function will be stored, if compilation is successful.
 `compileMethodBuilder()` returns 0 if compilation succeeds and some non-0 value
 otherwise.
 
-In wasmjit-omr, the `MethodBuilder` subclass is `wabt::jit::FunctionBuilder`.
-A subclass of `TypeDictionary` is also implemented as
-`wabt::jit::TypeDictionary`. In later sections, you will complete parts of
+In wasmjit-omr, the `OMR::MethodBuilder` subclass is `wabt::jit::FunctionBuilder` ([`wasmjit-omr/src/jit/function-builder.h`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.h#L32)).
+A subclass of `TypeDictionary` is also implemented as `wabt::jit::TypeDictionary` ([`wasmjit-omr/src/jit/type-dictionary.h`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/type-dictionary.h#L25)).
+In later sections, you will complete parts of
 `FunctionBuilder` to practice generating IL using JitBuilder.
 
 #### Your Task
 
-In `wasmjit-omr/src/jit/wabtjit.cc`, complete the implementation
+In [`wasmjit-omr/src/jit/wabtjit.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/wabtjit.cc#L26), complete the implementation
 of `wabt::jit::compile()`.
 
 ```c++
@@ -149,7 +171,7 @@ the JIT compiler is invoked. Compiling too often can mean a VM spends more time
 compiling than executing application code.
 
 A simple way to limit what/when functions get compiled is to only compile
-functions if they have been called a fixed number of times; a so-called "counted
+functions if they have been called a fixed number of times--a so-called "counted
 compilation".
 
 Another thing that VMs must handle is the case when JIT compilation fails. The
@@ -157,10 +179,11 @@ JIT may fail to compile a function if, for example, the function uses a
 language feature not supported by the compiler. In such cases, the function
 must always be interpreted.
 
-`wabt::interp::JitMeta` is a WABT struct used to keep track of information about WebAssembly
+`wabt::interp::JitMeta` ([`wasmjit-omr/src/interp.h`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.h#L476))
+is a WABT struct used to keep track of information about WebAssembly
 functions that is useful for controlling JIT compilation:
 
-```
+```c++
 struct JitMeta {
   DefinedFunc* wasm_fn;    // pointer to description object for the wasm function
   uint32_t num_calls = 0;  // the number of times the function has been called
@@ -174,7 +197,7 @@ struct JitMeta {
 
 #### Your Task
 
-In `wasmjit-omr/src/interp.cc`, complete the implementation
+In [`wasmjit-omr/src/interp.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1189), complete the implementation
 of `Environment::TryJit()`.
 
 ```c++
@@ -221,8 +244,8 @@ variable pointed to by the `fn` parameter are set to the entry point returned by
 
 #### What To Do
 
-- check `meta->tried_jit` is false, indicating that we have never tried to
-compile this function
+- check if `meta->tried_jit` is false, indicating that we have never tried to
+compile this function before
 - increment `meta->num_calls` (the number of times this function has been called)
 - check if `meta->num_calls` is greater than `jit_threshold`
 - if it is
@@ -246,7 +269,8 @@ succeeds, call the entry point returned by the JIT.
 
 #### Your Task
 
-In `wasmjit-omr/src/interp.cc`, complete the WABT interpreter's handling of the
+In [`wasmjit-omr/src/interp.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1380),
+complete the WABT interpreter's handling of the
 `Call` opcode to call `TryJit()` and to call the entry point to the compiled
 body when successful.
 
@@ -332,8 +356,8 @@ instruction is encountered that requires IL generation.
 
 #### Your Task
 
-In `wasmjit-omr/src/jit/function-builder.cc`, complete the implementation
-of `FunctionBuilder::buildIL()`.
+In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L245),
+complete the implementation of `FunctionBuilder::buildIL()`.
 
 ```c++
 bool FunctionBuilder::buildIL() {
@@ -352,7 +376,7 @@ bool FunctionBuilder::buildIL() {
 ```
 
 When invoked, `buildIL()` will generate IL for the WebAssembly function
-corresponding the current `FunctionBuilder` object.
+corresponding to the current `FunctionBuilder` object.
 
 It first sets an instance of `VirtualMachineState` on the current object. Since
 the current JIT implementation does not use this particular JitBuilder feature,
@@ -419,8 +443,8 @@ an instance as argument.
 
 #### Your Task
 
-In `wasmjit-omr/src/jit/function-builder.cc`, implement IL generation for the
-`Return` opcode.
+In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L683),
+implement IL generation for the `Return` opcode.
 
 ```c++
 case Opcode::Return:
@@ -471,7 +495,7 @@ other types to the template function will result in a build error.
 
 #### The task
 
-In `wasmjit-omr/src/jit/function-builder.cc`, implement the 32-bit integer
+In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1003), implement the 32-bit integer
 `Add`, `Sub`, and `Mul` opcodes.
 
 ```c++
@@ -583,8 +607,8 @@ Registered functions can then be called using the `Call()` services.
 
 #### Your Task
 
-In `wasmjit-omr/src/jit/function-builder.cc`, complete IL generation for the
-`Call` opcode.
+In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L770),
+complete IL generation for the `Call` opcode.
 
 ```c++
 case Opcode::Call: {
