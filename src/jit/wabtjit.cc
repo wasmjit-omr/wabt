@@ -26,13 +26,10 @@ namespace jit {
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   TypeDictionary types;
   FunctionBuilder builder(thread, fn, &types);
-  uint8_t* function = nullptr;
 
-  if (compileMethodBuilder(&builder, &function) == 0) {
-    return reinterpret_cast<JITedFunction>(function);
-  } else {
-    return nullptr;
-  }
+  // YOUR CODE HERE
+
+  return nullptr;
 }
 
 }
