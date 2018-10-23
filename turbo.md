@@ -14,7 +14,10 @@ The best way to make the most of this tutorial is to go through each exercise an
 complete the code yourself by following the hints provided and diving into the
 JitBuilder and wasm-jit codebases.
 
-Solutions for each exercise are provided at the end of this tutorial booklet that
+The source code has been annotated with comments `// YOUR CODE HERE` to guide you
+to the right place in the source code to implement your solution.
+
+Alternatively, solutions for each exercise are provided at the end of this tutorial booklet that
 you can either cut-and-paste or type in directly.  Typing the solutions in yourself
 may give you more pause to think about the details of the solution.  A cut-and-paste
 approach will allow you to complete this tutorial very quickly and allow you to get
@@ -132,7 +135,7 @@ In later sections, you will complete parts of
 
 #### Your Task
 
-In [`wasmjit-omr/src/jit/wabtjit.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/wabtjit.cc#L26), complete the implementation
+In [`wasmjit-omr/src/jit/wabtjit.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/wabtjit.cc#L26), complete the implementation
 of `wabt::jit::compile()`.
 
 ```c++
@@ -145,6 +148,7 @@ JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   return nullptr;
 }
 ```
+[**SOLUTION version**](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/wabtjit.cc#L26)
 
 Given an interpreter "thread" and a defined function object, `compile()` will
 (unconditionally) invoke the JIT compiler and return the entry point to the
@@ -176,7 +180,7 @@ compilation".
 
 Another thing that VMs must handle is the case when JIT compilation fails. The
 JIT may fail to compile a function if, for example, the function uses a
-language feature not supported by the compiler. In such cases, the function
+language feature not supported by the compiler. In such cases the function
 must always be interpreted.
 
 `wabt::interp::JitMeta` ([`wasmjit-omr/src/interp.h`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.h#L476))
@@ -185,8 +189,8 @@ functions that is useful for controlling JIT compilation:
 
 ```c++
 struct JitMeta {
-  DefinedFunc* wasm_fn;    // pointer to description object for the wasm function
-  uint32_t num_calls = 0;  // the number of times the function has been called
+  DefinedFunc* wasm_fn;            // pointer to the description object for the Wasm function
+  uint32_t num_calls = 0;          // the number of times the function has been called
 
   bool tried_jit = false;          // whether we've already tried JITing this function
   JITedFunction jit_fn = nullptr;  // pointer to the entry point of the compiled body
@@ -197,7 +201,7 @@ struct JitMeta {
 
 #### Your Task
 
-In [`wasmjit-omr/src/interp.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1189), complete the implementation
+In [`wasmjit-omr/src/interp.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/interp.cc#L1189), complete the implementation
 of `Environment::TryJit()`.
 
 ```c++
@@ -222,10 +226,11 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
   }
 }
 ```
+[**SOLUTION version**](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1189)
 
-Given an interpreter thread `t`, an instruction offset `offset`, and a
-pointer to a pointer to a function `fn` (used as an in-out parameter), `TryJit()`
-will try to JIT compile the function at `offset` if:
+Given an interpreter thread `t` ([`wasmjit-omr/src/interp.h`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/interp.h#L502)), an instruction offset `offset`, and a
+pointer to a pointer to a function `fn` (used as an in-out parameter) ([`wasmjit-omr/src/jit/wabjit.h`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/wabtjit.h#L26)),
+`TryJit()` should try to JIT compile the function at `offset` if:
 
 1. the JIT compiler is enabled
 2. there is an entry for it in the meta-data table
@@ -235,7 +240,7 @@ recompilation of functions for which a previous compilation failed)
 (a member of the `Environment` class)
 
 If all conditions for compilation are met, the JIT compiler is invoked by
-calling `jit::compile()` and the `tried_jit` field of the function's metadata is
+calling `jit::compile()` and the `tried_jit` field of the function's metadata should be
 set to `true`.
 
 If compilation succeeds, the `jit_fn` field of the function's metadata and the
@@ -269,7 +274,7 @@ succeeds, call the entry point returned by the JIT.
 
 #### Your Task
 
-In [`wasmjit-omr/src/interp.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1380),
+In [`wasmjit-omr/src/interp.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/interp.cc#L1371),
 complete the WABT interpreter's handling of the
 `Call` opcode to call `TryJit()` and to call the entry point to the compiled
 body when successful.
@@ -294,6 +299,7 @@ body when successful.
          break;
        }
 ```
+[**SOLUTION version**](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1380)
 
 When the interpreter encounters a `Call` instruction, it proceeds as follows:
 
@@ -356,7 +362,7 @@ instruction is encountered that requires IL generation.
 
 #### Your Task
 
-In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L245),
+In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/function-builder.cc#L245),
 complete the implementation of `FunctionBuilder::buildIL()`.
 
 ```c++
@@ -374,6 +380,8 @@ bool FunctionBuilder::buildIL() {
   return false;
 }
 ```
+
+[**SOLUTION version**](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L245)
 
 When invoked, `buildIL()` will generate IL for the WebAssembly function
 corresponding to the current `FunctionBuilder` object.
@@ -415,24 +423,25 @@ true.
 
 * * *
 
-## Part 3: Implement a few WASM opcodes
+## Part 3: Implement a few Wasm opcodes
 
 ### Exercise 5: Implement `Return`
 
 #### Background
 
-To generate IL, JitBuilder provides "services" that must be called on `IlBuilder`
+To generate IL, JitBuilder provides "services" that must be called on an `IlBuilder`
 instance. Sub-classes of `IlBuilder` include `BytecodeBuilder`, `MethodBuilder`,
 and sub-classes of these that are implemented by JitBuilder users (e.g.
 `FunctionBuilder`).
 
 Each JitBuilder service generates IL that represents a particular action. For
 example, the `Return()` service generates IL representing "returning from a
-function". When no arguments are passed, the generated IL represents simple
-return, without return value. An argument, of type `IlValue`, can be passed to
+function". When no arguments are passed, the generated IL represents a simple
+return, without a return value. An argument, of type `IlValue`, can be passed to
 represent a returned value.
 
-`IlValue` is a class used by JitBuilder to represent values that "computed" by
+`IlValue` ([`wasmjit-omr/third_party/omr/compiler/ilgen/OMRIlValue.hpp`](https://github.com/eclipse/omr/blob/a3d48e4713fa0078d0f34a5e901b9c2b84ad3c6d/compiler/ilgen/OMRIlValue.hpp#L41))
+is a class used by JitBuilder to represent values that are "computed" by
 the generated IL or, more precisely, values computed by the code *generated*
 from the IL by the compiler. JitBuilder provides various services for generating
 `IlValue` instances. For instance, `ConstInt32(int32_t)` generates the
@@ -443,7 +452,7 @@ an instance as argument.
 
 #### Your Task
 
-In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L683),
+In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/function-builder.cc#L678),
 implement IL generation for the `Return` opcode.
 
 ```c++
@@ -451,19 +460,21 @@ case Opcode::Return:
   return false;
 ```
 
+[**SOLUTION version**](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L683)
+
 The generated IL must represent "return the value `interp::Result::Ok`".
 
-Because not other instructions from the function are expected to be executed,
+Because no other instructions from the function are expected to be executed,
 `Emit()` can simply return true after successfully generating IL for `Return`.
 
 #### What To Do
 
 - static cast the enum value `interp::Result::Ok` to the underlying integer type
 `Result_t`
-- generate an IlValue for the constant by calling `Const()` on the current
-`BytecodeBuilder` instance `b`, passing the constant itself as argument
+- generate an `IlValue` for the constant by calling `Const()` on the current
+`BytecodeBuilder` instance `b`, passing the constant itself as an argument
 - generate the IL for the return by calling `Return()` on the builder `b`,
-passing the `IlValue` instance as argument
+passing the `IlValue` instance as an argument
 - change `return false` to `return true` :)
 
 
@@ -495,8 +506,8 @@ other types to the template function will result in a build error.
 
 #### The task
 
-In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1003), implement the 32-bit integer
-`Add`, `Sub`, and `Mul` opcodes.
+In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/function-builder.cc#L993),
+implement the 32-bit integer `Add`, `Sub`, and `Mul` opcodes.
 
 ```c++
 case Opcode::I32Add:
@@ -509,6 +520,8 @@ case Opcode::I32Mul:
   return false;
 ```
 
+[**SOLUTION version**](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1003)
+
 The IL generated for every binary arithmetic operation must:
 
 - pop the RHS from the operand stack
@@ -517,31 +530,32 @@ The IL generated for every binary arithmetic operation must:
 - push the result onto the operand stack
 
 Because the instructions that follow the arithmetic operations must also be
-processed, once IL is successfully generate, each `case` must `break`
+processed, once IL is successfully generated, each `case` must `break`
 out of the `switch` statement instead of `return`.
 
 For convenience, the `EmitBinaryOp` templated function may be used:
 
 ```c++
+/**
+ * \param[in] `T` : the type of operation being emitted (e.g., `int32_t` for 32-bit
+ *           integer binary operations)
+ * \param[in] `TResult` : the type of the result of the operation (same as `T` by
+ *           default)
+ * \param[in] `TOpHandler` : the type of the callable object that generates IL for
+ *           the operation
+ * \param[in] `builder` : a pointer to the builder object on which pushes and pops
+ *           should be generated
+ * \param[in] `pc` : the current ("virtual") pc pointing to the instruction for which
+ *           IL is being generated
+ * \param[in] `operation` : a lambda (or other callable object) that generates only
+ *           the IL for the operation.  The lambda's arguments are the IlValues
+ *           corresponding to the operation operands and is expected to return the
+ *           IlValue corresponding to the result:
+ *              `IlValue * lambda(IlValue* lhs, IlValue* rhs)`
+ */
 template <typename T, typename TResult = T, typename TOpHandler>
-void EmitBinaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h);
+void EmitBinaryOp(TR::IlBuilder* builder, const uint8_t* pc, TOpHandler operation);
 ```
-
-The arguments are:
-
-- `T`: the type of operation being emited (e.g. `int32_t` for 32-bit integer
-binary operations)
-- `TResult`: the type of the result of the operation (same as `T` by default)
-- `TOpHandler`: type of the callable object (object) that generates IL for the
-operation
-- `builder`: a pointer to the builder object on which pushes and pops should be
-generator
-- `pc`: the current ("virtual") pc pointing to the instruction for which IL is
-being generated
-- `operation`: a lambda (or other callable object) that generates the only the
-IL for the operation. The lambda is given as arguments the IlValues
-corresponding to the operation operands and is expected to return the IlValue
-corresponding to the result: `IlValue* lambda(IlValue* lhs, IlValue* rhs)`.
 
 #### What To Do
 
@@ -577,14 +591,14 @@ following entities:
 - the JIT compiler itself
 
 To call an interpreted function from JIT compiled code, a common strategy is
-for the JIT compiled code to simply the interpreter, pointing its pc to the
+for the JIT compiled code to simply call the interpreter, pointing its pc to the
 first instruction in the function.
 
 To avoid having to generate IL that represents all this logic, we can instead
 generate a call to a so-called *runtime helper* that will take care of all the
 complexity.
 
-In WABT, the following is already implemented for you:
+In WABT, the following is already implemented for you [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/function-builder.cc#L95):
 
 ```c++
 Result_t CallHelper(interp::Thread* th, interp::IstreamOffset offset, uint8_t* current_pc)
@@ -607,7 +621,7 @@ Registered functions can then be called using the `Call()` services.
 
 #### Your Task
 
-In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L770),
+In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/function-builder.cc#L764),
 complete IL generation for the `Call` opcode.
 
 ```c++
@@ -621,6 +635,8 @@ case Opcode::Call: {
   return false;
 }
 ```
+
+[**SOLUTION version**](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L770)
 
 The IL generated for `Call` must generate IL for a `Call` to the `CallHelper`
 runtime helper. The arguments to the call must be:
@@ -638,7 +654,7 @@ returned by the function call. It takes as arguments:
 
 The value returned by the function must then be checked for a trap values. If
 it is a trap, then the value must be propagated back by returning from the
-wasm function that IL is being generated for. The `EmitCheckTrap()` can be used
+Wasm function that IL is being generated for. The `EmitCheckTrap()` can be used
 to generated IL representing the required trap handling. As arguments, it takes
 a builder object, IlValue representing the value to be checked (return value of
 `CallHelper` in this case), and a pointer to the pc that must be updated if a
@@ -684,10 +700,15 @@ be configured for `libc-interp` using the `--jit-threshold` option. For example:
 env time ./libc-interp mandelbrot.wasm --jit-threshold 2
 ```
 
-will compiled functions after they have been called twice.
+will compile functions after they have been called twice.
 
 Try varying the threshold and see if you can find the "optimal" value for the
 Mandelbrot example we've been using.
+
+You will find that the "optimal" value for one application may not be the "optimal"
+value for another application.  Choosing a general compilation threshold that behaves
+reasonably well for different applications is a challenge for JIT compilers.  More
+complex heuristics (such as method sampling) may be needed.
 
 ## BONUS Part 5: Generate a verbose log
 
@@ -724,8 +745,8 @@ Try opening the file in a text editor. **(Warning: it is possible for this file
 to contain a few *million* lines!)**
 
 For information about what the content of the log file means, take a look at the
-`Compilation Log` section of the `ProblemDetermination.md` file in the OMR
-compiler documentation directory (`third_party/omr/doc/compiler/`).
+[`Compilation Log`](https://github.com/eclipse/omr/blob/master/doc/compiler/ProblemDetermination.md#compilation-log)
+section of `third_party/omr/doc/compiler/ProblemDetermination.md`.
 
 * * *
 
