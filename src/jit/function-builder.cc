@@ -253,14 +253,9 @@ bool FunctionBuilder::buildIL() {
 
   int32_t next_index;
 
-  while ((next_index = GetNextBytecodeFromWorklist()) != -1) {
-    auto& work_item = workItems_[next_index];
+  // YOUR CODE HERE
 
-    if (!Emit(work_item.builder, istream, work_item.pc))
-      return false;
-  }
-
-  return true;
+  return false;
 }
 
 /**
@@ -681,8 +676,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     // transformed into a BrUnless. So, there's no need to handle it.
 
     case Opcode::Return:
-      b->Return(b->Const(static_cast<Result_t>(interp::Result::Ok)));
-      return true;
+      return false;
 
     case Opcode::Unreachable:
       EmitTrap(b, b->Const(static_cast<Result_t>(interp::Result::TrapUnreachable)), pc);
@@ -772,13 +766,9 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto offset = b->ConstInt32(ReadU32(&pc));
       auto current_pc = b->Const(pc);
 
-      b->Store("result",
-      b->      Call("CallHelper", 3, th_addr, offset, current_pc));
+      // YOUR CODE HERE
 
-      // Don't pass the pc since a trap in a called function should not update the thread's pc
-      EmitCheckTrap(b, b->Load("result"), nullptr);
-
-      break;
+      return false;
     }
 
     case Opcode::CallIndirect: {
@@ -1001,22 +991,13 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::I32Add:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-        return b->Add(lhs, rhs);
-      });
-      break;
+      return false;
 
     case Opcode::I32Sub:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-        return b->Sub(lhs, rhs);
-      });
-      break;
+      return false;
 
     case Opcode::I32Mul:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-        return b->Mul(lhs, rhs);
-      });
-      break;
+      return false;
 
     case Opcode::I32DivS:
       EmitIntDivide<int32_t>(b, pc);
