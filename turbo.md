@@ -31,6 +31,7 @@ To complete this tutorial you will need:
 * A laptop (Linux, Windows, or macOS)
 * a C++11 toolchain (gcc, Clang, or Microsoft Visual C++)
 * CMake 2.6+, and a supported backend build system (make, Ninja)
+* Python 2.7+ (WABT requirement)
 * git
 
 * * *
@@ -440,25 +441,25 @@ The solution to this exercise is available in the repo [here](https://github.com
 
 #### Background
 
-To generate IL, JitBuilder provides "services" that must be called on an `IlBuilder`
-instance. Sub-classes of `IlBuilder` include `BytecodeBuilder`, `MethodBuilder`,
+To generate IL, JitBuilder provides "services" that must be called on an `OMR::IlBuilder`
+instance. Sub-classes of `OMR::IlBuilder` include `OMR::BytecodeBuilder`, `OMR::MethodBuilder`,
 and sub-classes of these that are implemented by JitBuilder users (e.g.
-`FunctionBuilder`).
+`wabt::jit::FunctionBuilder`).
 
 Each JitBuilder service generates IL that represents a particular action. For
 example, the `Return()` service generates IL representing "returning from a
 function". When no arguments are passed, the generated IL represents a simple
-return, without a return value. An argument, of type `IlValue`, can be passed to
+return, without a return value. An argument, of type `TR::IlValue`, can be passed to
 represent a returned value.
 
-`IlValue` ([`third_party/omr/compiler/ilgen/OMRIlValue.hpp`](https://github.com/eclipse/omr/blob/a3d48e4713fa0078d0f34a5e901b9c2b84ad3c6d/compiler/ilgen/OMRIlValue.hpp#L41))
+`TR::IlValue` ([`third_party/omr/compiler/ilgen/OMRIlValue.hpp`](https://github.com/eclipse/omr/blob/a3d48e4713fa0078d0f34a5e901b9c2b84ad3c6d/compiler/ilgen/OMRIlValue.hpp#L41))
 is a class used by JitBuilder to represent values that are "computed" by
 the generated IL or, more precisely, values computed by the code *generated*
 from the IL by the compiler. JitBuilder provides various services for generating
-`IlValue` instances. For instance, `ConstInt32(int32_t)` generates the
+`TR::IlValue` instances. For instance, `ConstInt32(int32_t)` generates the
 representation of a constant, 32-bit integer value. All the arithmetic
-operation services take as arguments and return instances of `IlValue`. Memory
-load operations produce `IlValue` instances while memory store operations take
+operation services take as arguments and return instances of `TR::IlValue`. Memory
+load operations produce `TR::IlValue` instances while memory store operations take
 an instance as argument.
 
 #### Your Task
@@ -480,10 +481,10 @@ Because no other instructions from the function are expected to be executed,
 
 - static cast the enum value `interp::Result::Ok` to the underlying integer type
 `Result_t`
-- generate an `IlValue` for the constant by calling `Const()` on the current
+- generate a `TR::IlValue` for the constant by calling `Const()` on the current
 `BytecodeBuilder` instance `b`, passing the constant itself as an argument
 - generate the IL for the return by calling `Return()` on the builder `b`,
-passing the `IlValue` instance as an argument
+passing the `TR::IlValue` instance as an argument
 - change `return false` to `return true` :)
 
 #### Solution
@@ -499,16 +500,16 @@ operand stack every time an operation is performed. For convenience,
 `FunctionBuilder` provides some helpers to generate IL for operand stack pushes
 and pops.
 
-`Pop(IlBuilder*, const char*)` generates IL corresponding to a stack pop. The
-first argument is a pointer to the `IlBuilder` object that should be used to
+`Pop(TR::IlBuilder*, const char*)` generates IL corresponding to a stack pop. The
+first argument is a pointer to the `TR::IlBuilder` object that should be used to
 generate the IL. The second argument is the name of the expected type of the
-value popped. It returns an `IlValue` instance representing the value popped
+value popped. It returns a `TR::IlValue` instance representing the value popped
 from the stack.
 
-`Push(IlBuilder*, const char*, IlValue*, const uint8_t)` generates IL
-representing a stack push. The first and second arguments are the `IlBuilder`
+`Push(TR::IlBuilder*, const char*, TR::IlValue*, const uint8_t)` generates IL
+representing a stack push. The first and second arguments are the `TR::IlBuilder`
 object to be used and name of the type of the value being pushed, respectively.
-The third argument is the `IlValue` instance representing the value being pushed.
+The third argument is the `TR::IlValue` instance representing the value being pushed.
 Finally the last argument is the `pc` pointing to the instruction performing the
 push. It is used generate a trap if the stack overflows because of the push.
 
@@ -548,21 +549,21 @@ For convenience, the `EmitBinaryOp` templated function may be used:
 
 ```c++
 /**
- * \param[in] `T` : the type of operation being emitted (e.g., `int32_t` for 32-bit
+ * \tparam    `T` : the type of operation being emitted (e.g., `int32_t` for 32-bit
  *           integer binary operations)
- * \param[in] `TResult` : the type of the result of the operation (same as `T` by
+ * \tparam    `TResult` : the type of the result of the operation (same as `T` by
  *           default)
- * \param[in] `TOpHandler` : the type of the callable object that generates IL for
+ * \tparam    `TOpHandler` : the type of the callable object that generates IL for
  *           the operation
  * \param[in] `builder` : a pointer to the builder object on which pushes and pops
  *           should be generated
  * \param[in] `pc` : the current ("virtual") pc pointing to the instruction for which
  *           IL is being generated
  * \param[in] `operation` : a lambda (or other callable object) that generates only
- *           the IL for the operation.  The lambda's arguments are the IlValues
+ *           the IL for the operation.  The lambda's arguments are the TR::IlValues
  *           corresponding to the operation operands and is expected to return the
  *           IlValue corresponding to the result:
- *              `IlValue * lambda(IlValue* lhs, IlValue* rhs)`
+ *              `TR::IlValue * lambda(TR::IlValue* lhs, TR::IlValue* rhs)`
  */
 template <typename T, typename TResult = T, typename TOpHandler>
 void EmitBinaryOp(TR::IlBuilder* builder, const uint8_t* pc, TOpHandler operation);
@@ -575,8 +576,8 @@ void EmitBinaryOp(TR::IlBuilder* builder, const uint8_t* pc, TOpHandler operatio
 - pop the LHS following the style used to pop the RHS
 - generate the appropriate computation using `b->Add()`, `b->Sub()`, or
 `b->Mul()` with the LHS and RHS as arguments
-- push the resulting `IlValue` using `Push()` with `b`, `TypeFieldName<int32_t>()`
-(or "i32"), the `IlValue` instance itself, and `pc` as arguments
+- push the resulting `TR::IlValue` using `Push()` with `b`, `TypeFieldName<int32_t>()`
+(or "i32"), the `TR::IlValue` instance itself, and `pc` as arguments
 - `break` out of the `switch`
 
 Or, alternatively:
@@ -584,9 +585,9 @@ Or, alternatively:
 - call `EmitBinaryOp<>()` with `int32_t` as the template argument, `b` and `pc`
 as second and third arguments, respectively, and a lambda function that:
     - captures by reference
-    - takes two `IlValue *`s as arguments
+    - takes two `TR::IlValue *`s as arguments
     - calls `Add()`, `Sub()`, or `Mul()` on `b`, forwarding the lambda's arguments
-    - returns the resulting `IlValue` instance
+    - returns the resulting `TR::IlValue` instance
 - `break` out of the `switch`
 
 #### Solution
@@ -658,12 +659,12 @@ runtime helper. The arguments to the call must be:
 - the offset of the function to be called (offset of the function's first instruction
 - the pc of the of the current `Call` instruction
 
-The `Call()` service returns an `IlValue` instance representing the value
+The `Call()` service returns a `TR::IlValue` instance representing the value
 returned by the function call. It takes as arguments:
 
 - the name of the function to be called (must match the name used in `DefineFunction`)
 - the number of arguments to be passed
-- `IlValue` instances representing the values of the arguments (as a vararg)
+- `TR::IlValue` instances representing the values of the arguments (as a vararg)
 
 The value returned by the function must then be checked for a trap values. If
 it is a trap, then the value must be propagated back by returning from the
