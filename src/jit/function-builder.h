@@ -39,8 +39,19 @@ class FunctionBuilder : public TR::MethodBuilder {
    * @param b is the builder object used to generate the code
    * @param type is the name of the field in the Value union corresponding to the type of the value being pushed
    * @param value is the IlValue representing the value being pushed
+   * @param pc is a pointer the instruction performing the push
+   *
+   * If the push results in a stack overflow as trap condition is generated for the instruction pointed to by `pc`.
    */
   void Push(TR::IlBuilder* b, const char* type, TR::IlValue* value, const uint8_t* pc);
+
+  /**
+   * @brief Overload of `Push()` for 32-bit integer values
+   * @param b is the builder object used to generate the code
+   * @param value is the IlValue representing the value being pushed
+   * @param pc is a pointer the instruction performing the push
+   */
+  void PushI32(TR::IlBuilder* b, TR::IlValue* value, const uint8_t* pc);
 
   /**
    * @brief Generate pop from the interpreter stack
@@ -49,6 +60,13 @@ class FunctionBuilder : public TR::MethodBuilder {
    * @return an IlValue representing the popped value
    */
   TR::IlValue* Pop(TR::IlBuilder* b, const char* type);
+
+  /**
+   * @brief Overload of `Pop()` for 32-bit integer values
+   * @param b is the builder object used to generate the code
+   * @return an IlValue representing the popped value
+   */
+  TR::IlValue* PopI32(TR::IlBuilder* b);
 
   /**
    * @brief Drop a number of values from the interpreter stack, optionally keeping the top value of the stack

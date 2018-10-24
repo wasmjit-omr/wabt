@@ -292,6 +292,10 @@ void FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* valu
   b->            Const(1)));
 }
 
+void FunctionBuilder::PushI32(TR::IlBuilder* b, TR::IlValue* value, const uint8_t* pc) {
+  Push(b, "i32", value, pc);
+}
+
 /**
  * @brief Generate pop from the interpreter stack
  *
@@ -314,6 +318,10 @@ TR::IlValue* FunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
          b->             IndexAt(pValueType_,
                                  stack_base_addr,
                                  new_stack_top));
+}
+
+TR::IlValue* FunctionBuilder::PopI32(TR::IlBuilder* b) {
+  return Pop(b, "i32");
 }
 
 /**
@@ -991,7 +999,10 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::I32Add:
-      return false;
+      auto rhs = PopI32(b);
+      auto lhs = PopI32(b);
+      PushI32(b, b->Add(lhs, rhs), pc);
+      break;
 
     case Opcode::I32Sub:
       return false;
@@ -1315,16 +1326,10 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::F32Sub:
-      EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-        return b->Sub(lhs, rhs);
-      });
-      break;
+      return false;
 
     case Opcode::F32Mul:
-      EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-        return b->Mul(lhs, rhs);
-      });
-      break;
+      return false;
 
     case Opcode::F32Div:
       EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
