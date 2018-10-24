@@ -1371,14 +1371,22 @@ Result Thread::Run(int num_instructions) {
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
 
+        // YOUR CODE HERE
+
+        // REPLACE `false` WITH CHECK OF `TryJit()` RETURN VALUE
         if (false) {
 
+          // REPLACE `true` WITH CHECK THAT VALUE RETURNED BY COMPILED BODY IS NOT `Result::Ok`
           if (true) {
+            // **DO NOT CHANGE ANYTHING HERE**
+
             // We don't want to overwrite the pc of the JITted function if it traps
             tpc.Reload();
 
             return result;
           }
+
+          // POP CALL STACK
 
         } else {
           CHECK_TRAP(PushCall(pc));
