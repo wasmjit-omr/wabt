@@ -491,7 +491,7 @@ passing the `TR::IlValue` instance as an argument
 
 The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L683).
 
-### Exercise 6: Implement `i32.add`, `i32.sub`, `i32.mul`
+### Exercise 6: Implement `i32.sub` and `i32.mul`
 
 #### Background
 
@@ -500,41 +500,30 @@ operand stack every time an operation is performed. For convenience,
 `FunctionBuilder` provides some helpers to generate IL for operand stack pushes
 and pops.
 
-`Pop(TR::IlBuilder*, const char*)` generates IL corresponding to a stack pop. The
-first argument is a pointer to the `TR::IlBuilder` object that should be used to
-generate the IL. The second argument is the name of the expected type of the
-value popped. It returns a `TR::IlValue` instance representing the value popped
-from the stack.
+`PopI32(TR::IlBuilder*)` generates IL corresponding to a stack pop. The first
+argument is a pointer to the `TR::IlBuilder` object that should be used to
+generate the IL. It returns a `TR::IlValue` instance representing the value
+popped from the stack.
 
-`Push(TR::IlBuilder*, const char*, TR::IlValue*, const uint8_t)` generates IL
-representing a stack push. The first and second arguments are the `TR::IlBuilder`
-object to be used and name of the type of the value being pushed, respectively.
-The third argument is the `TR::IlValue` instance representing the value being pushed.
-Finally the last argument is the `pc` pointing to the instruction performing the
-push. It is used generate a trap if the stack overflows because of the push.
+`PushI32(TR::IlBuilder*, TR::IlValue*, const uint8_t*)` generates IL representing
+a stack push. The first argument is the `TR::IlBuilder` object to be used to
+generate IL. The second argument is the `TR::IlValue` instance representing the
+value being pushed. The final argument is the `pc` pointing to the instruction
+performing the push. It is used to generate a trap if the stack overflows
+because of the push.
 
-The `TypeFieldName<T>()` helper can be used to get the string name of a C++ type
-`T`. Only types that can be used in WebAssembly are supported and passing any
-other types to the template function will result in a build error.
+#### Your Task
 
-#### The task
-
-In [`wasmjit-omr/src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/function-builder.cc#L993),
-implement the 32-bit integer `Add`, `Sub`, and `Mul` opcodes.
+In [`src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/function-builder.cc#L993),
+implement the 32-bit integer `Sub` and `Mul` opcodes.
 
 ```c++
-case Opcode::I32Add:
-  return false;
-
 case Opcode::I32Sub:
-  return false;
-
-case Opcode::I32Mul:
   return false;
 ```
 
-
-The IL generated for every binary arithmetic operation must:
+The IL generated for every binary arithmetic operation (`Add`, `Sub`, `Mul`, etc.)
+must:
 
 - pop the RHS from the operand stack
 - pop the LHS from the operand stack
@@ -545,7 +534,35 @@ Because the instructions that follow the arithmetic operations must also be
 processed, once IL is successfully generated, each `case` must `break`
 out of the `switch` statement instead of `return`.
 
-For convenience, the `EmitBinaryOp` templated function may be used:
+Use the implementation of `i32.add` as an example to guide you:
+
+```c++
+case Opcode::I32Add:
+  auto rhs = PopI32(b);
+  auto lhs = PopI32(b);
+  PushI32(b, b->Add(lhs, rhs), pc);
+  break;
+```
+
+#### What To Do
+
+- pop the RHS by calling `PopI32()` with `b` as argument
+- pop the LHS following the style used to pop the RHS
+- generate the computation by calling the appropriate service
+  (`b->Sub()` or `b->Mul()`) with the LHS and RHS as arguments
+- push the resulting `TR::IlValue` using `PushI32()` with `b`, the `TR::IlValue`
+  instance, and `pc` as arguments
+- `break` out of the `switch`
+
+#### Solution
+
+The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1007).
+
+### Exercise 7: Implement `f32.sub` and `f32.mul`
+
+Because most arithmetic opcode implementations follow a similar pattern, it is
+useful to abstract the commonalities into a helper function. In wasmjit-omr,
+the `EmitBinaryOp` templated function can be used for this purpose:
 
 ```c++
 /**
@@ -569,32 +586,44 @@ template <typename T, typename TResult = T, typename TOpHandler>
 void EmitBinaryOp(TR::IlBuilder* builder, const uint8_t* pc, TOpHandler operation);
 ```
 
+#### Your Task
+
+In [`src/jit/function-builder.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/jit/function-builder.cc#L1328),
+implement the 32-bit floating-point `Sub` and `Mul` opcodes using the
+`EmitBinaryOp` template function.
+
+```c++
+case Opcode::F32Sub:
+  return false;
+
+case Opcode::F32Mul:
+  return false;
+```
+
+Use the implementation of `f32.add` as an example to guide you:
+
+```c++
+case Opcode::F32Add:
+  EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+    return b->Add(lhs, rhs);
+  });
+  break;
+```
+
 #### What To Do
 
-- pop the RHS by calling `Pop()` with `b` and `TypeFieldName<int32_t>()` (or
-"i32") as arguments
-- pop the LHS following the style used to pop the RHS
-- generate the appropriate computation using `b->Add()`, `b->Sub()`, or
-`b->Mul()` with the LHS and RHS as arguments
-- push the resulting `TR::IlValue` using `Push()` with `b`, `TypeFieldName<int32_t>()`
-(or "i32"), the `TR::IlValue` instance itself, and `pc` as arguments
-- `break` out of the `switch`
-
-Or, alternatively:
-
-- call `EmitBinaryOp<>()` with `int32_t` as the template argument, `b` and `pc`
+- call `EmitBinaryOp<>()` with `float` as the template argument, `b` and `pc`
 as second and third arguments, respectively, and a lambda function that:
     - captures by reference
-    - takes two `TR::IlValue *`s as arguments
-    - calls `Add()`, `Sub()`, or `Mul()` on `b`, forwarding the lambda's arguments
+    - calls `Sub()` or `Mul()` on `b`, forwarding the lambda's arguments
     - returns the resulting `TR::IlValue` instance
 - `break` out of the `switch`
 
 #### Solution
 
-The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1003).
+The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1330).
 
-### Exercise 7: Implement `Call`
+### Exercise 8: Implement `Call`
 
 #### Background
 
@@ -882,29 +911,40 @@ case Opcode::Return:
   return true;
 ```
 
-### Exercise 6: Implement `i32.add`, `i32.sub`, `i32.mul`
+### Exercise 6: Implement `i32.sub` and `i32.mul`
 
 ```c++
-case Opcode::I32Add:
-  EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-    return b->Add(lhs, rhs);
-  });
+case Opcode::I32Sub:
+  auto rhs = PopI32(b);
+  auto lhs = PopI32(b);
+  PushI32(b, b->Sub(lhs, rhs), pc);
   break;
 
-case Opcode::I32Sub:
-  EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+case Opcode::I32Mul:
+  auto rhs = PopI32(b);
+  auto lhs = PopI32(b);
+  PushI32(b, b->Mul(lhs, rhs), pc);
+  break;
+```
+
+### Exercise 7: Implement `f32.sub` `f32.mul`
+
+```c++
+
+case Opcode::F32Sub:
+  EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
     return b->Sub(lhs, rhs);
   });
   break;
 
-case Opcode::I32Mul:
-  EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+case Opcode::F32Mul:
+  EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
     return b->Mul(lhs, rhs);
   });
   break;
 ```
 
-### Exercise 7: Implement `Call`
+### Exercise 8: Implement `Call`
 
 ```c++
 case Opcode::Call: {
