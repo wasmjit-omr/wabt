@@ -1,42 +1,70 @@
 # TURBO18: Boost WABT Performance using JitBuilder
 
-## WABT Overview
+In this tutorial you will learn how to integrate a just-in-time (JIT) compiler into
+a language runtime.  The WebAssembly Binary Toolkit (WABT) provides a number of tools
+for working with WebAssembly (Wasm) files, and the objective of this tutorial is to
+provide a JIT compiler for the WABT interpreter.  The JIT compiler is based on
+Eclipse OMR, which is a toolkit of runtime technology components that can be extended
+and customized for the needs of different runtimes.  This tutorial uses a simplified
+interface to the compiler component called JitBuilder, which makes it easy for a runtime
+to describe methods that can be input into the JIT for compilation.
 
+The concepts you will learn here are the same general steps you need to consider when
+building a dynamic compiler for any language runtime.
 
-## JitBuilder Overview
+You will not be building a complete Wasm JIT from scratch.  Rather, you will be building
+upon (and in some cases re-implementing) the functionality already provided by an existing Wasm
+JIT for the WABT interpreter.  This is mainly so that you can continuously build as you follow
+the exercises, watch the evolution of your changes, and run a real workload that demonstrates
+the effect of JITing code.
 
+The workload is an implementation of a Mandelbrot viewer that will plot the result.
+The speed at which the set is computed and the plot completed is a function of the speed
+of execution of the underlying Wasm functions.  The faster you can make your Wasm functions
+(i.e., by compiling them) the faster the plot will complete.  You will use this Mandelbrot
+viewer as a measure of your progress.
 
 ## How to Complete the Tutorial
 
-The means by which you complete this tutorial are up to you!
+The means by which you complete this tutorial is up to you!  You may set your own pace
+and complete the exercises as you choose.  You should be able to build after each exercise
+is complete to validate your work.
 
 The best way to make the most of this tutorial is to go through each exercise and
-complete the code yourself by following the hints provided and diving into the
-JitBuilder and wasm-jit codebases.
+complete the code yourself by following the hints provided and diving into and exploring
+the JitBuilder and wasm-jit codebases.
 
 The source code has been annotated with comments `// YOUR CODE HERE` to guide you
 to the right place in the source code to implement your solution.
 
 Alternatively, solutions for each exercise are provided at the end of this tutorial booklet that
-you can either cut-and-paste or type in directly.  Typing the solutions in yourself
+you can either cut-and-paste or type in directly.  Links to the repo are also provided.
+Typing the solutions in yourself
 may give you more pause to think about the details of the solution.  A cut-and-paste
 approach will allow you to complete this tutorial very quickly and allow you to get
 a high-level overview of the steps in involved in integrating a JIT compiler in a
 runtime.
 
-## Prerequisites
+## Getting Started
+
+Before providing you with an overview of the technologies you will be working with in this
+tutorial, you may wish to begin installing and building the components you will need
+to complete the tutorial.  Because building may take several minutes, you can read the
+background material while the installation is proceeding.
+
+But feel free to to skip ahead and then come back to this step when you're ready.
+
+### Prerequisites
 
 To complete this tutorial you will need:
 
-* A laptop (Linux, Windows, or macOS)
-* a C++11 toolchain (gcc, Clang, or Microsoft Visual C++)
+* A laptop running Linux or macOS (Windows is not yet supported in this tutorial)
+* a C++11 toolchain (gcc, Clang)
 * CMake 2.6+, and a supported backend build system (make, Ninja)
 * Python 2.7+ (WABT requirement)
 * git
 
-* * *
-
-## Part 0: Building and running the project
+### Cloning, Building, and Running the Project
 
 Start by cloning the repository `https://github.com/wasmjit-omr/wasmjit-omr.git`
 and checking out the `turbo` branch.  Depending on your network connection, this
@@ -108,6 +136,25 @@ _start() => error: host function trapped
 ```
 
 Note that the error status reported is expected!
+
+* * *
+
+## WABT Overview
+
+The [WebAssembly Binary Toolkit](https://github.com/WebAssembly/wabt) (WABT) is a suite
+of tools for working with WebAssembly.  The tools are written in C/C++ and are designed
+for easy integration into other projects.
+
+This tutorial builds upon the [wasmjit-omr](https://github.com/wasmjit-omr/wasmjit-omr)
+project, which provides a rudimentary JIT for the Wasm interpreter library in WABT.
+
+The tool we will be focused on for this tutorial is **libc-interp**.  This is a
+stack-based interpreter that can decode and interpret the Wasm instructions in a
+Wasm binary file.  It also provides a library of utility functions that can be called at
+runtime from Wasm functions, similar to the C runtime for C applications.
+
+## JitBuilder Overview
+
 
 * * *
 
