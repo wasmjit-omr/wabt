@@ -194,6 +194,16 @@ how you add operations to different `TR::IlBuilder` objects. You can create all 
 start from the `TR::MethodBuilder` object (function entry) and create `TR::IlBuilder`
 objects as you need them to represent the different paths of execution as you require them.
 
+`TR::BytecodeBuilder` is a special kind of IlBuilder that’s designed to simplify writing
+JIT compilers for bytecode based languages. You allocate a `TR::BytecodeBuilder` object for
+each bytecode in a method and translate the operations needed for that bytecode using that
+object. You have to specify every control flow edge (even fall through edges) between bytecode
+builders. `TR::BytecodeBuilder` also taps into a handy and mostly automatic built-in
+worklist algorithm provided by `TR::MethodBuilder` that can traverse all flow edges in a
+control flow graph, visiting each bytecode at most once. Any bytecodes in the method that
+aren’t reachable (many parsers generate unreachable code to simplify the process of initial
+code generation from a parse tree) will not be visited.
+
 `TR::IlValue` is an object that represents the values that are created and consumed by
 expressions. If you load a local variable by name, the value that’s loaded is a
 `TR::IlValue`. If you create a constant integer, that’s a `TR::IlValue`. If you pass both
