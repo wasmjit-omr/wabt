@@ -153,8 +153,56 @@ stack-based interpreter that can decode and interpret the Wasm instructions in a
 Wasm binary file.  It also provides a library of utility functions that can be called at
 runtime from Wasm functions, similar to the C runtime for C applications.
 
+The bulk of the source for the interpreter can be found in `src/` with JIT specializations
+in `src/jit/`.  The main interpreter module, Wasm runtime, and Mandelbrot demo file for
+this tutorial can be found in `libc-interp/`.
+
 ## JitBuilder Overview
 
+JitBuilder provides a simplified interface to the compiler technology that allows you to
+integrate a compiler into your runtime more quickly.  It abstracts away many of the low-level
+compilation details that you would normally need to consider when building an Eclipse OMR
+based compiler behind a much simpler API.
+
+JitBuilder packages the guts of the compiler into a static library that you can then link
+against in your language runtime using APIs, which are described in just a few header files.
+
+There are a few structures that are particularly important when using JitBuilder:
+
+`TR::MethodBuilder` is an object that represents the ABI (parameters, return value) and
+the operations that should be performed when a compiled method is called. To compile your
+own methods, you subclass `OMR::MethodBuilder` and implement its constructor to specify
+the ABI and then specify the operations the compiled method should perform by implementing
+a `MethodBuilder` member function called `buildIL()`.  After passing a `TR::MethodBuilder`
+object to `compileMethodBuilder()`, you get back a pointer to a function that you can call
+by casting that pointer to a C function prototype. Each `TR::MethodBuilder` has a hash map
+of names (C strings) representing the method’s local variables, and you can define them all
+at once or make them up as you go.
+
+`TR::TypeDictionary` is an object that you can use to describe the shape of structures, unions,
+and other types so that JitBuilder knows how to access their fields and values.
+
+`TR::IlBuilder` is an object that represents the operations to perform when a particular
+control flow path is reached. The method entry point is one particular control flow path,
+and so a `TR::MethodBuilder` object is also a `TR::IlBuilder` object. But you can create
+arbitrary `TR::IlBuilder` objects and connect them together (even nest them) in arbitrary
+ways using an ever-growing list of services like `IfThen` or `ForLoopUp` or `WhileDoLoop`.
+Each service you call on a `TR::IlBuilder` appends operations to the control flow path and
+so describes the intended order of operations to the compiler. There is no restriction on
+how you add operations to different `TR::IlBuilder` objects. You can create all the
+`TR::IlBuilder` objects up front and then add operations to them individually, or you can
+start from the `TR::MethodBuilder` object (function entry) and create `TR::IlBuilder`
+objects as you need them to represent the different paths of execution as you require them.
+
+`TR::IlValue` is an object that represents the values that are created and consumed by
+expressions. If you load a local variable by name, the value that’s loaded is a
+`TR::IlValue`. If you create a constant integer, that’s a `TR::IlValue`. If you pass both
+of those `TR::IlValue`s into the Add operation, you’ll get back another `TR::IlValue` that
+represents their sum. There is an ever growing list of operations you can apply to create
+arbitrarily complex `TR::IlValue` expressions.
+
+These key structures can be found in `third_party/omr/compiler/ilgen` and can be extended
+by your language runtime.
 
 * * *
 
