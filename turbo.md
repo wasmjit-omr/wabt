@@ -374,6 +374,23 @@ these calls where the interpreter handles calls. When a program is about to
 call a function, the interpreter will invoke the JIT and, if compilation
 succeeds, call the entry point returned by the JIT.
 
+To correctly manage calls, the VM must keep track of the call stack at all times.
+For convenience, the `PushCall(const uint8_t* pc)` and `PopCall()` function are
+provided. `PushCall()` takes as an argument the `pc` of the call instruction and
+returns a status to indicate possible trap conditions due to a call stack
+overflow. `PopCall()` simply resets the interpreter's pc and takes no arguments
+and produces no return value.
+
+When the interpreter calls a JIT compiled function body, it is important to call
+both of the above functions before and after the JIT compiled function call.
+More precisely, the sequence of events must be:
+
+- push a new stack by calling `PushCall(pc)`, checking for a trap condition in the
+  returned value (`CHECK_TRAP()` macro can be used for this purpose)
+- call the JIT compiled function
+- check that the JIT compiled function returns `interp::Result::Ok`
+- pop the stack frame by calling `PopCall()`
+
 #### Your Task
 
 In [`src/interp.cc`](https://github.com/wasmjit-omr/wasmjit-omr/blob/42b8ae72308581eaff882626496ec1cf8dadff8f/src/interp.cc#L1371),
@@ -382,24 +399,32 @@ complete the WABT interpreter's handling of the
 body when successful.
 
 ```c++
-       case Opcode::Call: {
-         IstreamOffset offset = ReadU32(&pc);
+      case Opcode::Call: {
+        IstreamOffset offset = ReadU32(&pc);
 
-         if (false) {
+        // YOUR CODE HERE
 
-           if (true) {
-             // We don't want to overwrite the pc of the JITted function if it traps
-             tpc.Reload();
+        // REPLACE `false` WITH CHECK OF `TryJit()` RETURN VALUE
+        if (false) {
 
-             return result;
-           }
+          // REPLACE `true WITH CHECK THAT VALUE RETURNED BY COMPILED BODY IS NOT `Result::Ok`
+          if (true) {
+            // **DO NOT CHANGE ANYTHING HERE**
 
-         } else {
-           CHECK_TRAP(PushCall(pc));
-           GOTO(offset);
-         }
-         break;
-       }
+            // We don't want to overwrite the pc of the JITted function if it traps
+            tpc.Reload();
+
+            return result;
+          }
+
+          // POP CALL STACK
+
+        } else {
+          CHECK_TRAP(PushCall(pc));
+          GOTO(offset);
+        }
+        break;
+      }
 ```
 
 When the interpreter encounters a `Call` instruction, it proceeds as follows:
