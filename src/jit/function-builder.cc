@@ -998,11 +998,12 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::I32Add:
+    case Opcode::I32Add: {
       auto rhs = PopI32(b);
       auto lhs = PopI32(b);
       PushI32(b, b->Add(lhs, rhs), pc);
       break;
+    }
 
     case Opcode::I32Sub:
       return false;

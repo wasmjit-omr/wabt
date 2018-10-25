@@ -667,11 +667,12 @@ out of the `switch` statement instead of `return`.
 Use the implementation of `i32.add` as an example to guide you:
 
 ```c++
-case Opcode::I32Add:
+case Opcode::I32Add: {
   auto rhs = PopI32(b);
   auto lhs = PopI32(b);
   PushI32(b, b->Add(lhs, rhs), pc);
   break;
+}
 ```
 
 #### What To Do
@@ -1044,17 +1045,19 @@ case Opcode::Return:
 ### Exercise 6: Implement `i32.sub` and `i32.mul`
 
 ```c++
-case Opcode::I32Sub:
+case Opcode::I32Sub: {
   auto rhs = PopI32(b);
   auto lhs = PopI32(b);
   PushI32(b, b->Sub(lhs, rhs), pc);
   break;
+}
 
-case Opcode::I32Mul:
+case Opcode::I32Mul: {
   auto rhs = PopI32(b);
   auto lhs = PopI32(b);
   PushI32(b, b->Mul(lhs, rhs), pc);
   break;
+}
 ```
 
 ### Exercise 7: Implement `f32.sub` `f32.mul`
