@@ -66,16 +66,13 @@ To complete this tutorial you will need:
 
 ### Cloning, Building, and Running the Project
 
-Start by cloning the repository `https://github.com/wasmjit-omr/wasmjit-omr.git`
-and checking out the `turbo` branch.  Depending on your network connection, this
-step should take approximately 25 seconds.
+Start by cloning the repository.
+The `turbo` branch will be checked out by default.
+Depending on your network connection, this step should take approximately 25 seconds.
 
 ```sh
-git clone --recursive https://github.com/wasmjit-omr/wasmjit-omr.git
+git clone --recursive https://github.com/omr-turbo/wasmjit-omr.git
 cd wasmjit-omr
-git checkout turbo
-git submodule sync -- third_party/omr
-git submodule update -- third_party/omr   # updated OMR for TURBO tutorial
 ```
 
 Next, build the project.  This step typically takes around 7 minutes depending
