@@ -684,6 +684,9 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     // transformed into a BrUnless. So, there's no need to handle it.
 
     case Opcode::Return:
+
+      // YOUR CODE HERE
+
       return false;
 
     case Opcode::Unreachable:
@@ -1006,9 +1009,15 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::I32Sub:
+
+      // YOUR CODE HERE
+
       return false;
 
     case Opcode::I32Mul:
+
+      // YOUR CODE HERE
+
       return false;
 
     case Opcode::I32DivS:
@@ -1327,9 +1336,15 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::F32Sub:
+
+      // YOUR CODE HERE
+
       return false;
 
     case Opcode::F32Mul:
+
+      // YOUR CODE HERE
+
       return false;
 
     case Opcode::F32Div:

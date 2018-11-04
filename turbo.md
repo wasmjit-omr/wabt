@@ -553,7 +553,7 @@ JitBuilder.
 
 In a loop, `GetNextBytecodeFromWorklist()` is called and the index is verified
 to be different than -1 (which indicates the end of the work list). The work
-item at the given index in `workItems_` is retireved and IL is generated for
+item at the given index in `workItems_` is retrieved and IL is generated for
 the corresponding instruction, using the contained `builder` object. If IL
 generation for an instruction fails, the function returns false.
 
@@ -703,7 +703,7 @@ case Opcode::I32Add: {
 
 #### Solution
 
-The solution to this exercise is available in this document [here](#exercise-6-implement-i32-sub-and-i32-mul)
+The solution to this exercise is available in this document [here](#solution-exercise-6-implement-i32-sub-and-i32-mul)
 or from the GitHub repository [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1007).
 
 ### Exercise 7: Implement `f32.sub` and `f32.mul`
@@ -844,11 +844,11 @@ returned by the function call. It takes as arguments:
 - the number of arguments to be passed
 - `TR::IlValue` instances representing the values of the arguments (as a vararg)
 
-The value returned by the function must then be checked for a trap values. If
+The value returned by the function must then be checked for a trap value. If
 it is a trap, then the value must be propagated back by returning from the
 Wasm function that IL is being generated for. The `EmitCheckTrap()` can be used
-to generated IL representing the required trap handling. As arguments, it takes
-a builder object, IlValue representing the value to be checked (return value of
+to generate IL representing the required trap handling. As arguments, it takes
+a builder object, `TR::IlValue` representing the value to be checked (return value of
 `CallHelper` in this case), and a pointer to the pc that must be updated if a
 trap condition is detected.
 
