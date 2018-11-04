@@ -38,7 +38,7 @@ The source code has been annotated with comments `// YOUR CODE HERE` to guide yo
 to the right place in the source code to implement your solution.
 
 Alternatively, solutions for each exercise are provided at the end of this tutorial booklet that
-you can either cut-and-paste or type in directly.  Links to the repo are also provided.
+you can either cut-and-paste or type in directly.  Links to the GitHub repository are also provided.
 Typing the solutions in yourself
 may give you more pause to think about the details of the solution.  A cut-and-paste
 approach will allow you to complete this tutorial very quickly and allow you to get
@@ -76,7 +76,8 @@ cd wasmjit-omr
 ```
 
 Next, build the project.  This step typically takes around 7 minutes depending
-on your build machine and development environment.
+on your build machine and development environment.  If you are building in a
+virtual machine then building may take significantly longer.
 
 ```sh
 mkdir build
@@ -211,6 +212,19 @@ arbitrarily complex `TR::IlValue` expressions.
 These key structures can be found in `third_party/omr/compiler/ilgen` and can be extended
 by your language runtime.
 
+## Further resources
+
+After the tutorial, you may wish to review the following resources for a deeper understanding
+of the wasmjt-omr and JitBuilder content.
+
+* VIDEO (30 minutes) [Performant WebAssembly outside the browser using Eclipse OMR JitBuilder](https://www.youtube.com/watch?v=wWhGlNVg2O8)
+
+* [JitBuilder Library and Eclipse OMR: Just-in-time compilers made easy](https://developer.ibm.com/code/2016/07/19/jitbuilder-library-and-eclipse-omr-just-in-time-compilers-made-easy/)
+
+* [Build more complicated methods using the JitBuilder library](https://developer.ibm.com/code/2017/03/08/build-more-complicated-methods-using-the-jitbuilder-library/)
+
+* [Building the JitBuilder library from source code](https://developer.ibm.com/code/2017/04/14/building-jitbuilder-library-source-code/)
+
 * * *
 
 ## Part 1: Dispatching the JIT
@@ -269,7 +283,8 @@ returns `0`, `nullptr` (or `NULL`) otherwise
 
 #### Solution
 
-The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/wabtjit.cc#L26).
+The solution to this exercise is available in this document [here](#solution-exercise-1-calling-the-omr-compiler-from-jitbuilder)
+or from the GitHub repository [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/wabtjit.cc#L26).
 
 
 ### Exercise 2: Deciding When To Compile
@@ -368,7 +383,8 @@ compile this function before
 
 #### Solution
 
-The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1189).
+The solution to this exercise is available in this document [here](#solution-exercise-2-deciding-when-to-compile)
+or from the GitHub repository [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1189).
 
 
 ### Exercise 3: Where To Compile
@@ -471,7 +487,8 @@ the address of the variable to store the entry point to the JIT compiled body
 
 #### Solution
 
-The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1380).
+The solution to this exercise is available in this document [here](#solution-exercise-3-where-to-compile)
+or from the GitHub repository [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/interp.cc#L1380).
 
 * * *
 
@@ -558,7 +575,8 @@ true.
 
 #### Solution
 
-The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L245).
+The solution to this exercise is available in this document [here](#solution-exercise-4-implement-buildil)
+or from the GitHub repository [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L245).
 
 * * *
 
@@ -616,7 +634,8 @@ passing the `TR::IlValue` instance as an argument
 
 #### Solution
 
-The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L683).
+The solution to this exercise is available in this document [here](#solution-exercise-5-implement-return)
+or from the GitHub repository [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L683).
 
 ### Exercise 6: Implement `i32.sub` and `i32.mul`
 
@@ -684,7 +703,8 @@ case Opcode::I32Add: {
 
 #### Solution
 
-The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1007).
+The solution to this exercise is available in this document [here](#exercise-6-implement-i32-sub-and-i32-mul)
+or from the GitHub repository [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1007).
 
 ### Exercise 7: Implement `f32.sub` and `f32.mul`
 
@@ -749,7 +769,8 @@ as second and third arguments, respectively, and a lambda function that:
 
 #### Solution
 
-The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1330).
+The solution to this exercise is available in this document [here](#solution-exercise-7-implement-f32-sub-and-f32-mul)
+or from the GitHub repository [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L1330).
 
 ### Exercise 8: Implement `Call`
 
@@ -858,7 +879,8 @@ as arguments:
 
 #### Solution
 
-The solution to this exercise is available in the repo [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L770).
+The solution to this exercise is available in this document [here](#solution-exercise-8-implement-call)
+or from the GitHub repository [here](https://github.com/wasmjit-omr/wasmjit-omr/blob/2f7c7ba59fa36f7b5beed916d9b0e444c9dc2da8/src/jit/function-builder.cc#L770).
 
 * * *
 
@@ -927,7 +949,7 @@ section of `third_party/omr/doc/compiler/ProblemDetermination.md`.
 
 ## Exercise Solutions
 
-### Exercise 1: Calling the OMR Compiler from JitBuilder
+### Solution Exercise 1: Calling the OMR Compiler from JitBuilder
 
 ```c++
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
@@ -943,7 +965,7 @@ JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
 }
 ```
 
-### Exercise 2: Deciding When To Compile
+### Solution Exercise 2: Deciding When To Compile
 
 ```c++
 bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn) {
@@ -977,7 +999,7 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
 }
 ```
 
-### Exercise 3: Where To Compile
+### Solution Exercise 3: Where To Compile
 
 ```c++
        case Opcode::Call: {
@@ -1006,7 +1028,7 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
 
 ```
 
-### Exercise 4: Implement `buildIL()`
+### Solution Exercise 4: Implement `buildIL`
 
 ```c++
 bool FunctionBuilder::buildIL() {
@@ -1031,7 +1053,7 @@ bool FunctionBuilder::buildIL() {
 }
 ```
 
-### Exercise 5: Implement `Return`
+### Solution Exercise 5: Implement `Return`
 
 ```c++
 case Opcode::Return:
@@ -1039,7 +1061,7 @@ case Opcode::Return:
   return true;
 ```
 
-### Exercise 6: Implement `i32.sub` and `i32.mul`
+### Solution Exercise 6: Implement `i32.sub` and `i32.mul`
 
 ```c++
 case Opcode::I32Sub: {
@@ -1057,7 +1079,7 @@ case Opcode::I32Mul: {
 }
 ```
 
-### Exercise 7: Implement `f32.sub` `f32.mul`
+### Solution Exercise 7: Implement `f32.sub` and `f32.mul`
 
 ```c++
 
@@ -1074,7 +1096,7 @@ case Opcode::F32Mul:
   break;
 ```
 
-### Exercise 8: Implement `Call`
+### Solution Exercise 8: Implement `Call`
 
 ```c++
 case Opcode::Call: {
