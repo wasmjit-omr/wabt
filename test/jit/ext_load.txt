@@ -1,0 +1,616 @@
+;;; TOOL: run-interp-jit
+(module
+  (memory 1)
+
+  (func $i32_load8_u (param i32) (result i32)
+    get_local 0
+    i32.load8_u)
+
+  (func $i32_load8_u_off (param i32) (result i32)
+    get_local 0
+    i32.load8_u offset=1)
+
+  (func (export "test_i32_load8_u_0") (result i32)
+    i32.const 0
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0
+    call $i32_load8_u)
+
+  (func (export "test_i32_load8_u_1") (result i32)
+    i32.const 0
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0
+    call $i32_load8_u_off)
+
+  (func (export "test_i32_load8_u_2") (result i32)
+    i32.const 0xfffc
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0xffff
+    call $i32_load8_u)
+
+  (func (export "test_i32_load8_u_3") (result i32)
+    i32.const 0xfffc
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0xfffe
+    call $i32_load8_u_off)
+
+  (func (export "test_i32_load8_u_4") (result i32)
+    i32.const 0x10000
+    call $i32_load8_u)
+
+  (func (export "test_i32_load8_u_5") (result i32)
+    i32.const 0xffff
+    call $i32_load8_u_off)
+
+  (func (export "test_i32_load8_u_6") (result i32)
+    i32.const 0xffffffff
+    call $i32_load8_u_off)
+
+  (func $i32_load8_s (param i32) (result i32)
+    get_local 0
+    i32.load8_s)
+
+  (func $i32_load8_s_off (param i32) (result i32)
+    get_local 0
+    i32.load8_s offset=1)
+
+  (func (export "test_i32_load8_s_0") (result i32)
+    i32.const 0
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0
+    call $i32_load8_s)
+
+  (func (export "test_i32_load8_s_1") (result i32)
+    i32.const 0
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0
+    call $i32_load8_s_off)
+
+  (func (export "test_i32_load8_s_2") (result i32)
+    i32.const 0xfffc
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0xffff
+    call $i32_load8_s)
+
+  (func (export "test_i32_load8_s_3") (result i32)
+    i32.const 0xfffc
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0xfffe
+    call $i32_load8_s_off)
+
+  (func (export "test_i32_load8_s_4") (result i32)
+    i32.const 0x10000
+    call $i32_load8_s)
+
+  (func (export "test_i32_load8_s_5") (result i32)
+    i32.const 0xffff
+    call $i32_load8_s_off)
+
+  (func (export "test_i32_load8_s_6") (result i32)
+    i32.const 0xffffffff
+    call $i32_load8_s_off)
+
+  (func $i32_load16_u (param i32) (result i32)
+    get_local 0
+    i32.load16_u)
+
+  (func $i32_load16_u_off (param i32) (result i32)
+    get_local 0
+    i32.load16_u offset=2)
+
+  (func (export "test_i32_load16_u_0") (result i32)
+    i32.const 0
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0
+    call $i32_load16_u)
+
+  (func (export "test_i32_load16_u_1") (result i32)
+    i32.const 0
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0
+    call $i32_load16_u_off)
+
+  (func (export "test_i32_load16_u_2") (result i32)
+    i32.const 0xfffc
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0xfffe
+    call $i32_load16_u)
+
+  (func (export "test_i32_load16_u_3") (result i32)
+    i32.const 0xfffc
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0xfffc
+    call $i32_load16_u_off)
+
+  (func (export "test_i32_load16_u_4") (result i32)
+    i32.const 0xffff
+    call $i32_load16_u)
+
+  (func (export "test_i32_load16_u_5") (result i32)
+    i32.const 0xfffd
+    call $i32_load16_u_off)
+
+  (func (export "test_i32_load16_u_6") (result i32)
+    i32.const 0xffffffff
+    call $i32_load16_u)
+
+  (func (export "test_i32_load16_u_7") (result i32)
+    i32.const 0xfffffffd
+    call $i32_load16_u_off)
+
+  (func (export "test_i32_load16_u_8") (result i32)
+    i32.const 0xffffffff
+    call $i32_load16_u_off)
+
+  (func $i32_load16_s (param i32) (result i32)
+    get_local 0
+    i32.load16_s)
+
+  (func $i32_load16_s_off (param i32) (result i32)
+    get_local 0
+    i32.load16_s offset=2)
+
+  (func (export "test_i32_load16_s_0") (result i32)
+    i32.const 0
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0
+    call $i32_load16_s)
+
+  (func (export "test_i32_load16_s_1") (result i32)
+    i32.const 0
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0
+    call $i32_load16_s_off)
+
+  (func (export "test_i32_load16_s_2") (result i32)
+    i32.const 0xfffc
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0xfffe
+    call $i32_load16_s)
+
+  (func (export "test_i32_load16_s_3") (result i32)
+    i32.const 0xfffc
+    i32.const 0xdeadbeef
+    i32.store
+    i32.const 0xfffc
+    call $i32_load16_s_off)
+
+  (func (export "test_i32_load16_s_4") (result i32)
+    i32.const 0xffff
+    call $i32_load16_s)
+
+  (func (export "test_i32_load16_s_5") (result i32)
+    i32.const 0xfffd
+    call $i32_load16_s_off)
+
+  (func (export "test_i32_load16_s_6") (result i32)
+    i32.const 0xffffffff
+    call $i32_load16_s)
+
+  (func (export "test_i32_load16_s_7") (result i32)
+    i32.const 0xfffffffd
+    call $i32_load16_s_off)
+
+  (func (export "test_i32_load16_s_8") (result i32)
+    i32.const 0xffffffff
+    call $i32_load16_s_off)
+
+  (func $i64_load8_u (param i32) (result i64)
+    get_local 0
+    i64.load8_u)
+
+  (func $i64_load8_u_off (param i32) (result i64)
+    get_local 0
+    i64.load8_u offset=1)
+
+  (func (export "test_i64_load8_u_0") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load8_u)
+
+  (func (export "test_i64_load8_u_1") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load8_u_off)
+
+  (func (export "test_i64_load8_u_2") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xffff
+    call $i64_load8_u)
+
+  (func (export "test_i64_load8_u_3") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfffe
+    call $i64_load8_u_off)
+
+  (func (export "test_i64_load8_u_4") (result i64)
+    i32.const 0x10000
+    call $i64_load8_u)
+
+  (func (export "test_i64_load8_u_5") (result i64)
+    i32.const 0xffff
+    call $i64_load8_u_off)
+
+  (func (export "test_i64_load8_u_6") (result i64)
+    i32.const 0xffffffff
+    call $i64_load8_u_off)
+
+  (func $i64_load8_s (param i32) (result i64)
+    get_local 0
+    i64.load8_s)
+
+  (func $i64_load8_s_off (param i32) (result i64)
+    get_local 0
+    i64.load8_s offset=1)
+
+  (func (export "test_i64_load8_s_0") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load8_s)
+
+  (func (export "test_i64_load8_s_1") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load8_s_off)
+
+  (func (export "test_i64_load8_s_2") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xffff
+    call $i64_load8_s)
+
+  (func (export "test_i64_load8_s_3") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfffe
+    call $i64_load8_s_off)
+
+  (func (export "test_i64_load8_s_4") (result i64)
+    i32.const 0x10000
+    call $i64_load8_s)
+
+  (func (export "test_i64_load8_s_5") (result i64)
+    i32.const 0xffff
+    call $i64_load8_s_off)
+
+  (func (export "test_i64_load8_s_6") (result i64)
+    i32.const 0xffffffff
+    call $i64_load8_s_off)
+
+  (func $i64_load16_u (param i32) (result i64)
+    get_local 0
+    i64.load16_u)
+
+  (func $i64_load16_u_off (param i32) (result i64)
+    get_local 0
+    i64.load16_u offset=2)
+  
+  (func (export "test_i64_load16_u_0") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load16_u)
+
+  (func (export "test_i64_load16_u_1") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load16_u_off)
+
+  (func (export "test_i64_load16_u_2") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfffe
+    call $i64_load16_u)
+
+  (func (export "test_i64_load16_u_3") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfffc
+    call $i64_load16_u_off)
+
+  (func (export "test_i64_load16_u_4") (result i64)
+    i32.const 0xffff
+    call $i64_load16_u)
+
+  (func (export "test_i64_load16_u_5") (result i64)
+    i32.const 0xfffd
+    call $i64_load16_u_off)
+
+  (func (export "test_i64_load16_u_6") (result i64)
+    i32.const 0xffffffff
+    call $i64_load16_u)
+
+  (func (export "test_i64_load16_u_7") (result i64)
+    i32.const 0xfffffffd
+    call $i64_load16_u_off)
+
+  (func (export "test_i64_load16_u_8") (result i64)
+    i32.const 0xffffffff
+    call $i64_load16_u_off)
+
+  (func $i64_load16_s (param i32) (result i64)
+    get_local 0
+    i64.load16_s)
+
+  (func $i64_load16_s_off (param i32) (result i64)
+    get_local 0
+    i64.load16_s offset=2)
+
+  (func (export "test_i64_load16_s_0") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load16_s)
+
+  (func (export "test_i64_load16_s_1") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load16_s_off)
+
+  (func (export "test_i64_load16_s_2") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfffe
+    call $i64_load16_s)
+
+  (func (export "test_i64_load16_s_3") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfffc
+    call $i64_load16_s_off)
+
+  (func (export "test_i64_load16_s_4") (result i64)
+    i32.const 0xffff
+    call $i64_load16_s)
+
+  (func (export "test_i64_load16_s_5") (result i64)
+    i32.const 0xfffd
+    call $i64_load16_s_off)
+
+  (func (export "test_i64_load16_s_6") (result i64)
+    i32.const 0xffffffff
+    call $i64_load16_s)
+
+  (func (export "test_i64_load16_s_7") (result i64)
+    i32.const 0xfffffffd
+    call $i64_load16_s_off)
+
+  (func (export "test_i64_load16_s_8") (result i64)
+    i32.const 0xffffffff
+    call $i64_load16_s_off)
+
+  (func $i64_load32_u (param i32) (result i64)
+    get_local 0
+    i64.load32_u)
+
+  (func $i64_load32_u_off (param i32) (result i64)
+    get_local 0
+    i64.load32_u offset=4)
+
+  (func (export "test_i64_load32_u_0") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load32_u)
+
+  (func (export "test_i64_load32_u_1") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load32_u_off)
+
+  (func (export "test_i64_load32_u_2") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfffc
+    call $i64_load32_u)
+
+  (func (export "test_i64_load32_u_3") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfff8
+    call $i64_load32_u_off)
+
+  (func (export "test_i64_load32_u_4") (result i64)
+    i32.const 0xfffd
+    call $i64_load32_u)
+
+  (func (export "test_i64_load32_u_5") (result i64)
+    i32.const 0xfff9
+    call $i64_load32_u_off)
+
+  (func (export "test_i64_load32_u_6") (result i64)
+    i32.const 0xffffffff
+    call $i64_load32_u)
+
+  (func (export "test_i64_load32_u_7") (result i64)
+    i32.const 0xfffffffd
+    call $i64_load32_u_off)
+
+  (func (export "test_i64_load32_u_8") (result i64)
+    i32.const 0xffffffff
+    call $i64_load32_u_off)
+
+  (func $i64_load32_s (param i32) (result i64)
+    get_local 0
+    i64.load32_s)
+
+  (func $i64_load32_s_off (param i32) (result i64)
+    get_local 0
+    i64.load32_s offset=4)
+
+  (func (export "test_i64_load32_s_0") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load32_s)
+
+  (func (export "test_i64_load32_s_1") (result i64)
+    i32.const 0
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0
+    call $i64_load32_s_off)
+
+  (func (export "test_i64_load32_s_2") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfffc
+    call $i64_load32_s)
+
+  (func (export "test_i64_load32_s_3") (result i64)
+    i32.const 0xfff8
+    i64.const 0xdeadbeefbaadf00d
+    i64.store
+    i32.const 0xfff8
+    call $i64_load32_s_off)
+
+  (func (export "test_i64_load32_s_4") (result i64)
+    i32.const 0xfffd
+    call $i64_load32_s)
+
+  (func (export "test_i64_load32_s_5") (result i64)
+    i32.const 0xfff9
+    call $i64_load32_s_off)
+
+  (func (export "test_i64_load32_s_6") (result i64)
+    i32.const 0xffffffff
+    call $i64_load32_s)
+
+  (func (export "test_i64_load32_s_7") (result i64)
+    i32.const 0xfffffffd
+    call $i64_load32_s_off)
+
+  (func (export "test_i64_load32_s_8") (result i64)
+    i32.const 0xffffffff
+    call $i64_load32_s_off)
+)
+(;; STDOUT ;;;
+test_i32_load8_u_0() => i32:239
+test_i32_load8_u_1() => i32:190
+test_i32_load8_u_2() => i32:222
+test_i32_load8_u_3() => i32:222
+test_i32_load8_u_4() => error: out of bounds memory access
+test_i32_load8_u_5() => error: out of bounds memory access
+test_i32_load8_u_6() => error: out of bounds memory access
+test_i32_load8_s_0() => i32:4294967279
+test_i32_load8_s_1() => i32:4294967230
+test_i32_load8_s_2() => i32:4294967262
+test_i32_load8_s_3() => i32:4294967262
+test_i32_load8_s_4() => error: out of bounds memory access
+test_i32_load8_s_5() => error: out of bounds memory access
+test_i32_load8_s_6() => error: out of bounds memory access
+test_i32_load16_u_0() => i32:48879
+test_i32_load16_u_1() => i32:57005
+test_i32_load16_u_2() => i32:57005
+test_i32_load16_u_3() => i32:57005
+test_i32_load16_u_4() => error: out of bounds memory access
+test_i32_load16_u_5() => error: out of bounds memory access
+test_i32_load16_u_6() => error: out of bounds memory access
+test_i32_load16_u_7() => error: out of bounds memory access
+test_i32_load16_u_8() => error: out of bounds memory access
+test_i32_load16_s_0() => i32:4294950639
+test_i32_load16_s_1() => i32:4294958765
+test_i32_load16_s_2() => i32:4294958765
+test_i32_load16_s_3() => i32:4294958765
+test_i32_load16_s_4() => error: out of bounds memory access
+test_i32_load16_s_5() => error: out of bounds memory access
+test_i32_load16_s_6() => error: out of bounds memory access
+test_i32_load16_s_7() => error: out of bounds memory access
+test_i32_load16_s_8() => error: out of bounds memory access
+test_i64_load8_u_0() => i64:13
+test_i64_load8_u_1() => i64:240
+test_i64_load8_u_2() => i64:222
+test_i64_load8_u_3() => i64:222
+test_i64_load8_u_4() => error: out of bounds memory access
+test_i64_load8_u_5() => error: out of bounds memory access
+test_i64_load8_u_6() => error: out of bounds memory access
+test_i64_load8_s_0() => i64:13
+test_i64_load8_s_1() => i64:18446744073709551600
+test_i64_load8_s_2() => i64:18446744073709551582
+test_i64_load8_s_3() => i64:18446744073709551582
+test_i64_load8_s_4() => error: out of bounds memory access
+test_i64_load8_s_5() => error: out of bounds memory access
+test_i64_load8_s_6() => error: out of bounds memory access
+test_i64_load16_u_0() => i64:61453
+test_i64_load16_u_1() => i64:47789
+test_i64_load16_u_2() => i64:57005
+test_i64_load16_u_3() => i64:57005
+test_i64_load16_u_4() => error: out of bounds memory access
+test_i64_load16_u_5() => error: out of bounds memory access
+test_i64_load16_u_6() => error: out of bounds memory access
+test_i64_load16_u_7() => error: out of bounds memory access
+test_i64_load16_u_8() => error: out of bounds memory access
+test_i64_load16_s_0() => i64:18446744073709547533
+test_i64_load16_s_1() => i64:18446744073709533869
+test_i64_load16_s_2() => i64:18446744073709543085
+test_i64_load16_s_3() => i64:18446744073709543085
+test_i64_load16_s_4() => error: out of bounds memory access
+test_i64_load16_s_5() => error: out of bounds memory access
+test_i64_load16_s_6() => error: out of bounds memory access
+test_i64_load16_s_7() => error: out of bounds memory access
+test_i64_load16_s_8() => error: out of bounds memory access
+test_i64_load32_u_0() => i64:3131961357
+test_i64_load32_u_1() => i64:3735928559
+test_i64_load32_u_2() => i64:3735928559
+test_i64_load32_u_3() => i64:3735928559
+test_i64_load32_u_4() => error: out of bounds memory access
+test_i64_load32_u_5() => error: out of bounds memory access
+test_i64_load32_u_6() => error: out of bounds memory access
+test_i64_load32_u_7() => error: out of bounds memory access
+test_i64_load32_u_8() => error: out of bounds memory access
+test_i64_load32_s_0() => i64:18446744072546545677
+test_i64_load32_s_1() => i64:18446744073150512879
+test_i64_load32_s_2() => i64:18446744073150512879
+test_i64_load32_s_3() => i64:18446744073150512879
+test_i64_load32_s_4() => error: out of bounds memory access
+test_i64_load32_s_5() => error: out of bounds memory access
+test_i64_load32_s_6() => error: out of bounds memory access
+test_i64_load32_s_7() => error: out of bounds memory access
+test_i64_load32_s_8() => error: out of bounds memory access
+;;; STDOUT ;;)
