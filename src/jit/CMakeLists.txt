@@ -19,6 +19,7 @@ add_library(wabtjit STATIC
   type-dictionary.cc
   function-builder.cc
   wabtjit.cc
+  stack.cc
 )
 
 # Mark JitBuilder include directories as "system" include directories. For most compilers, this
