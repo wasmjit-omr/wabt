@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
+#include <cstddef>
+
 #include "wabtjit.h"
 #include "type-dictionary.h"
 #include "function-builder.h"
 
-#include "Jit.hpp"
+extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
 
 namespace wabt {
 namespace jit {
@@ -26,9 +28,9 @@ namespace jit {
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   TypeDictionary types;
   FunctionBuilder builder(thread, fn, &types);
-  uint8_t* function = nullptr;
+  void* function = nullptr;
 
-  if (compileMethodBuilder(&builder, &function) == 0) {
+  if (internal_compileMethodBuilder(&builder, &function) == 0) {
     return reinterpret_cast<JITedFunction>(function);
   } else {
     return nullptr;

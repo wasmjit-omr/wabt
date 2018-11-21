@@ -27,6 +27,39 @@ class TypeDictionary : public TR::TypeDictionary {
   TypeDictionary();
 };
 
+template <typename T>
+struct is_supported {
+  static const bool value =  std::is_arithmetic<T>::value // note: is_arithmetic = is_integral || is_floating_point
+                          || std::is_void<T>::value;
+};
+template <typename T>
+struct is_supported<T*> {
+  // a pointer type is supported iff the type being pointed to is supported
+  static const bool value =  is_supported<T>::value;
+};
+
+template <typename T>
+TR::IlType* toIlType(TR::TypeDictionary *td, typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 1)>::type* = 0) { return td->Int8; }
+template <typename T>
+TR::IlType* toIlType(TR::TypeDictionary *td, typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 2)>::type* = 0) { return td->Int16; }
+template <typename T>
+TR::IlType* toIlType(TR::TypeDictionary *td, typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 4)>::type* = 0) { return td->Int32; }
+template <typename T>
+TR::IlType* toIlType(TR::TypeDictionary *td, typename std::enable_if<std::is_integral<T>::value && (sizeof(T) == 8)>::type* = 0) { return td->Int64; }
+
+template <typename T>
+TR::IlType* toIlType(TR::TypeDictionary *td, typename std::enable_if<std::is_floating_point<T>::value && (sizeof(T) == 4)>::type* = 0) { return td->Float; }
+template <typename T>
+TR::IlType* toIlType(TR::TypeDictionary *td, typename std::enable_if<std::is_floating_point<T>::value && (sizeof(T) == 8)>::type* = 0) { return td->Double; }
+
+template <typename T>
+TR::IlType* toIlType(TR::TypeDictionary *td, typename std::enable_if<std::is_void<T>::value>::type* = 0) { return td->NoType; }
+
+template <typename T>
+TR::IlType* toIlType(TR::TypeDictionary *td, typename std::enable_if<std::is_pointer<T>::value && is_supported<typename std::remove_pointer<T>::type>::value>::type* = 0) {
+  return td->PointerTo(toIlType<typename std::remove_pointer<T>::type>(td));
+}
+
 }
 }
 
