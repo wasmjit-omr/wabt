@@ -186,7 +186,7 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
   DefineFile(__FILE__);
   DefineName(fn->dbg_name_.c_str());
 
-  DefineReturnType(types->toIlType<Result_t>());
+  DefineReturnType(toIlType<Result_t>(types));
 
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
@@ -212,34 +212,34 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  Double);
   DefineFunction("CallHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallHelper),
-                 types->toIlType<Result_t>(),
+                 toIlType<Result_t>(types),
                  3,
-                 types->toIlType<void*>(),
-                 types->toIlType<wabt::interp::IstreamOffset>(),
+                 toIlType<void*>(types),
+                 toIlType<wabt::interp::IstreamOffset>(types),
                  types->PointerTo(Int8));
   DefineFunction("CallIndirectHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallIndirectHelper),
-                 types->toIlType<Result_t>(),
+                 toIlType<Result_t>(types),
                  5,
-                 types->toIlType<void*>(),
-                 types->toIlType<Index>(),
-                 types->toIlType<Index>(),
-                 types->toIlType<Index>(),
+                 toIlType<void*>(types),
+                 toIlType<Index>(types),
+                 toIlType<Index>(types),
+                 toIlType<Index>(types),
                  types->PointerTo(Int8));
   DefineFunction("CallHostHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallHostHelper),
-                 types->toIlType<Result_t>(),
+                 toIlType<Result_t>(types),
                  2,
-                 types->toIlType<void*>(),
-                 types->toIlType<Index>());
+                 toIlType<void*>(types),
+                 toIlType<Index>(types));
   DefineFunction("MemoryTranslationHelper", __FILE__, "0",
                  reinterpret_cast<void*>(MemoryTranslationHelper),
-                 types->toIlType<void*>(),
+                 toIlType<void*>(types),
                  4,
-                 types->toIlType<void*>(),
-                 types->toIlType<uint32_t>(),
-                 types->toIlType<uint64_t>(),
-                 types->toIlType<uint32_t>());
+                 toIlType<void*>(types),
+                 toIlType<uint32_t>(types),
+                 toIlType<uint64_t>(types),
+                 toIlType<uint32_t>(types));
 }
 
 bool FunctionBuilder::buildIL() {
@@ -601,7 +601,7 @@ template <>
 TR::IlValue* FunctionBuilder::EmitIsNan<float>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               CoerceTo(Int32, value),
+         b->               ConvertBitsTo(Int32, value),
          b->               ConstInt32(0x7fffffffU)),
          b->           ConstInt32(0x7f800000U));
 }
@@ -610,7 +610,7 @@ template <>
 TR::IlValue* FunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               CoerceTo(Int64, value),
+         b->               ConvertBitsTo(Int64, value),
          b->               ConstInt64(0x7fffffffffffffffULL)),
          b->           ConstInt64(0x7ff0000000000000ULL));
 }
@@ -637,7 +637,7 @@ void FunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc, Virtua
   b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)),
              pc);
 
-  auto* target_type = b->typeDictionary()->toIlType<ToType>();
+  auto* target_type = toIlType<ToType>(b->typeDictionary());
 
   // this could be optimized using templates or constant expressions,
   // but the compiler should be able to simplify this anyways
@@ -679,7 +679,7 @@ void FunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc
   b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)),
              pc);
 
-  auto* target_type = b->typeDictionary()->toIlType<ToType>();
+  auto* target_type = toIlType<ToType>(b->typeDictionary());
   auto* new_value = b->UnsignedConvertTo(target_type, b->ConvertTo(Int64, value));
 
   stack->Push(new_value);
@@ -1627,22 +1627,22 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F32ReinterpretI32: {
-      stack.Push(b->CoerceTo(Float, stack.Pop()));
+      stack.Push(b->ConvertBitsTo(Float, stack.Pop()));
       break;
     }
 
     case Opcode::I32ReinterpretF32: {
-      stack.Push(b->CoerceTo(Int32, stack.Pop()));
+      stack.Push(b->ConvertBitsTo(Int32, stack.Pop()));
       break;
     }
 
     case Opcode::F64ReinterpretI64: {
-      stack.Push(b->CoerceTo(Double, stack.Pop()));
+      stack.Push(b->ConvertBitsTo(Double, stack.Pop()));
       break;
     }
 
     case Opcode::I64ReinterpretF64: {
-      stack.Push(b->CoerceTo(Int64, stack.Pop()));
+      stack.Push(b->ConvertBitsTo(Int64, stack.Pop()));
       break;
     }
 

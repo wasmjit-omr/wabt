@@ -20,9 +20,9 @@
 wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     using namespace wabt::interp;
     DefineUnion("Value");
-    UnionField("Value", "i32", toIlType<decltype(Value::i32)>());
-    UnionField("Value", "i64", toIlType<decltype(Value::i64)>());
-    UnionField("Value", "f32", toIlType<float>());
-    UnionField("Value", "f64", toIlType<double>());
+    UnionField("Value", "i32", toIlType<decltype(Value::i32)>(this));
+    UnionField("Value", "i64", toIlType<decltype(Value::i64)>(this));
+    UnionField("Value", "f32", toIlType<float>(this));
+    UnionField("Value", "f64", toIlType<double>(this));
     CloseUnion("Value");
 }
