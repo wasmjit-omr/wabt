@@ -716,7 +716,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::GetGlobal: {
+    case Opcode::GlobalGet: {
       interp::Global* g = thread_->env()->GetGlobal(interp::ReadU32(&pc));
 
       // The type of value stored in a global will never change, so we're safe
@@ -736,7 +736,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::SetGlobal: {
+    case Opcode::GlobalSet: {
       interp::Global* g = thread_->env()->GetGlobal(interp::ReadU32(&pc));
       assert(g->mutable_);
 
@@ -750,7 +750,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::GetLocal: {
+    case Opcode::LocalGet: {
       Type t;
       uint32_t off = GetLocalOffset(&stack, &t, interp::ReadU32(&pc));
 
@@ -761,7 +761,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::SetLocal: {
+    case Opcode::LocalSet: {
       auto* value = stack.Pop();
       uint32_t off = GetLocalOffset(&stack, nullptr, interp::ReadU32(&pc));
 
@@ -769,7 +769,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::TeeLocal: {
+    case Opcode::LocalTee: {
       auto* value = stack.Top();
       uint32_t off = GetLocalOffset(&stack, nullptr, interp::ReadU32(&pc));
 
@@ -1510,12 +1510,12 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::I64ExtendSI32: {
+    case Opcode::I64ExtendI32S: {
       stack.Push(b->ConvertTo(Int64, stack.Pop()));
       break;
     }
 
-    case Opcode::I64ExtendUI32: {
+    case Opcode::I64ExtendI32U: {
       stack.Push(b->UnsignedConvertTo(Int64, stack.Pop()));
       break;
     }
@@ -1555,42 +1555,42 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::F32ConvertSI32: {
+    case Opcode::F32ConvertI32S: {
       stack.Push(b->ConvertTo(Float, stack.Pop()));
       break;
     }
 
-    case Opcode::F32ConvertUI32: {
+    case Opcode::F32ConvertI32U: {
       stack.Push(b->UnsignedConvertTo(Float, stack.Pop()));
       break;
     }
 
-    case Opcode::F32ConvertSI64: {
+    case Opcode::F32ConvertI64S: {
       stack.Push(b->ConvertTo(Float, stack.Pop()));
       break;
     }
 
-    case Opcode::F32ConvertUI64: {
+    case Opcode::F32ConvertI64U: {
       stack.Push(b->UnsignedConvertTo(Float, stack.Pop()));
       break;
     }
 
-    case Opcode::F64ConvertSI32: {
+    case Opcode::F64ConvertI32S: {
       stack.Push(b->ConvertTo(Double, stack.Pop()));
       break;
     }
 
-    case Opcode::F64ConvertUI32: {
+    case Opcode::F64ConvertI32U: {
       stack.Push(b->UnsignedConvertTo(Double, stack.Pop()));
       break;
     }
 
-    case Opcode::F64ConvertSI64: {
+    case Opcode::F64ConvertI64S: {
       stack.Push(b->ConvertTo(Double, stack.Pop()));
       break;
     }
 
-    case Opcode::F64ConvertUI64: {
+    case Opcode::F64ConvertI64U: {
       stack.Push(b->UnsignedConvertTo(Double, stack.Pop()));
       break;
     }
@@ -1615,37 +1615,37 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::I32TruncSF32:
+    case Opcode::I32TruncF32S:
       EmitTruncation<int32_t, float>(b, pc, &stack);
       break;
 
-    case Opcode::I32TruncUF32:
+    case Opcode::I32TruncF32U:
       EmitUnsignedTruncation<uint32_t, float>(b, pc, &stack);
       break;
 
-    case Opcode::I32TruncSF64:
+    case Opcode::I32TruncF64S:
       EmitTruncation<int32_t, double>(b, pc, &stack);
       break;
 
-    case Opcode::I32TruncUF64:
+    case Opcode::I32TruncF64U:
       EmitUnsignedTruncation<uint32_t, double>(b, pc, &stack);
       break;
 
-    case Opcode::I64TruncSF32:
+    case Opcode::I64TruncF32S:
       EmitTruncation<int64_t, float>(b, pc, &stack);
       break;
 
 //    UNSIGNED TYPE NOT HANDLED
-//    case Opcode::I64TruncUF32:
+//    case Opcode::I64TruncF32U:
 //      EmitTruncation<uint64_t, float>(b, pc, &stack);
 //      break;
 
-    case Opcode::I64TruncSF64:
+    case Opcode::I64TruncF64S:
       EmitTruncation<int64_t, double>(b, pc, &stack);
       break;
 
 //    UNSIGNED TYPE NOT HANDLED
-//    case Opcode::I64TruncUF64:
+//    case Opcode::I64TruncF64U:
 //      EmitTruncation<uint64_t, double>(b, pc, &stack);
 //      break;
 
