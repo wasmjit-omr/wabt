@@ -82,8 +82,9 @@ bool Opcode::IsNaturallyAligned(Address alignment) const {
 }
 
 Address Opcode::GetAlignment(Address alignment) const {
-  if (alignment == WABT_USE_NATURAL_ALIGNMENT)
+  if (alignment == WABT_USE_NATURAL_ALIGNMENT) {
     return GetMemorySize();
+  }
   return alignment;
 }
 
@@ -111,9 +112,9 @@ bool Opcode::IsEnabled(const Features& features) const {
     case Opcode::I64Extend8S:
     case Opcode::I64Extend16S:
     case Opcode::I64Extend32S:
-    case Opcode::Wake:
-    case Opcode::I32Wait:
-    case Opcode::I64Wait:
+    case Opcode::AtomicWake:
+    case Opcode::I32AtomicWait:
+    case Opcode::I64AtomicWait:
     case Opcode::I32AtomicLoad:
     case Opcode::I64AtomicLoad:
     case Opcode::I32AtomicLoad8U:
@@ -178,6 +179,9 @@ bool Opcode::IsEnabled(const Features& features) const {
     case Opcode::I64AtomicRmw16UCmpxchg:
     case Opcode::I64AtomicRmw32UCmpxchg:
       return features.threads_enabled();
+
+    case Opcode::V128Const:
+      return features.simd_enabled();
 
     // Interpreter opcodes are never "enabled".
     case Opcode::InterpAlloca:

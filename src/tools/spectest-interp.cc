@@ -200,7 +200,7 @@ class JSONParser {
  public:
   JSONParser() {}
 
-  wabt::Result ReadFile(const char* spec_json_filename);
+  wabt::Result ReadFile(string_view spec_json_filename);
   wabt::Result ParseScript(Script* out_script);
 
  private:
@@ -241,7 +241,7 @@ class JSONParser {
 #define PARSE_KEY_STRING_VALUE(key, value) \
   CHECK_RESULT(ParseKeyStringValue(key, value))
 
-wabt::Result JSONParser::ReadFile(const char* spec_json_filename) {
+wabt::Result JSONParser::ReadFile(string_view spec_json_filename) {
   loc_.filename = spec_json_filename;
   loc_.line = 1;
   loc_.first_column = 1;
@@ -251,8 +251,8 @@ wabt::Result JSONParser::ReadFile(const char* spec_json_filename) {
 
 void JSONParser::PrintError(const char* format, ...) {
   WABT_SNPRINTF_ALLOCA(buffer, length, format);
-  fprintf(stderr, "%s:%d:%d: %s\n", loc_.filename, loc_.line, loc_.first_column,
-          buffer);
+  fprintf(stderr, "%s:%d:%d: %s\n", loc_.filename.to_string().c_str(),
+          loc_.line, loc_.first_column, buffer);
 }
 
 void JSONParser::PutbackChar() {
@@ -263,8 +263,9 @@ void JSONParser::PutbackChar() {
 }
 
 int JSONParser::ReadChar() {
-  if (json_offset_ >= json_data_.size())
+  if (json_offset_ >= json_data_.size()) {
     return -1;
+  }
   prev_loc_ = loc_;
   char c = json_data_[json_offset_++];
   if (c == '\n') {
@@ -453,8 +454,9 @@ wabt::Result JSONParser::ParseTypeVector(TypeVector* out_types) {
   EXPECT("[");
   bool first = true;
   while (!Match("]")) {
-    if (!first)
+    if (!first) {
       EXPECT(",");
+    }
     Type type;
     CHECK_RESULT(ParseTypeObject(&type));
     first = false;
@@ -514,8 +516,9 @@ wabt::Result JSONParser::ParseConstVector(TypedValues* out_values) {
   EXPECT("[");
   bool first = true;
   while (!Match("]")) {
-    if (!first)
+    if (!first) {
       EXPECT(",");
+    }
     TypedValue value;
     CHECK_RESULT(ParseConst(&value));
     out_values->push_back(value);
@@ -575,16 +578,18 @@ static string_view GetDirname(string_view path) {
   // s = "some\windows\directory", => "some\windows"
   size_t last_slash = path.find_last_of('/');
   size_t last_backslash = path.find_last_of('\\');
-  if (last_slash == string_view::npos)
+  if (last_slash == string_view::npos) {
     last_slash = 0;
-  if (last_backslash == string_view::npos)
+  }
+  if (last_backslash == string_view::npos) {
     last_backslash = 0;
+  }
 
   return path.substr(0, std::max(last_slash, last_backslash));
 }
 
 std::string JSONParser::CreateModulePath(string_view filename) {
-  const char* spec_json_filename = loc_.filename;
+  string_view spec_json_filename = loc_.filename;
   string_view dirname = GetDirname(spec_json_filename);
   std::string path;
 
@@ -743,8 +748,9 @@ wabt::Result JSONParser::ParseScript(Script* out_script) {
   bool first = true;
   while (!Match("]")) {
     CommandPtr command;
-    if (!first)
+    if (!first) {
       EXPECT(",");
+    }
     CHECK_RESULT(ParseCommand(&command));
     out_script->commands.push_back(std::move(command));
     first = false;
@@ -785,11 +791,11 @@ class CommandRunner {
 
   void TallyCommand(wabt::Result);
 
-  wabt::Result ReadInvalidTextModule(const char* module_filename,
+  wabt::Result ReadInvalidTextModule(string_view module_filename,
                                      Environment* env,
                                      ErrorHandler* error_handler);
   wabt::Result ReadInvalidModule(int line_number,
-                                 const char* module_filename,
+                                 string_view module_filename,
                                  Environment* env,
                                  ModuleType module_type,
                                  const char* desc);
@@ -1006,10 +1012,12 @@ static ExecResult GetGlobalExportByName(Environment* env,
                                         interp::Module* module,
                                         string_view name) {
   interp::Export* export_ = module->GetExport(name);
-  if (!export_)
+  if (!export_) {
     return ExecResult(interp::Result::UnknownExport);
-  if (export_->kind != ExternalKind::Global)
+  }
+  if (export_->kind != ExternalKind::Global) {
     return ExecResult(interp::Result::ExportKindMismatch);
+  }
 
   interp::Global* global = env->GetGlobal(export_->index);
   return ExecResult(interp::Result::Ok, {global->typed_value});
@@ -1049,7 +1057,7 @@ ExecResult CommandRunner::RunAction(int line_number,
   return exec_result;
 }
 
-wabt::Result CommandRunner::ReadInvalidTextModule(const char* module_filename,
+wabt::Result CommandRunner::ReadInvalidTextModule(string_view module_filename,
                                                   Environment* env,
                                                   ErrorHandler* error_handler) {
   std::unique_ptr<WastLexer> lexer =
@@ -1060,14 +1068,16 @@ wabt::Result CommandRunner::ReadInvalidTextModule(const char* module_filename,
     wabt::Module* module = script->GetFirstModule();
     result = ResolveNamesModule(lexer.get(), module, error_handler);
     if (Succeeded(result)) {
+      ValidateOptions options(s_features);
       // Don't do a full validation, just validate the function signatures.
-      result = ValidateFuncSignatures(lexer.get(), module, error_handler);
+      result =
+          ValidateFuncSignatures(lexer.get(), module, error_handler, &options);
     }
   }
   return result;
 }
 
-static wabt::Result ReadModule(const char* module_filename,
+static wabt::Result ReadModule(string_view module_filename,
                                Environment* env,
                                ErrorHandler* error_handler,
                                DefinedModule** out_module) {
@@ -1082,19 +1092,20 @@ static wabt::Result ReadModule(const char* module_filename,
     const bool kStopOnFirstError = true;
     ReadBinaryOptions options(s_features, s_log_stream.get(), kReadDebugNames,
                               kStopOnFirstError);
-    result = ReadBinaryInterp(env, DataOrNull(file_data), file_data.size(),
+    result = ReadBinaryInterp(env, file_data.data(), file_data.size(),
                               &options, error_handler, out_module);
 
     if (Succeeded(result)) {
-      if (s_verbose)
+      if (s_verbose) {
         env->DisassembleModule(s_stdout_stream.get(), *out_module);
+      }
     }
   }
   return result;
 }
 
 wabt::Result CommandRunner::ReadInvalidModule(int line_number,
-                                              const char* module_filename,
+                                              string_view module_filename,
                                               Environment* env,
                                               ModuleType module_type,
                                               const char* desc) {
@@ -1122,7 +1133,7 @@ wabt::Result CommandRunner::ReadInvalidModule(int line_number,
 wabt::Result CommandRunner::OnModuleCommand(const ModuleCommand* command) {
   Environment::MarkPoint mark = env_.Mark();
   ErrorHandlerFile error_handler(Location::Type::Binary);
-  wabt::Result result = ReadModule(command->filename.c_str(), &env_,
+  wabt::Result result = ReadModule(command->filename, &env_,
                                    &error_handler, &last_module_);
 
   if (Failed(result)) {
@@ -1168,8 +1179,8 @@ wabt::Result CommandRunner::OnAssertMalformedCommand(
   InitEnvironment(&env);
 
   wabt::Result result =
-      ReadInvalidModule(command->line, command->filename.c_str(), &env,
-                        command->type, "assert_malformed");
+      ReadInvalidModule(command->line, command->filename, &env, command->type,
+                        "assert_malformed");
   if (Succeeded(result)) {
     PrintError(command->line, "expected module to be malformed: \"%s\"",
                command->filename.c_str());
@@ -1200,8 +1211,8 @@ wabt::Result CommandRunner::OnAssertUnlinkableCommand(
     const AssertUnlinkableCommand* command) {
   Environment::MarkPoint mark = env_.Mark();
   wabt::Result result =
-      ReadInvalidModule(command->line, command->filename.c_str(), &env_,
-                        command->type, "assert_unlinkable");
+      ReadInvalidModule(command->line, command->filename, &env_, command->type,
+                        "assert_unlinkable");
   env_.ResetToMarkPoint(mark);
 
   if (Succeeded(result)) {
@@ -1218,9 +1229,8 @@ wabt::Result CommandRunner::OnAssertInvalidCommand(
   Environment env;
   InitEnvironment(&env);
 
-  wabt::Result result =
-      ReadInvalidModule(command->line, command->filename.c_str(), &env,
-                        command->type, "assert_invalid");
+  wabt::Result result = ReadInvalidModule(
+      command->line, command->filename, &env, command->type, "assert_invalid");
   if (Succeeded(result)) {
     PrintError(command->line, "expected module to be invalid: \"%s\"",
                command->filename.c_str());
@@ -1236,7 +1246,7 @@ wabt::Result CommandRunner::OnAssertUninstantiableCommand(
   DefinedModule* module;
   Environment::MarkPoint mark = env_.Mark();
   wabt::Result result =
-      ReadModule(command->filename.c_str(), &env_, &error_handler, &module);
+      ReadModule(command->filename, &env_, &error_handler, &module);
 
   if (Succeeded(result)) {
     ExecResult exec_result = executor_.RunStartFunction(module);
@@ -1258,8 +1268,9 @@ wabt::Result CommandRunner::OnAssertUninstantiableCommand(
 }
 
 static bool TypedValuesAreEqual(const TypedValue& tv1, const TypedValue& tv2) {
-  if (tv1.type != tv2.type)
+  if (tv1.type != tv2.type) {
     return false;
+  }
 
   switch (tv1.type) {
     case Type::I32:
@@ -1391,12 +1402,13 @@ wabt::Result CommandRunner::OnAssertExhaustionCommand(
 }
 
 void CommandRunner::TallyCommand(wabt::Result result) {
-  if (Succeeded(result))
+  if (Succeeded(result)) {
     passed_++;
+  }
   total_++;
 }
 
-static wabt::Result ReadAndRunSpecJSON(const char* spec_json_filename) {
+static wabt::Result ReadAndRunSpecJSON(string_view spec_json_filename) {
   JSONParser parser;
   CHECK_RESULT(parser.ReadFile(spec_json_filename));
 

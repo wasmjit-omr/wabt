@@ -148,6 +148,12 @@ class BinaryReaderInterp : public BinaryReaderNop {
   wabt::Result OnAtomicRmwCmpxchgExpr(Opcode opcode,
                                       uint32_t alignment_log2,
                                       Address offset) override;
+  wabt::Result OnAtomicWaitExpr(Opcode opcode,
+                                uint32_t alignment_log2,
+                                Address offset) override;
+  wabt::Result OnAtomicWakeExpr(Opcode opcode,
+                                uint32_t alignment_log2,
+                                Address offset) override;
   wabt::Result OnBinaryExpr(wabt::Opcode opcode) override;
   wabt::Result OnBlockExpr(Index num_types, Type* sig_types) override;
   wabt::Result OnBrExpr(Index depth) override;
@@ -165,6 +171,7 @@ class BinaryReaderInterp : public BinaryReaderNop {
   wabt::Result OnEndExpr() override;
   wabt::Result OnF32ConstExpr(uint32_t value_bits) override;
   wabt::Result OnF64ConstExpr(uint64_t value_bits) override;
+  wabt::Result OnV128ConstExpr(v128 value_bits) override;
   wabt::Result OnGetGlobalExpr(Index global_index) override;
   wabt::Result OnGetLocalExpr(Index local_index) override;
   wabt::Result OnGrowMemoryExpr() override;
@@ -186,12 +193,6 @@ class BinaryReaderInterp : public BinaryReaderNop {
   wabt::Result OnTeeLocalExpr(Index local_index) override;
   wabt::Result OnUnaryExpr(wabt::Opcode opcode) override;
   wabt::Result OnUnreachableExpr() override;
-  wabt::Result OnWaitExpr(Opcode opcode,
-                          uint32_t alignment_log2,
-                          Address offset) override;
-  wabt::Result OnWakeExpr(Opcode opcode,
-                          uint32_t alignment_log2,
-                          Address offset) override;
   wabt::Result EndFunctionBody(Index index) override;
 
   wabt::Result EndElemSegmentInitExpr(Index index) override;
@@ -204,6 +205,7 @@ class BinaryReaderInterp : public BinaryReaderNop {
 
   wabt::Result OnInitExprF32ConstExpr(Index index, uint32_t value) override;
   wabt::Result OnInitExprF64ConstExpr(Index index, uint64_t value) override;
+  wabt::Result OnInitExprV128ConstExpr(Index index, v128 value) override;
   wabt::Result OnInitExprGetGlobalExpr(Index index,
                                        Index global_index) override;
   wabt::Result OnInitExprI32ConstExpr(Index index, uint32_t value) override;
@@ -242,6 +244,7 @@ class BinaryReaderInterp : public BinaryReaderNop {
   wabt::Result EmitI8(uint8_t value);
   wabt::Result EmitI32(uint32_t value);
   wabt::Result EmitI64(uint64_t value);
+  wabt::Result EmitV128(v128 value);
   wabt::Result EmitI32At(IstreamOffset offset, uint32_t value);
   wabt::Result EmitDropKeep(uint32_t drop, uint8_t keep);
   wabt::Result AppendFixup(IstreamOffsetVectorVector* fixups_vector,
@@ -426,6 +429,10 @@ wabt::Result BinaryReaderInterp::EmitI64(uint64_t value) {
   return EmitData(&value, sizeof(value));
 }
 
+wabt::Result BinaryReaderInterp::EmitV128(v128 value) {
+  return EmitData(&value, sizeof(value));
+}
+
 wabt::Result BinaryReaderInterp::EmitI32At(IstreamOffset offset,
                                            uint32_t value) {
   return EmitDataAt(offset, &value, sizeof(value));
@@ -449,8 +456,9 @@ wabt::Result BinaryReaderInterp::EmitDropKeep(uint32_t drop, uint8_t keep) {
 wabt::Result BinaryReaderInterp::AppendFixup(
     IstreamOffsetVectorVector* fixups_vector,
     Index index) {
-  if (index >= fixups_vector->size())
+  if (index >= fixups_vector->size()) {
     fixups_vector->resize(index + 1);
+  }
   (*fixups_vector)[index].push_back(GetIstreamOffset());
   return wabt::Result::Ok;
 }
@@ -904,6 +912,13 @@ wabt::Result BinaryReaderInterp::OnInitExprF64ConstExpr(Index index,
   return wabt::Result::Ok;
 }
 
+wabt::Result BinaryReaderInterp::OnInitExprV128ConstExpr(Index index,
+                                                         v128 value_bits) {
+  init_expr_value_.type = Type::V128;
+  init_expr_value_.value.v128_bits = value_bits;
+  return wabt::Result::Ok;
+}
+
 wabt::Result BinaryReaderInterp::OnInitExprGetGlobalExpr(Index index,
                                                          Index global_index) {
   if (global_index >= num_global_imports_) {
@@ -1038,8 +1053,9 @@ wabt::Result BinaryReaderInterp::OnDataSegmentData(Index index,
     return wabt::Result::Error;
   }
 
-  if (size > 0)
+  if (size > 0) {
     data_segment_infos_.emplace_back(&memory->data[address], src_data, size);
+  }
 
   return wabt::Result::Ok;
 }
@@ -1378,6 +1394,13 @@ wabt::Result BinaryReaderInterp::OnF64ConstExpr(uint64_t value_bits) {
   return wabt::Result::Ok;
 }
 
+wabt::Result BinaryReaderInterp::OnV128ConstExpr(v128 value_bits) {
+  CHECK_RESULT(typechecker_.OnConst(Type::V128));
+  CHECK_RESULT(EmitOpcode(Opcode::V128Const));
+  CHECK_RESULT(EmitV128(value_bits));
+  return wabt::Result::Ok;
+}
+
 wabt::Result BinaryReaderInterp::OnGetGlobalExpr(Index global_index) {
   CHECK_RESULT(CheckGlobal(global_index));
   Type type = GetGlobalTypeByModuleIndex(global_index);
@@ -1502,24 +1525,24 @@ wabt::Result BinaryReaderInterp::OnUnreachableExpr() {
   return wabt::Result::Ok;
 }
 
-wabt::Result BinaryReaderInterp::OnWaitExpr(Opcode opcode,
-                                            uint32_t alignment_log2,
-                                            Address offset) {
+wabt::Result BinaryReaderInterp::OnAtomicWaitExpr(Opcode opcode,
+                                                  uint32_t alignment_log2,
+                                                  Address offset) {
   CHECK_RESULT(CheckHasMemory(opcode));
   CHECK_RESULT(CheckAtomicAlign(alignment_log2, opcode.GetMemorySize()));
-  CHECK_RESULT(typechecker_.OnWait(opcode));
+  CHECK_RESULT(typechecker_.OnAtomicWait(opcode));
   CHECK_RESULT(EmitOpcode(opcode));
   CHECK_RESULT(EmitI32(module_->memory_index));
   CHECK_RESULT(EmitI32(offset));
   return wabt::Result::Ok;
 }
 
-wabt::Result BinaryReaderInterp::OnWakeExpr(Opcode opcode,
-                                            uint32_t alignment_log2,
-                                            Address offset) {
+wabt::Result BinaryReaderInterp::OnAtomicWakeExpr(Opcode opcode,
+                                                  uint32_t alignment_log2,
+                                                  Address offset) {
   CHECK_RESULT(CheckHasMemory(opcode));
   CHECK_RESULT(CheckAtomicAlign(alignment_log2, opcode.GetMemorySize()));
-  CHECK_RESULT(typechecker_.OnWake(opcode));
+  CHECK_RESULT(typechecker_.OnAtomicWake(opcode));
   CHECK_RESULT(EmitOpcode(opcode));
   CHECK_RESULT(EmitI32(module_->memory_index));
   CHECK_RESULT(EmitI32(offset));

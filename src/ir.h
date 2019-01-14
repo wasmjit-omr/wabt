@@ -90,6 +90,10 @@ struct Const {
     return Const(F64Tag(), val, loc);
   }
 
+  static Const V128(v128 val, const Location& loc = Location()) {
+    return Const(V128Tag(), val, loc);
+  }
+
   Location loc;
   Type type;
   union {
@@ -97,6 +101,7 @@ struct Const {
     uint64_t u64;
     uint32_t f32_bits;
     uint64_t f64_bits;
+    v128     v128_bits;
   };
 
  private:
@@ -105,19 +110,59 @@ struct Const {
   struct I64Tag {};
   struct F32Tag {};
   struct F64Tag {};
+  struct V128Tag {};
 
   Const(I32Tag, uint32_t val = 0, const Location& loc = Location());
   Const(I64Tag, uint64_t val = 0, const Location& loc = Location());
   Const(F32Tag, uint32_t val = 0, const Location& loc = Location());
   Const(F64Tag, uint64_t val = 0, const Location& loc = Location());
+  Const(V128Tag, v128 val = {{0, 0, 0, 0}}, const Location& loc = Location());
 };
 typedef std::vector<Const> ConstVector;
 
+struct FuncSignature {
+  TypeVector param_types;
+  TypeVector result_types;
+
+  Index GetNumParams() const { return param_types.size(); }
+  Index GetNumResults() const { return result_types.size(); }
+  Type GetParamType(Index index) const { return param_types[index]; }
+  Type GetResultType(Index index) const { return result_types[index]; }
+
+  bool operator==(const FuncSignature&) const;
+};
+
+struct FuncType {
+  FuncType() = default;
+  explicit FuncType(string_view name) : name(name.to_string()) {}
+
+  Index GetNumParams() const { return sig.GetNumParams(); }
+  Index GetNumResults() const { return sig.GetNumResults(); }
+  Type GetParamType(Index index) const { return sig.GetParamType(index); }
+  Type GetResultType(Index index) const { return sig.GetResultType(index); }
+
+  std::string name;
+  FuncSignature sig;
+};
+
+struct FuncDeclaration {
+  Index GetNumParams() const { return sig.GetNumParams(); }
+  Index GetNumResults() const { return sig.GetNumResults(); }
+  Type GetParamType(Index index) const { return sig.GetParamType(index); }
+  Type GetResultType(Index index) const { return sig.GetResultType(index); }
+
+  bool has_func_type = false;
+  Var type_var;
+  FuncSignature sig;
+};
+
 enum class ExprType {
   AtomicLoad,
-  AtomicStore,
   AtomicRmw,
   AtomicRmwCmpxchg,
+  AtomicStore,
+  AtomicWait,
+  AtomicWake,
   Binary,
   Block,
   Br,
@@ -148,11 +193,9 @@ enum class ExprType {
   TryBlock,
   Unary,
   Unreachable,
-  Wait,
-  Wake,
 
-  First = Binary,
-  Last = Wake
+  First = AtomicLoad,
+  Last = Unreachable
 };
 
 const char* GetExprTypeName(ExprType type);
@@ -246,7 +289,6 @@ class VarExpr : public ExprMixin<TypeEnum> {
 typedef VarExpr<ExprType::Br> BrExpr;
 typedef VarExpr<ExprType::BrIf> BrIfExpr;
 typedef VarExpr<ExprType::Call> CallExpr;
-typedef VarExpr<ExprType::CallIndirect> CallIndirectExpr;
 typedef VarExpr<ExprType::GetGlobal> GetGlobalExpr;
 typedef VarExpr<ExprType::GetLocal> GetLocalExpr;
 typedef VarExpr<ExprType::Rethrow> RethrowExpr;
@@ -254,6 +296,14 @@ typedef VarExpr<ExprType::SetGlobal> SetGlobalExpr;
 typedef VarExpr<ExprType::SetLocal> SetLocalExpr;
 typedef VarExpr<ExprType::TeeLocal> TeeLocalExpr;
 typedef VarExpr<ExprType::Throw> ThrowExpr;
+
+class CallIndirectExpr : public ExprMixin<ExprType::CallIndirect> {
+ public:
+  explicit CallIndirectExpr(const Location& loc = Location())
+      : ExprMixin<ExprType::CallIndirect>(loc) {}
+
+  FuncDeclaration decl;
+};
 
 template <ExprType TypeEnum>
 class BlockExprBase : public ExprMixin<TypeEnum> {
@@ -326,8 +376,8 @@ typedef LoadStoreExpr<ExprType::AtomicLoad> AtomicLoadExpr;
 typedef LoadStoreExpr<ExprType::AtomicStore> AtomicStoreExpr;
 typedef LoadStoreExpr<ExprType::AtomicRmw> AtomicRmwExpr;
 typedef LoadStoreExpr<ExprType::AtomicRmwCmpxchg> AtomicRmwCmpxchgExpr;
-typedef LoadStoreExpr<ExprType::Wait> WaitExpr;
-typedef LoadStoreExpr<ExprType::Wake> WakeExpr;
+typedef LoadStoreExpr<ExprType::AtomicWait> AtomicWaitExpr;
+typedef LoadStoreExpr<ExprType::AtomicWake> AtomicWakeExpr;
 
 struct Exception {
   Exception() = default;
@@ -335,42 +385,6 @@ struct Exception {
 
   std::string name;
   TypeVector sig;
-};
-
-struct FuncSignature {
-  TypeVector param_types;
-  TypeVector result_types;
-
-  Index GetNumParams() const { return param_types.size(); }
-  Index GetNumResults() const { return result_types.size(); }
-  Type GetParamType(Index index) const { return param_types[index]; }
-  Type GetResultType(Index index) const { return result_types[index]; }
-
-  bool operator==(const FuncSignature&) const;
-};
-
-struct FuncType {
-  FuncType() = default;
-  explicit FuncType(string_view name) : name(name.to_string()) {}
-
-  Index GetNumParams() const { return sig.GetNumParams(); }
-  Index GetNumResults() const { return sig.GetNumResults(); }
-  Type GetParamType(Index index) const { return sig.GetParamType(index); }
-  Type GetResultType(Index index) const { return sig.GetResultType(index); }
-
-  std::string name;
-  FuncSignature sig;
-};
-
-struct FuncDeclaration {
-  Index GetNumParams() const { return sig.GetNumParams(); }
-  Index GetNumResults() const { return sig.GetNumResults(); }
-  Type GetParamType(Index index) const { return sig.GetParamType(index); }
-  Type GetResultType(Index index) const { return sig.GetResultType(index); }
-
-  bool has_func_type = false;
-  Var type_var;
-  FuncSignature sig;
 };
 
 struct Func {

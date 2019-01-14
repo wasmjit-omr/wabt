@@ -35,10 +35,11 @@ namespace interp {
 // Differs from the normal CHECK_RESULT because this one is meant to return the
 // interp Result type.
 #undef CHECK_RESULT
-#define CHECK_RESULT(expr)  \
-  do {                      \
-    if (WABT_FAILED(expr))  \
-      return Result::Error; \
+#define CHECK_RESULT(expr)   \
+  do {                       \
+    if (WABT_FAILED(expr)) { \
+      return Result::Error;  \
+    }                        \
   } while (0)
 
 // Differs from CHECK_RESULT since it can return different traps, not just
@@ -72,6 +73,10 @@ std::string TypedValueToString(const TypedValue& tv) {
       return StringPrintf("f64:%f", value);
     }
 
+    case Type::V128:
+      return StringPrintf("v128:0x%08x 0x%08x 0x%08x 0x%08x", tv.value.v128_bits.v[0],
+             tv.value.v128_bits.v[1],tv.value.v128_bits.v[2],tv.value.v128_bits.v[3]);
+
     default:
       WABT_UNREACHABLE;
   }
@@ -85,8 +90,9 @@ void WriteTypedValue(Stream* stream, const TypedValue& tv) {
 void WriteTypedValues(Stream* stream, const TypedValues& values) {
   for (size_t i = 0; i < values.size(); ++i) {
     WriteTypedValue(stream, values[i]);
-    if (i != values.size() - 1)
+    if (i != values.size() - 1) {
       stream->Writef(", ");
+    }
   }
 }
 
@@ -108,8 +114,9 @@ void WriteCall(Stream* stream,
                const TypedValues& args,
                const TypedValues& results,
                Result result) {
-  if (!module_name.empty())
+  if (!module_name.empty()) {
     stream->Writef(PRIstringview ".", WABT_PRINTF_STRING_VIEW_ARG(module_name));
+  }
   stream->Writef(PRIstringview "(", WABT_PRINTF_STRING_VIEW_ARG(func_name));
   WriteTypedValues(stream, args);
   stream->Writef(") =>");
@@ -128,8 +135,9 @@ Environment::Environment() : istream_(new OutputBuffer()) {}
 
 Index Environment::FindModuleIndex(string_view name) const {
   auto iter = module_bindings_.find(name.to_string());
-  if (iter == module_bindings_.end())
+  if (iter == module_bindings_.end()) {
     return kInvalidIndex;
+  }
   return iter->second.index;
 }
 
@@ -140,8 +148,9 @@ Module* Environment::FindModule(string_view name) {
 
 Module* Environment::FindRegisteredModule(string_view name) {
   auto iter = registered_module_bindings_.find(name.to_string());
-  if (iter == registered_module_bindings_.end())
+  if (iter == registered_module_bindings_.end()) {
     return nullptr;
+  }
   return modules_[iter->second.index].get();
 }
 
@@ -175,8 +184,9 @@ Module::Module(string_view name, bool is_host)
 
 Export* Module::GetExport(string_view name) {
   int field_index = export_bindings.FindIndex(name);
-  if (field_index < 0)
+  if (field_index < 0) {
     return nullptr;
+  }
   return &exports[field_index];
 }
 
@@ -204,18 +214,20 @@ void Environment::ResetToMarkPoint(const MarkPoint& mark) {
   // Destroy entries in the binding hash.
   for (size_t i = mark.modules_size; i < modules_.size(); ++i) {
     std::string name = modules_[i]->name;
-    if (!name.empty())
+    if (!name.empty()) {
       module_bindings_.erase(name);
+    }
   }
 
   // registered_module_bindings_ maps from an arbitrary name to a module index,
   // so we have to iterate through the entire table to find entries to remove.
   auto iter = registered_module_bindings_.begin();
   while (iter != registered_module_bindings_.end()) {
-    if (iter->second.index >= mark.modules_size)
+    if (iter->second.index >= mark.modules_size) {
       iter = registered_module_bindings_.erase(iter);
-    else
+    } else {
       ++iter;
+    }
   }
 
   modules_.erase(modules_.begin() + mark.modules_size, modules_.end());
@@ -242,6 +254,7 @@ uint32_t ToRep(int32_t x) { return Bitcast<uint32_t>(x); }
 uint64_t ToRep(int64_t x) { return Bitcast<uint64_t>(x); }
 uint32_t ToRep(float x) { return Bitcast<uint32_t>(x); }
 uint64_t ToRep(double x) { return Bitcast<uint64_t>(x); }
+v128     ToRep(v128 x) { return Bitcast<v128>(x); }
 
 template <typename Dst, typename Src>
 Dst FromRep(Src x);
@@ -534,6 +547,13 @@ Value MakeValue<double>(uint64_t v) {
   return result;
 }
 
+template <>
+Value MakeValue<v128>(v128 v) {
+  Value result;
+  result.v128_bits = v;
+  return result;
+}
+
 template <typename T> ValueTypeRep<T> GetValue(Value);
 template<> uint32_t GetValue<int32_t>(Value v) { return v.i32; }
 template<> uint32_t GetValue<uint32_t>(Value v) { return v.i32; }
@@ -541,13 +561,15 @@ template<> uint64_t GetValue<int64_t>(Value v) { return v.i64; }
 template<> uint64_t GetValue<uint64_t>(Value v) { return v.i64; }
 template<> uint32_t GetValue<float>(Value v) { return v.f32_bits; }
 template<> uint64_t GetValue<double>(Value v) { return v.f64_bits; }
+template<> v128 GetValue<v128>(Value v) { return v.v128_bits; }
 
 #define TRAP(type) return Result::Trap##type
 #define TRAP_UNLESS(cond, type) TRAP_IF(!(cond), type)
-#define TRAP_IF(cond, type)  \
-  do {                       \
-    if (WABT_UNLIKELY(cond)) \
-      TRAP(type);            \
+#define TRAP_IF(cond, type)    \
+  do {                         \
+    if (WABT_UNLIKELY(cond)) { \
+      TRAP(type);              \
+    }                          \
   } while (0)
 
 #define CHECK_STACK() \
@@ -599,6 +621,14 @@ inline uint64_t ReadU64(const uint8_t** pc) {
   return ReadUx<uint64_t>(pc);
 }
 
+inline v128 ReadV128At(const uint8_t* pc) {
+  return ReadUxAt<v128>(pc);
+}
+
+inline v128 ReadV128(const uint8_t** pc) {
+  return ReadUx<v128>(pc);
+}
+
 inline Opcode ReadOpcode(const uint8_t** pc) {
   uint8_t value = ReadU8(pc);
   if (Opcode::IsPrefixByte(value)) {
@@ -643,8 +673,7 @@ Result Thread::GetAtomicAccessAddress(const uint8_t** pc, void** out_address) {
   uint64_t addr = static_cast<uint64_t>(Pop<uint32_t>()) + ReadU32(pc);
   TRAP_IF(addr + sizeof(MemType) > memory->data.size(),
           MemoryAccessOutOfBounds);
-  uint32_t addr_align = addr != 0 ? (1 << wabt_ctz_u32(addr)) : UINT32_MAX;
-  TRAP_IF(addr_align < sizeof(MemType), AtomicMemoryAccessUnaligned);
+  TRAP_IF((addr & (sizeof(MemType) - 1)) != 0, AtomicMemoryAccessUnaligned);
   *out_address = memory->data.data() + static_cast<IstreamOffset>(addr);
   return Result::Ok;
 }
@@ -700,8 +729,9 @@ ValueTypeRep<T> Thread::PopRep() {
 
 void Thread::DropKeep(uint32_t drop_count, uint8_t keep_count) {
   assert(keep_count <= 1);
-  if (keep_count == 1)
+  if (keep_count == 1) {
     Pick(drop_count + 1) = Top();
+  }
   value_stack_top_ -= drop_count;
 }
 
@@ -1218,8 +1248,9 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
 
 bool Environment::FuncSignaturesAreEqual(Index sig_index_0,
                                          Index sig_index_1) const {
-  if (sig_index_0 == sig_index_1)
+  if (sig_index_0 == sig_index_1) {
     return true;
+  }
   const FuncSignature* sig_0 = &sigs_[sig_index_0];
   const FuncSignature* sig_1 = &sigs_[sig_index_1];
   return sig_0->param_types == sig_1->param_types &&
@@ -1298,8 +1329,9 @@ Result Thread::Run(int num_instructions) {
 
       case Opcode::BrIf: {
         IstreamOffset new_pc = ReadU32(&pc);
-        if (Pop<uint32_t>())
+        if (Pop<uint32_t>()) {
           GOTO(new_pc);
+        }
         break;
       }
 
@@ -1766,23 +1798,17 @@ Result Thread::Run(int num_instructions) {
         CHECK_TRAP(Binop(Ge<uint32_t>));
         break;
 
-      case Opcode::I32Clz: {
-        uint32_t value = Pop<uint32_t>();
-        CHECK_TRAP(Push<uint32_t>(value != 0 ? wabt_clz_u32(value) : 32));
+      case Opcode::I32Clz:
+        CHECK_TRAP(Push<uint32_t>(Clz(Pop<uint32_t>())));
         break;
-      }
 
-      case Opcode::I32Ctz: {
-        uint32_t value = Pop<uint32_t>();
-        CHECK_TRAP(Push<uint32_t>(value != 0 ? wabt_ctz_u32(value) : 32));
+      case Opcode::I32Ctz:
+        CHECK_TRAP(Push<uint32_t>(Ctz(Pop<uint32_t>())));
         break;
-      }
 
-      case Opcode::I32Popcnt: {
-        uint32_t value = Pop<uint32_t>();
-        CHECK_TRAP(Push<uint32_t>(wabt_popcount_u32(value)));
+      case Opcode::I32Popcnt:
+        CHECK_TRAP(Push<uint32_t>(Popcount(Pop<uint32_t>())));
         break;
-      }
 
       case Opcode::I32Eqz:
         CHECK_TRAP(Unop(IntEqz<uint32_t, uint32_t>));
@@ -1880,20 +1906,16 @@ Result Thread::Run(int num_instructions) {
         CHECK_TRAP(Binop(Ge<uint64_t>));
         break;
 
-      case Opcode::I64Clz: {
-        uint64_t value = Pop<uint64_t>();
-        CHECK_TRAP(Push<uint64_t>(value != 0 ? wabt_clz_u64(value) : 64));
+      case Opcode::I64Clz:
+        CHECK_TRAP(Push<uint64_t>(Clz(Pop<uint64_t>())));
         break;
-      }
 
-      case Opcode::I64Ctz: {
-        uint64_t value = Pop<uint64_t>();
-        CHECK_TRAP(Push<uint64_t>(value != 0 ? wabt_ctz_u64(value) : 64));
+      case Opcode::I64Ctz:
+        CHECK_TRAP(Push<uint64_t>(Ctz(Pop<uint64_t>())));
         break;
-      }
 
       case Opcode::I64Popcnt:
-        CHECK_TRAP(Push<uint64_t>(wabt_popcount_u64(Pop<uint64_t>())));
+        CHECK_TRAP(Push<uint64_t>(Popcount(Pop<uint64_t>())));
         break;
 
       case Opcode::F32Add:
@@ -2260,8 +2282,9 @@ Result Thread::Run(int num_instructions) {
 
       case Opcode::InterpBrUnless: {
         IstreamOffset new_pc = ReadU32(&pc);
-        if (!Pop<uint32_t>())
+        if (!Pop<uint32_t>()) {
           GOTO(new_pc);
+        }
         break;
       }
 
@@ -2279,12 +2302,17 @@ Result Thread::Run(int num_instructions) {
       case Opcode::Nop:
         break;
 
-      case Opcode::I32Wait:
-      case Opcode::I64Wait:
-      case Opcode::Wake:
+      case Opcode::I32AtomicWait:
+      case Opcode::I64AtomicWait:
+      case Opcode::AtomicWake:
         // TODO(binji): Implement.
         TRAP(Unreachable);
         break;
+
+      case Opcode::V128Const: {
+        CHECK_TRAP(PushRep<v128>(ReadV128(&pc)));
+        break;
+      }
 
       // The following opcodes are either never generated or should never be
       // executed.
@@ -2427,7 +2455,7 @@ void Thread::Trace(Stream* stream) {
       break;
     }
 
-    case Opcode::Wake:
+    case Opcode::AtomicWake:
     case Opcode::I32AtomicStore:
     case Opcode::I32AtomicStore8:
     case Opcode::I32AtomicStore16:
@@ -2507,7 +2535,7 @@ void Thread::Trace(Stream* stream) {
       break;
     }
 
-    case Opcode::I32Wait: {
+    case Opcode::I32AtomicWait: {
       Index memory_index = ReadU32(&pc);
       stream->Writef("%s $%" PRIindex ":%u+$%u, %u, %" PRIu64 "\n",
                      opcode.GetName(), memory_index, Pick(3).i32, ReadU32At(pc),
@@ -2515,7 +2543,7 @@ void Thread::Trace(Stream* stream) {
       break;
     }
 
-    case Opcode::I64Wait:
+    case Opcode::I64AtomicWait:
     case Opcode::I64AtomicRmwCmpxchg:
     case Opcode::I64AtomicRmw8UCmpxchg:
     case Opcode::I64AtomicRmw16UCmpxchg:
@@ -2740,6 +2768,12 @@ void Thread::Trace(Stream* stream) {
                      *(pc + 4));
       break;
 
+    case Opcode::V128Const: {
+      stream->Writef("%s $0x%08x 0x%08x 0x%08x 0x%08x \n", opcode.GetName(),
+                     ReadU32At(pc), ReadU32At(pc+4),ReadU32At(pc+8),ReadU32At(pc+12));
+      break;
+    }
+
     // The following opcodes are either never generated or should never be
     // executed.
     case Opcode::Block:
@@ -2764,8 +2798,9 @@ void Environment::Disassemble(Stream* stream,
                               IstreamOffset to) {
   /* TODO(binji): mark function entries */
   /* TODO(binji): track value stack size */
-  if (from >= istream_->data.size())
+  if (from >= istream_->data.size()) {
     return;
+  }
   to = std::min<IstreamOffset>(to, istream_->data.size());
   const uint8_t* istream = istream_->data.data();
   const uint8_t* pc = &istream[from];
@@ -2880,7 +2915,7 @@ void Environment::Disassemble(Stream* stream,
         break;
       }
 
-      case Opcode::Wake:
+      case Opcode::AtomicWake:
       case Opcode::I32AtomicStore:
       case Opcode::I64AtomicStore:
       case Opcode::I32AtomicStore8:
@@ -2945,8 +2980,8 @@ void Environment::Disassemble(Stream* stream,
         break;
       }
 
-      case Opcode::I32Wait:
-      case Opcode::I64Wait:
+      case Opcode::I32AtomicWait:
+      case Opcode::I64AtomicWait:
       case Opcode::I32AtomicRmwCmpxchg:
       case Opcode::I64AtomicRmwCmpxchg:
       case Opcode::I32AtomicRmw8UCmpxchg:
@@ -3150,6 +3185,12 @@ void Environment::Disassemble(Stream* stream,
         break;
       }
 
+      case Opcode::V128Const: {
+      stream->Writef("%s $0x%08x 0x%08x 0x%08x 0x%08x \n", opcode.GetName(),
+                     ReadU32(&pc), ReadU32(&pc),ReadU32(&pc),ReadU32(&pc));
+
+        break;
+      }
       // The following opcodes are either never generated or should never be
       // executed.
       case Opcode::Block:
@@ -3220,8 +3261,9 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
     exec_result.result = func->is_host
                  ? thread_.CallHost(cast<HostFunc>(func))
                  : RunDefinedFunction(cast<DefinedFunc>(func)->offset);
-    if (exec_result.result == Result::Ok)
+    if (exec_result.result == Result::Ok) {
       CopyResults(sig, &exec_result.values);
+    }
   }
 
   exec_result.call_stack.assign(thread_.call_stack_.begin(), thread_.call_stack_.begin() + thread_.call_stack_top_);
@@ -3232,8 +3274,9 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
 }
 
 ExecResult Executor::RunStartFunction(DefinedModule* module) {
-  if (module->start_func_index == kInvalidIndex)
+  if (module->start_func_index == kInvalidIndex) {
     return ExecResult(Result::Ok);
+  }
 
   if (trace_stream_) {
     trace_stream_->Writef(">>> running start function:\n");
@@ -3259,10 +3302,12 @@ ExecResult Executor::RunExportByName(Module* module,
                                      string_view name,
                                      const TypedValues& args) {
   Export* export_ = module->GetExport(name);
-  if (!export_)
+  if (!export_) {
     return ExecResult(Result::UnknownExport);
-  if (export_->kind != ExternalKind::Func)
+  }
+  if (export_->kind != ExternalKind::Func) {
     return ExecResult(Result::ExportKindMismatch);
+  }
   return RunExport(export_, args);
 }
 
@@ -3281,19 +3326,22 @@ Result Executor::RunDefinedFunction(IstreamOffset function_offset) {
       result = thread_.Run(kNumInstructions);
     }
   }
-  if (result != Result::Returned)
+  if (result != Result::Returned) {
     return result;
+  }
   // Use OK instead of RETURNED for consistency.
   return Result::Ok;
 }
 
 Result Executor::PushArgs(const FuncSignature* sig, const TypedValues& args) {
-  if (sig->param_types.size() != args.size())
+  if (sig->param_types.size() != args.size()) {
     return Result::ArgumentTypeMismatch;
+  }
 
   for (size_t i = 0; i < sig->param_types.size(); ++i) {
-    if (sig->param_types[i] != args[i].type)
+    if (sig->param_types[i] != args[i].type) {
       return Result::ArgumentTypeMismatch;
+    }
 
     Result result = thread_.Push(args[i].value);
     if (result != Result::Ok) {

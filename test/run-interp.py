@@ -52,6 +52,7 @@ def main(args):
   parser.add_argument('--enable-threads', action='store_true')
   parser.add_argument('--disable-jit', action='store_true')
   parser.add_argument('--trap-on-failed-comp', action='store_true')
+  parser.add_argument('--enable-simd', action='store_true')
   options = parser.parse_args(args)
 
   wast_tool = None
@@ -80,6 +81,7 @@ def main(args):
       '--enable-saturating-float-to-int':
           options.enable_saturating_float_to_int,
       '--enable-threads': options.enable_threads,
+      '--enable-simd': options.enable_simd,
   })
 
   interp_tool.AppendOptionalArgs({
@@ -91,7 +93,8 @@ def main(args):
           options.enable_saturating_float_to_int,
       '--enable-threads': options.enable_threads,
       '--disable-jit': options.disable_jit,
-      '--no-stack-trace': not options.spec
+      '--no-stack-trace': not options.spec,
+      '--enable-simd': options.enable_simd,
   })
 
   wast_tool.verbose = options.print_cmd

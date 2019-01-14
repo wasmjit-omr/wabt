@@ -84,16 +84,10 @@ endif ()
 if (EMSCRIPTEN)
   set(SIZEOF_SSIZE_T 4)
   set(SIZEOF_SIZE_T 4)
-  set(SIZEOF_INT 4)
-  set(SIZEOF_LONG 4)
-  set(SIZEOF_LONG_LONG 8)
 else ()
   include(CheckTypeSize)
   check_type_size(ssize_t SSIZE_T)
   check_type_size(size_t SIZEOF_SIZE_T)
-  check_type_size(int SIZEOF_INT BUILTIN_TYPES_ONLY)
-  check_type_size(long SIZEOF_LONG BUILTIN_TYPES_ONLY)
-  check_type_size("long long" SIZEOF_LONG_LONG BUILTIN_TYPES_ONLY)
 endif ()
 
 configure_file(
@@ -185,12 +179,13 @@ else ()
 endif ()
 
 set(USE_SANITIZER FALSE)
+
 function(SANITIZER NAME FLAGS)
   if (${NAME})
     if (USE_SANITIZER)
       message(FATAL_ERROR "Only one sanitizer allowed")
-    endif()
-    set(USE_SANITIZER TRUE)
+    endif ()
+    set(USE_SANITIZER TRUE PARENT_SCOPE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${FLAGS}" PARENT_SCOPE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS}" PARENT_SCOPE)
   endif ()
@@ -199,8 +194,23 @@ SANITIZER(USE_ASAN "-fsanitize=address")
 SANITIZER(USE_MSAN "-fsanitize=memory")
 SANITIZER(USE_LSAN "-fsanitize=leak")
 
-set(UBSAN_BLACKLIST ${WABT_SOURCE_DIR}/ubsan.blacklist)
-SANITIZER(USE_UBSAN "-fsanitize=undefined -fno-sanitize-recover -fsanitize-blacklist=${UBSAN_BLACKLIST}")
+if (USE_UBSAN)
+  # -fno-sanitize-recover was deprecated, see if we are compiling with a newer
+  # clang that requires -fno-sanitize-recover=all.
+  set(UBSAN_BLACKLIST ${WABT_SOURCE_DIR}/ubsan.blacklist)
+  include(CheckCXXCompilerFlag)
+  CHECK_CXX_COMPILER_FLAG("-fsanitize=undefined -fno-sanitize-recover -Wall -Werror" HAS_UBSAN_RECOVER_BARE)
+  if (HAS_UBSAN_RECOVER_BARE)
+    SANITIZER(USE_UBSAN "-fsanitize=undefined -fno-sanitize-recover -fsanitize-blacklist=${UBSAN_BLACKLIST}")
+  endif ()
+  CHECK_CXX_COMPILER_FLAG("-fsanitize=undefined -fno-sanitize-recover=all -Wall -Werror" HAS_UBSAN_RECOVER_ALL)
+  if (HAS_UBSAN_RECOVER_ALL)
+    SANITIZER(USE_UBSAN "-fsanitize=undefined -fno-sanitize-recover=all -fsanitize-blacklist=${UBSAN_BLACKLIST}")
+  endif ()
+  if (NOT USE_SANITIZER)
+    message(FATAL_ERROR "UBSAN is not supported")
+  endif ()
+endif ()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${WABT_SOURCE_DIR}/cmake)
 find_package(RE2C)
@@ -226,6 +236,7 @@ add_library(libwabt STATIC
   src/opcode.cc
   src/error-handler.cc
   src/hash-util.cc
+  src/filenames.cc
   src/string-view.cc
   src/ir.cc
   src/expr-visitor.cc
@@ -281,7 +292,11 @@ target_link_libraries(libwabt PUBLIC wabtjit)
 if (NOT EMSCRIPTEN)
   if (CODE_COVERAGE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \"-fprofile-arcs -ftest-coverage\"")
-    link_libraries(gcov)
+    if (COMPILER_IS_CLANG)
+      set(CMAKE_EXE_LINKER_FLAGS "--coverage")
+    else ()
+      link_libraries(gcov)
+    endif ()
   endif ()
 
   function(wabt_executable name)
@@ -339,6 +354,9 @@ if (NOT EMSCRIPTEN)
   # wat-desugar
   wabt_executable(wat-desugar src/tools/wat-desugar.cc)
 
+  # wasm-validate
+  wabt_executable(wasm-validate src/tools/wasm-validate.cc)
+
   find_package(Threads)
   if (BUILD_TESTS)
     if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gtest/googletest)
@@ -372,6 +390,7 @@ if (NOT EMSCRIPTEN)
       src/test-circular-array.cc
       src/test-intrusive-list.cc
       src/test-string-view.cc
+      src/test-filenames.cc
       src/test-utf8.cc
       src/test-wast-parser.cc
       third_party/gtest/googletest/src/gtest_main.cc
