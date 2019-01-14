@@ -798,10 +798,11 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::GetLocal: {
-      // note: to work around JitBuilder's lack of support unions as value types,
-      // just copy a field that's the size of the entire union
       Type t;
       uint32_t off = GetLocalOffset(&stack, &t, ReadU32(&pc));
+
+      if (t == Type::V128)
+        return false;
 
       stack.Push(b->LoadIndirect("Value", TypeFieldName(t), PickPhys(b, off)));
       break;
@@ -843,6 +844,11 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       EmitCheckTrap(b, b->Load("result"), nullptr);
 
+      for (Type t : sig->result_types) {
+        if (t == Type::V128)
+          return false;
+      }
+
       MoveFromPhysStack(b, &stack, sig->result_types);
 
       break;
@@ -865,6 +871,11 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       EmitCheckTrap(b, b->Load("result"), nullptr);
 
+      for (Type t : sig->result_types) {
+        if (t == Type::V128)
+          return false;
+      }
+
       MoveFromPhysStack(b, &stack, sig->result_types);
 
       break;
@@ -882,6 +893,11 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->           ConstInt32(func_index)));
 
       EmitCheckTrap(b, b->Load("result"), pc);
+
+      for (Type t : sig->result_types) {
+        if (t == Type::V128)
+          return false;
+      }
 
       MoveFromPhysStack(b, &stack, sig->result_types);
 
