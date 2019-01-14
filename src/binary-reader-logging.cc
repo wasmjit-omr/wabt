@@ -99,8 +99,8 @@ void BinaryReaderLogging::LogTypes(TypeVector& types) {
   LogTypes(types.size(), types.data());
 }
 
-bool BinaryReaderLogging::OnError(ErrorLevel error_level, const char* message) {
-  return reader_->OnError(error_level, message);
+bool BinaryReaderLogging::OnError(const Error& error) {
+  return reader_->OnError(error);
 }
 
 void BinaryReaderLogging::OnSetState(const State* s) {
@@ -511,7 +511,7 @@ Result BinaryReaderLogging::OnFunctionSymbol(Index index,
   LOGF("OnFunctionSymbol(name: " PRIstringview " flags: 0x%x index: %" PRIindex
        ")\n",
        WABT_PRINTF_STRING_VIEW_ARG(name), flags, func_index);
-  return reader_->OnGlobalSymbol(index, flags, name, func_index);
+  return reader_->OnFunctionSymbol(index, flags, name, func_index);
 }
 
 Result BinaryReaderLogging::OnGlobalSymbol(Index index,

@@ -56,21 +56,17 @@ namespace interp {
 std::string TypedValueToString(const TypedValue& tv) {
   switch (tv.type) {
     case Type::I32:
-      return StringPrintf("i32:%u", tv.value.i32);
+      return StringPrintf("i32:%u", tv.get_i32());
 
     case Type::I64:
-      return StringPrintf("i64:%" PRIu64, tv.value.i64);
+      return StringPrintf("i64:%" PRIu64, tv.get_i64());
 
     case Type::F32: {
-      float value;
-      memcpy(&value, &tv.value.f32_bits, sizeof(float));
-      return StringPrintf("f32:%f", value);
+      return StringPrintf("f32:%f", tv.get_f32());
     }
 
     case Type::F64: {
-      double value;
-      memcpy(&value, &tv.value.f64_bits, sizeof(double));
-      return StringPrintf("f64:%f", value);
+      return StringPrintf("f64:%f", tv.get_f64());
     }
 
     case Type::V128:
@@ -163,6 +159,10 @@ Thread::Thread(Environment* env, const Options& options)
       value_stack_(options.value_stack_size),
       call_stack_(options.call_stack_size) {}
 
+FuncSignature::FuncSignature(std::vector<Type> param_types,
+                             std::vector<Type> result_types)
+    : param_types(param_types), result_types(result_types) {}
+
 FuncSignature::FuncSignature(Index param_count,
                              Type* param_types,
                              Index result_count,
@@ -181,6 +181,36 @@ Module::Module(string_view name, bool is_host)
       table_index(kInvalidIndex),
       is_host(is_host) {}
 
+Export* Module::GetFuncExport(Environment* env,
+                              string_view name,
+                              Index sig_index) {
+  auto range = export_bindings.equal_range(name.to_string());
+  for (auto iter = range.first; iter != range.second; ++iter) {
+    const Binding& binding = iter->second;
+    Export* export_ = &exports[binding.index];
+    if (export_->kind == ExternalKind::Func) {
+      const Func* func = env->GetFunc(export_->index);
+      if (env->FuncSignaturesAreEqual(sig_index, func->sig_index)) {
+        return export_;
+      }
+    }
+  }
+
+  // No match; check whether the module wants to spontaneously create a
+  // function of this name and signature.
+  Index index = OnUnknownFuncExport(name, sig_index);
+  if (index != kInvalidIndex) {
+    Export* export_ = &exports[index];
+    assert(export_->kind == ExternalKind::Func);
+    const Func* func = env->GetFunc(export_->index);
+    WABT_USE(func);
+    assert(env->FuncSignaturesAreEqual(sig_index, func->sig_index));
+    return export_;
+  }
+
+  return nullptr;
+}
+
 Export* Module::GetExport(string_view name) {
   int field_index = export_bindings.FindIndex(name);
   if (field_index < 0) {
@@ -189,13 +219,114 @@ Export* Module::GetExport(string_view name) {
   return &exports[field_index];
 }
 
+Index Module::AppendExport(ExternalKind kind,
+                           Index item_index,
+                           string_view name) {
+  exports.emplace_back(name, kind, item_index);
+  Export* export_ = &exports.back();
+  export_bindings.emplace(export_->name, Binding(exports.size() - 1));
+  return exports.size() - 1;
+}
+
 DefinedModule::DefinedModule()
     : Module(false),
       start_func_index(kInvalidIndex),
       istream_start(kInvalidIstreamOffset),
       istream_end(kInvalidIstreamOffset) {}
 
-HostModule::HostModule(string_view name) : Module(name, true) {}
+HostModule::HostModule(Environment* env, string_view name)
+    : Module(name, true), env_(env) {}
+
+Index HostModule::OnUnknownFuncExport(string_view name, Index sig_index) {
+  if (on_unknown_func_export) {
+    return on_unknown_func_export(env_, this, name, sig_index);
+  }
+  return kInvalidIndex;
+}
+
+std::pair<HostFunc*, Index> HostModule::AppendFuncExport(
+    string_view name,
+    const FuncSignature& sig,
+    HostFunc::Callback callback) {
+  // TODO(binji): dedupe signature?
+  env_->EmplaceBackFuncSignature(sig);
+  Index sig_index = env_->GetFuncSignatureCount() - 1;
+  return AppendFuncExport(name, sig_index, callback);
+}
+
+std::pair<HostFunc*, Index> HostModule::AppendFuncExport(
+    string_view name,
+    Index sig_index,
+    HostFunc::Callback callback) {
+  auto* host_func = new HostFunc(this->name, name, sig_index, callback);
+  env_->EmplaceBackFunc(host_func);
+  Index func_env_index = env_->GetFuncCount() - 1;
+  Index export_index = AppendExport(ExternalKind::Func, func_env_index, name);
+  return {host_func, export_index};
+}
+
+std::pair<Table*, Index> HostModule::AppendTableExport(string_view name,
+                                                       const Limits& limits) {
+  Table* table = env_->EmplaceBackTable(limits);
+  Index table_env_index = env_->GetTableCount() - 1;
+  Index export_index = AppendExport(ExternalKind::Table, table_env_index, name);
+  return {table, export_index};
+}
+
+std::pair<Memory*, Index> HostModule::AppendMemoryExport(string_view name,
+                                                         const Limits& limits) {
+  Memory* memory = env_->EmplaceBackMemory(limits);
+  Index memory_env_index = env_->GetMemoryCount() - 1;
+  Index export_index =
+      AppendExport(ExternalKind::Memory, memory_env_index, name);
+  return {memory, export_index};
+}
+
+std::pair<Global*, Index> HostModule::AppendGlobalExport(string_view name,
+                                                         Type type,
+                                                         bool mutable_) {
+  Global* global = env_->EmplaceBackGlobal(TypedValue(type), mutable_);
+  Index global_env_index = env_->GetGlobalCount() - 1;
+  Index export_index =
+      AppendExport(ExternalKind::Global, global_env_index, name);
+  return {global, export_index};
+}
+
+std::pair<Global*, Index> HostModule::AppendGlobalExport(string_view name,
+                                             bool mutable_,
+                                             uint32_t value) {
+  std::pair<Global*, Index> pair =
+      AppendGlobalExport(name, Type::I32, mutable_);
+  pair.first->typed_value.set_i32(value);
+  return pair;
+}
+
+std::pair<Global*, Index> HostModule::AppendGlobalExport(string_view name,
+                                             bool mutable_,
+                                             uint64_t value) {
+  std::pair<Global*, Index> pair =
+      AppendGlobalExport(name, Type::I64, mutable_);
+  pair.first->typed_value.set_i64(value);
+  return pair;
+}
+
+std::pair<Global*, Index> HostModule::AppendGlobalExport(string_view name,
+                                             bool mutable_,
+                                             float value) {
+  std::pair<Global*, Index> pair =
+      AppendGlobalExport(name, Type::F32, mutable_);
+  pair.first->typed_value.set_f32(value);
+  return pair;
+}
+
+std::pair<Global*, Index> HostModule::AppendGlobalExport(string_view name,
+                                             bool mutable_,
+                                             double value) {
+  std::pair<Global*, Index> pair =
+      AppendGlobalExport(name, Type::F64, mutable_);
+  pair.first->typed_value.set_f64(value);
+  return pair;
+}
 
 Environment::MarkPoint Environment::Mark() {
   MarkPoint mark;
@@ -239,7 +370,7 @@ void Environment::ResetToMarkPoint(const MarkPoint& mark) {
 }
 
 HostModule* Environment::AppendHostModule(string_view name) {
-  HostModule* module = new HostModule(name);
+  HostModule* module = new HostModule(this, name);
   modules_.emplace_back(module);
   registered_module_bindings_.emplace(name.to_string(),
                                       Binding(modules_.size() - 1));
@@ -633,17 +764,8 @@ inline v128 ReadV128(const uint8_t** pc) {
 }
 
 inline Opcode ReadOpcode(const uint8_t** pc) {
-  uint8_t value = ReadU8(pc);
-  if (Opcode::IsPrefixByte(value)) {
-    // For now, assume all instructions are encoded with just one extra byte
-    // so we don't have to decode LEB128 here.
-    uint32_t code = ReadU8(pc);
-    return Opcode::FromCode(value, code);
-  } else {
-    // TODO(binji): Optimize if needed; Opcode::FromCode does a log2(n) lookup
-    // from the encoding.
-    return Opcode::FromCode(value);
-  }
+  uint32_t value = ReadU32(pc);
+  return Opcode(static_cast<Opcode::Enum>(value));
 }
 
 inline void read_table_entry_at(const uint8_t* pc,
@@ -731,8 +853,9 @@ ValueTypeRep<T> Thread::PopRep() {
 }
 
 void Thread::DropKeep(uint32_t drop_count, uint32_t keep_count) {
-  for (uint32_t i = 0; i < keep_count; ++i) {
-    Pick(drop_count + i + 1) = Pick(i + 1);
+  // Copy backward to avoid clobbering when the regions overlap.
+  for (uint32_t i = keep_count; i > 0; --i) {
+    Pick(drop_count + i) = Pick(i);
   }
   value_stack_top_ -= drop_count;
 }
@@ -1444,21 +1567,23 @@ Result Thread::CallHost(HostFunc* func) {
 
   size_t num_params = sig->param_types.size();
   size_t num_results = sig->result_types.size();
-  // + 1 is a workaround for using data() below; UBSAN doesn't like calling
-  // data() with an empty vector.
-  TypedValues params(num_params + 1);
-  TypedValues results(num_results + 1);
+  TypedValues params(num_params);
+  TypedValues results(num_results);
 
   for (size_t i = num_params; i > 0; --i) {
     params[i - 1].value = Pop();
     params[i - 1].type = sig->param_types[i - 1];
   }
 
-  Result call_result =
-      func->callback(func, sig, num_params, params.data(), num_results,
-                     results.data(), func->user_data);
+  for (size_t i = 0; i < num_results; ++i) {
+    results[i].type = sig->result_types[i];
+    results[i].SetZero();
+  }
+
+  Result call_result = func->callback(func, sig, params, results);
   TRAP_IF(call_result != Result::Ok, HostTrapped);
 
+  TRAP_IF(results.size() != num_results, HostResultTypeMismatch);
   for (size_t i = 0; i < num_results; ++i) {
     TRAP_IF(results[i].type != sig->result_types[i], HostResultTypeMismatch);
     CHECK_TRAP(Push(results[i].value));
@@ -4554,6 +4679,7 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
   Func* func = env_->GetFunc(func_index);
   FuncSignature* sig = env_->GetFuncSignature(func->sig_index);
 
+  thread_.Reset();
   exec_result.result = PushArgs(sig, args);
   if (exec_result.result == Result::Ok) {
     exec_result.result =
@@ -4567,7 +4693,6 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
   exec_result.call_stack.assign(thread_.call_stack_.begin(), thread_.call_stack_.begin() + thread_.call_stack_top_);
   exec_result.call_stack.push_back(thread_.pc_);
 
-  thread_.Reset();
   return exec_result;
 }
 

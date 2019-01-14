@@ -21,7 +21,6 @@
 
 #include "config.h"
 
-#include "src/error-handler.h"
 #include "src/lexer-source.h"
 #include "src/wast-parser.h"
 
@@ -84,7 +83,6 @@ namespace wabt {
 
 WastLexer::WastLexer(std::unique_ptr<LexerSource> source, string_view filename)
     : source_(std::move(source)),
-      line_finder_(source_->Clone()),
       filename_(filename),
       line_(1),
       comment_nesting_(0),

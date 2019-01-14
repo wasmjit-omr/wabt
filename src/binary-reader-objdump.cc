@@ -38,7 +38,7 @@ class BinaryReaderObjdumpBase : public BinaryReaderNop {
                           ObjdumpOptions* options,
                           ObjdumpState* state);
 
-  bool OnError(ErrorLevel, const char* message) override;
+  bool OnError(const Error&) override;
 
   Result BeginModule(uint32_t version) override;
   Result BeginSection(BinarySection section_type, Offset size) override;
@@ -86,8 +86,7 @@ Result BinaryReaderObjdumpBase::BeginSection(BinarySection section_code,
   return Result::Ok;
 }
 
-bool BinaryReaderObjdumpBase::OnError(ErrorLevel error_level,
-                                      const char* message) {
+bool BinaryReaderObjdumpBase::OnError(const Error&) {
   // Tell the BinaryReader that this error is "handled" for all passes other
   // than the prepass. When the error is handled the default message will be
   // suppressed.
@@ -831,9 +830,13 @@ Result BinaryReaderObjdump::BeginSection(BinarySection section_code,
              name, state->offset, state->offset + size, size);
       break;
     case ObjdumpMode::Details:
-      if (section_match) {
-        if (section_code != BinarySection::Code) {
-          printf("%s:\n", name);
+      if (section_match && section_code != BinarySection::Code) {
+        printf("%s", name);
+        // All known section types except the start section have a count
+        // in which case this line gets completed in OnCount().
+        if (section_code == BinarySection::Start ||
+            section_code == BinarySection::Custom) {
+          printf(":\n");
         }
         print_details_ = true;
       } else {
@@ -875,6 +878,8 @@ void WABT_PRINTF_FORMAT(2, 3) BinaryReaderObjdump::PrintDetails(const char* fmt,
 Result BinaryReaderObjdump::OnCount(Index count) {
   if (options_->mode == ObjdumpMode::Headers) {
     printf("count: %" PRIindex "\n", count);
+  } else if (options_->mode == ObjdumpMode::Details && print_details_) {
+    printf("[%" PRIindex "]:\n", count);
   }
   return Result::Ok;
 }
@@ -1499,15 +1504,15 @@ Result ReadBinaryObjdump(const uint8_t* data,
   switch (options->mode) {
     case ObjdumpMode::Prepass: {
       BinaryReaderObjdumpPrepass reader(data, size, options, state);
-      return ReadBinary(data, size, &reader, &read_options);
+      return ReadBinary(data, size, &reader, read_options);
     }
     case ObjdumpMode::Disassemble: {
       BinaryReaderObjdumpDisassemble reader(data, size, options, state);
-      return ReadBinary(data, size, &reader, &read_options);
+      return ReadBinary(data, size, &reader, read_options);
     }
     default: {
       BinaryReaderObjdump reader(data, size, options, state);
-      return ReadBinary(data, size, &reader, &read_options);
+      return ReadBinary(data, size, &reader, read_options);
     }
   }
 }

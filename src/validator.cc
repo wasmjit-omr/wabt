@@ -25,11 +25,9 @@
 
 #include "src/binary-reader.h"
 #include "src/cast.h"
-#include "src/error-handler.h"
 #include "src/expr-visitor.h"
 #include "src/ir.h"
 #include "src/type-checker.h"
-#include "src/wast-parser-lexer-shared.h"
 
 namespace wabt {
 
@@ -38,10 +36,7 @@ namespace {
 class Validator : public ExprVisitor::Delegate {
  public:
   WABT_DISALLOW_COPY_AND_ASSIGN(Validator);
-  Validator(ErrorHandler*,
-            WastLexer*,
-            const Script*,
-            const ValidateOptions* options);
+  Validator(Errors*, const Script*, const ValidateOptions& options);
 
   Result CheckModule(const Module* module);
   Result CheckScript(const Script* script);
@@ -199,9 +194,8 @@ class Validator : public ExprVisitor::Delegate {
   void CheckExcept(const Location* loc, const Exception* Except);
   Result CheckExceptVar(const Var* var, const Exception** out_except);
 
-  const ValidateOptions* options_ = nullptr;
-  ErrorHandler* error_handler_ = nullptr;
-  WastLexer* lexer_ = nullptr;
+  const ValidateOptions& options_;
+  Errors* errors_ = nullptr;
   const Script* script_ = nullptr;
   const Module* current_module_ = nullptr;
   const Func* current_func_ = nullptr;
@@ -216,24 +210,18 @@ class Validator : public ExprVisitor::Delegate {
   Result result_ = Result::Ok;
 };
 
-Validator::Validator(ErrorHandler* error_handler,
-                     WastLexer* lexer,
+Validator::Validator(Errors* errors,
                      const Script* script,
-                     const ValidateOptions* options)
-    : options_(options),
-      error_handler_(error_handler),
-      lexer_(lexer),
-      script_(script) {
+                     const ValidateOptions& options)
+    : options_(options), errors_(errors), script_(script) {
   typechecker_.set_error_callback(
       [this](const char* msg) { OnTypecheckerError(msg); });
 }
 
-void Validator::PrintError(const Location* loc, const char* fmt, ...) {
+void Validator::PrintError(const Location* loc, const char* format, ...) {
   result_ = Result::Error;
-  va_list args;
-  va_start(args, fmt);
-  WastFormatError(error_handler_, loc, lexer_, fmt, args);
-  va_end(args);
+  WABT_SNPRINTF_ALLOCA(buffer, length, format);
+  errors_->emplace_back(ErrorLevel::Error, *loc, buffer);
 }
 
 void Validator::OnTypecheckerError(const char* msg) {
@@ -492,11 +480,11 @@ void Validator::CheckBlockDeclaration(const Location* loc,
                                       Opcode opcode,
                                       const BlockDeclaration* decl) {
   if (decl->sig.GetNumParams() > 0 &&
-      !options_->features.multi_value_enabled()) {
+      !options_.features.multi_value_enabled()) {
     PrintError(loc, "%s params not currently supported.", opcode.GetName());
   }
   if (decl->sig.GetNumResults() > 1 &&
-      !options_->features.multi_value_enabled()) {
+      !options_.features.multi_value_enabled()) {
     PrintError(loc, "multiple %s results not currently supported.",
                opcode.GetName());
   }
@@ -728,7 +716,18 @@ Result Validator::OnSelectExpr(SelectExpr* expr) {
 
 Result Validator::OnSetGlobalExpr(SetGlobalExpr* expr) {
   expr_loc_ = &expr->loc;
-  typechecker_.OnSetGlobal(GetGlobalVarTypeOrAny(&expr->var));
+  Type type = Type::Any;
+  const Global* global;
+  Index global_index;
+  if (Succeeded(CheckGlobalVar(&expr->var, &global, &global_index))) {
+    if (!global->mutable_) {
+      PrintError(&expr->loc,
+                 "can't set_global on immutable global at index %" PRIindex ".",
+                 global_index);
+    }
+    type = global->type;
+  }
+  typechecker_.OnSetGlobal(type);
   return Result::Ok;
 }
 
@@ -869,7 +868,7 @@ void Validator::CheckFuncSignature(const Location* loc,
 void Validator::CheckFunc(const Location* loc, const Func* func) {
   current_func_ = func;
   CheckFuncSignature(loc, func->decl);
-  if (!options_->features.multi_value_enabled() && func->GetNumResults() > 1) {
+  if (!options_.features.multi_value_enabled() && func->GetNumResults() > 1) {
     PrintError(loc, "multiple result values not currently supported.");
     // Don't run any other checks, the won't test the result_type properly.
     return;
@@ -1004,7 +1003,7 @@ void Validator::CheckMemory(const Location* loc, const Memory* memory) {
   CheckLimits(loc, &memory->page_limits, WABT_MAX_PAGES, "pages");
 
   if (memory->page_limits.is_shared) {
-    if (!options_->features.threads_enabled()) {
+    if (!options_.features.threads_enabled()) {
       PrintError(loc, "memories may not be shared");
     } else if (!memory->page_limits.has_max) {
       PrintError(loc, "shared memories must have max sizes");
@@ -1055,7 +1054,7 @@ void Validator::CheckImport(const Location* loc, const Import* import) {
     case ExternalKind::Global: {
       auto* global_import = cast<GlobalImport>(import);
       if (global_import->global.mutable_ &&
-          !options_->features.mutable_globals_enabled()) {
+          !options_.features.mutable_globals_enabled()) {
         PrintError(loc, "mutable globals cannot be imported");
       }
       ++num_imported_globals_;
@@ -1082,7 +1081,7 @@ void Validator::CheckExport(const Location* loc, const Export* export_) {
     case ExternalKind::Global: {
       const Global* global;
       if (Succeeded(CheckGlobalVar(&export_->var, &global, nullptr))) {
-        if (global->mutable_ && !options_->features.mutable_globals_enabled()) {
+        if (global->mutable_ && !options_.features.mutable_globals_enabled()) {
           PrintError(&export_->var.loc, "mutable globals cannot be exported");
         }
       }
@@ -1399,8 +1398,38 @@ class Validator::CheckFuncSignatureExprVisitorDelegate
   explicit CheckFuncSignatureExprVisitorDelegate(Validator* validator)
       : validator_(validator) {}
 
+  Result BeginBlockExpr(BlockExpr* expr) override {
+    validator_->CheckBlockDeclaration(&expr->loc, Opcode::Block,
+                                      &expr->block.decl);
+    return Result::Ok;
+  }
+
   Result OnCallIndirectExpr(CallIndirectExpr* expr) override {
     validator_->CheckFuncSignature(&expr->loc, expr->decl);
+    return Result::Ok;
+  }
+
+  Result BeginIfExpr(IfExpr* expr) override {
+    validator_->CheckBlockDeclaration(&expr->loc, Opcode::If,
+                                      &expr->true_.decl);
+    return Result::Ok;
+  }
+
+  Result BeginIfExceptExpr(IfExceptExpr* expr) override {
+    validator_->CheckBlockDeclaration(&expr->loc, Opcode::IfExcept,
+                                      &expr->true_.decl);
+    return Result::Ok;
+  }
+
+  Result BeginLoopExpr(LoopExpr* expr) override {
+    validator_->CheckBlockDeclaration(&expr->loc, Opcode::Loop,
+                                      &expr->block.decl);
+    return Result::Ok;
+  }
+
+  Result BeginTryExpr(TryExpr* expr) override {
+    validator_->CheckBlockDeclaration(&expr->loc, Opcode::Try,
+                                      &expr->block.decl);
     return Result::Ok;
   }
 
@@ -1432,29 +1461,26 @@ Result Validator::CheckAllFuncSignatures(const Module* module) {
 
 }  // end anonymous namespace
 
-Result ValidateScript(WastLexer* lexer,
-                      const Script* script,
-                      ErrorHandler* error_handler,
-                      const ValidateOptions* options) {
-  Validator validator(error_handler, lexer, script, options);
+Result ValidateScript(const Script* script,
+                      Errors* errors,
+                      const ValidateOptions& options) {
+  Validator validator(errors, script, options);
 
   return validator.CheckScript(script);
 }
 
-Result ValidateModule(WastLexer* lexer,
-                      const Module* module,
-                      ErrorHandler* error_handler,
-                      const ValidateOptions* options) {
-  Validator validator(error_handler, lexer, nullptr, options);
+Result ValidateModule(const Module* module,
+                      Errors* errors,
+                      const ValidateOptions& options) {
+  Validator validator(errors, nullptr, options);
 
   return validator.CheckModule(module);
 }
 
-Result ValidateFuncSignatures(WastLexer* lexer,
-                              const Module* module,
-                              ErrorHandler* error_handler,
-                              const ValidateOptions* options) {
-  Validator validator(error_handler, lexer, nullptr, options);
+Result ValidateFuncSignatures(const Module* module,
+                              Errors* errors,
+                              const ValidateOptions& options) {
+  Validator validator(errors, nullptr, options);
 
   return validator.CheckAllFuncSignatures(module);
 }

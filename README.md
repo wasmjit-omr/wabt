@@ -24,9 +24,9 @@ target; instead they aim for full fidelity and compliance with the spec (e.g.
 
 Wabt has been compiled to JavaScript via emscripten. Some of the functionality is available in the following demos:
 
-- [index](https://cdn.rawgit.com/WebAssembly/wabt/aae5a4b7/demo/index.html)
-- [wat2wasm](https://cdn.rawgit.com/WebAssembly/wabt/aae5a4b7/demo/wat2wasm/)
-- [wasm2wat](https://cdn.rawgit.com/WebAssembly/wabt/aae5a4b7/demo/wasm2wat/)
+- [index](https://cdn.rawgit.com/WebAssembly/wabt/e0719fe0/demo/index.html)
+- [wat2wasm](https://cdn.rawgit.com/WebAssembly/wabt/e0719fe0/demo/wat2wasm/)
+- [wasm2wat](https://cdn.rawgit.com/WebAssembly/wabt/e0719fe0/demo/wasm2wat/)
 
 ## Cloning
 
@@ -149,13 +149,13 @@ $ out/wat2wasm spec-test.wast -v
 $ out/wast2json spec-test.wast -o spec-test.json
 ```
 
-You can use `-h` to get additional help:
+You can use `--help` to get additional help:
 
 ```console
-$ out/wat2wasm -h
+$ out/wat2wasm --help
 ```
 
-Or try the [online demo](https://cdn.rawgit.com/WebAssembly/wabt/aae5a4b7/demo/wat2wasm/).
+Or try the [online demo](https://cdn.rawgit.com/WebAssembly/wabt/e0719fe0/demo/wat2wasm/).
 
 ## Running wasm2wat
 
@@ -169,13 +169,13 @@ $ out/wasm2wat test.wasm -o test.wat
 $ out/wasm2wat test.wasm -o test.wat
 ```
 
-You can use `-h` to get additional help:
+You can use `--help` to get additional help:
 
 ```console
-$ out/wasm2wat -h
+$ out/wasm2wat --help
 ```
 
-Or try the [online demo](https://cdn.rawgit.com/WebAssembly/wabt/aae5a4b7/demo/wasm2wat/).
+Or try the [online demo](https://cdn.rawgit.com/WebAssembly/wabt/e0719fe0/demo/wasm2wat/).
 
 ## Running wasm-interp
 
@@ -199,10 +199,10 @@ $ out/wasm-interp test.json --spec
 $ out/wasm-interp test.wasm -V 100 --run-all-exports
 ```
 
-You can use `-h` to get additional help:
+You can use `--help` to get additional help:
 
 ```console
-$ out/wasm-interp -h
+$ out/wasm-interp --help
 ```
 
 ## Running wasm2c

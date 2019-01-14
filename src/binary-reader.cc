@@ -44,11 +44,11 @@
     }                           \
   } while (0)
 
-#define ERROR_UNLESS_OPCODE_ENABLED(opcode)      \
-  do {                                           \
-    if (!opcode.IsEnabled(options_->features)) { \
-      return ReportUnexpectedOpcode(opcode);     \
-    }                                            \
+#define ERROR_UNLESS_OPCODE_ENABLED(opcode)     \
+  do {                                          \
+    if (!opcode.IsEnabled(options_.features)) { \
+      return ReportUnexpectedOpcode(opcode);    \
+    }                                           \
   } while (0)
 
 #define CALLBACK0(member) \
@@ -67,7 +67,7 @@ class BinaryReader {
   BinaryReader(const void* data,
                size_t size,
                BinaryReaderDelegate* delegate,
-               const ReadBinaryOptions* options);
+               const ReadBinaryOptions& options);
 
   Result ReadModule();
 
@@ -147,7 +147,7 @@ class BinaryReader {
   TypeVector param_types_;
   TypeVector result_types_;
   std::vector<Index> target_depths_;
-  const ReadBinaryOptions* options_ = nullptr;
+  const ReadBinaryOptions& options_;
   BinarySection last_known_section_ = BinarySection::Invalid;
   bool did_read_names_section_ = false;
   bool reading_custom_section_ = false;
@@ -173,11 +173,11 @@ class BinaryReader {
 BinaryReader::BinaryReader(const void* data,
                            size_t size,
                            BinaryReaderDelegate* delegate,
-                           const ReadBinaryOptions* options)
+                           const ReadBinaryOptions& options)
     : read_end_(size),
       state_(static_cast<const uint8_t*>(data), size),
-      logging_delegate_(options->log_stream, delegate),
-      delegate_(options->log_stream ? &logging_delegate_ : delegate),
+      logging_delegate_(options.log_stream, delegate),
+      delegate_(options.log_stream ? &logging_delegate_ : delegate),
       options_(options),
       last_known_section_(BinarySection::Invalid) {
   delegate->OnSetState(&state_);
@@ -186,12 +186,13 @@ BinaryReader::BinaryReader(const void* data,
 void WABT_PRINTF_FORMAT(2, 3) BinaryReader::PrintError(const char* format,
                                                        ...) {
   ErrorLevel error_level =
-      reading_custom_section_ && !options_->fail_on_custom_section_error
+      reading_custom_section_ && !options_.fail_on_custom_section_error
           ? ErrorLevel::Warning
           : ErrorLevel::Error;
 
   WABT_SNPRINTF_ALLOCA(buffer, length, format);
-  bool handled = delegate_->OnError(error_level, buffer);
+  Error error(error_level, Location(state_.offset), buffer);
+  bool handled = delegate_->OnError(error);
 
   if (!handled) {
     // Not great to just print, but we don't want to eat the error either.
@@ -373,7 +374,7 @@ bool BinaryReader::IsConcreteType(Type type) {
       return true;
 
     case Type::V128:
-      return options_->features.simd_enabled();
+      return options_.features.simd_enabled();
 
     default:
       return false;
@@ -385,7 +386,7 @@ bool BinaryReader::IsBlockType(Type type) {
     return true;
   }
 
-  if (!(options_->features.multi_value_enabled() && IsTypeIndex(type))) {
+  if (!(options_.features.multi_value_enabled() && IsTypeIndex(type))) {
     return false;
   }
 
@@ -1611,7 +1612,7 @@ Result BinaryReader::ReadCustomSection(Offset section_size) {
   ValueRestoreGuard<bool, &BinaryReader::reading_custom_section_> guard(this);
   reading_custom_section_ = true;
 
-  if (options_->read_debug_names && section_name == WABT_BINARY_SECTION_NAME) {
+  if (options_.read_debug_names && section_name == WABT_BINARY_SECTION_NAME) {
     CHECK_RESULT(ReadNameSection(section_size));
     did_read_names_section_ = true;
   } else if (section_name.rfind(WABT_BINARY_SECTION_RELOC, 0) == 0) {
@@ -1619,7 +1620,7 @@ Result BinaryReader::ReadCustomSection(Offset section_size) {
     CHECK_RESULT(ReadRelocSection(section_size));
   } else if (section_name == WABT_BINARY_SECTION_LINKING) {
     CHECK_RESULT(ReadLinkingSection(section_size));
-  } else if (options_->features.exceptions_enabled() &&
+  } else if (options_.features.exceptions_enabled() &&
              section_name == WABT_BINARY_SECTION_EXCEPTION) {
     CHECK_RESULT(ReadExceptionSection(section_size));
   } else {
@@ -1658,7 +1659,7 @@ Result BinaryReader::ReadTypeSection(Offset section_size) {
 
     Index num_results;
     CHECK_RESULT(ReadCount(&num_results, "function result count"));
-    ERROR_UNLESS(num_results <= 1 || options_->features.multi_value_enabled(),
+    ERROR_UNLESS(num_results <= 1 || options_.features.multi_value_enabled(),
                  "result count must be 0 or 1");
 
     result_types_.resize(num_results);
@@ -1739,7 +1740,7 @@ Result BinaryReader::ReadImportSection(Offset section_size) {
       }
 
       case ExternalKind::Except: {
-        ERROR_UNLESS(options_->features.exceptions_enabled(),
+        ERROR_UNLESS(options_.features.exceptions_enabled(),
                      "invalid import exception kind: exceptions not allowed");
         TypeVector sig;
         CHECK_RESULT(ReadExceptionType(sig));
@@ -1857,7 +1858,7 @@ Result BinaryReader::ReadExportSection(Offset section_size) {
         break;
       case ExternalKind::Except:
         // Note: Can't check if index valid, exceptions section comes later.
-        ERROR_UNLESS(options_->features.exceptions_enabled(),
+        ERROR_UNLESS(options_.features.exceptions_enabled(),
                      "invalid export exception kind: exceptions not allowed");
         break;
     }
@@ -1925,6 +1926,7 @@ Result BinaryReader::ReadCodeSection(Offset section_size) {
     Offset body_start_offset = state_.offset;
     Offset end_offset = body_start_offset + body_size;
 
+    uint64_t total_locals = 0;
     Index num_local_decls;
     CHECK_RESULT(ReadCount(&num_local_decls, "local declaration count"));
     CALLBACK(OnLocalDeclCount, num_local_decls);
@@ -1932,6 +1934,9 @@ Result BinaryReader::ReadCodeSection(Offset section_size) {
       Index num_local_types;
       CHECK_RESULT(ReadIndex(&num_local_types, "local type count"));
       ERROR_UNLESS(num_local_types > 0, "local count must be > 0");
+      total_locals += num_local_types;
+      ERROR_UNLESS(total_locals < UINT32_MAX,
+                   "local count must be < 0x10000000");
       Type local_type;
       CHECK_RESULT(ReadType(&local_type, "local type"));
       ERROR_UNLESS(IsConcreteType(local_type), "expected valid local type");
@@ -2003,12 +2008,12 @@ Result BinaryReader::ReadSections() {
 
     CALLBACK(BeginSection, section, section_size);
 
-    bool stop_on_first_error = options_->stop_on_first_error;
+    bool stop_on_first_error = options_.stop_on_first_error;
     Result section_result = Result::Error;
     switch (section) {
       case BinarySection::Custom:
         section_result = ReadCustomSection(section_size);
-        if (options_->fail_on_custom_section_error) {
+        if (options_.fail_on_custom_section_error) {
           result |= section_result;
         } else {
           stop_on_first_error = false;
@@ -2106,7 +2111,7 @@ Result BinaryReader::ReadModule() {
 Result ReadBinary(const void* data,
                   size_t size,
                   BinaryReaderDelegate* delegate,
-                  const ReadBinaryOptions* options) {
+                  const ReadBinaryOptions& options) {
   BinaryReader reader(data, size, delegate, options);
   return reader.ReadModule();
 }

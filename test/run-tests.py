@@ -117,6 +117,12 @@ TOOLS = {
         ('RUN', '%(wasm-interp)s --run-all-exports --disable-jit --no-stack-trace %(temp_file)s.wasm'),
         ('VERBOSE-ARGS', ['--print-cmd', '-v']),
     ],
+    'run-gen-wasm-strip': [
+        ('RUN', '%(gen_wasm_py)s %(in_file)s -o %(temp_file)s.wasm'),
+        ('RUN', '%(wasm-strip)s %(temp_file)s.wasm'),
+        ('RUN', '%(wasm-objdump)s -h %(temp_file)s.wasm'),
+        ('VERBOSE-ARGS', ['--print-cmd', '-v']),
+    ],
     'run-opcodecnt': [
         ('RUN', '%(wat2wasm)s %(in_file)s -o %(temp_file)s.wasm'),
         ('RUN', '%(wasm-opcodecnt)s %(temp_file)s.wasm'),

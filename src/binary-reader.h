@@ -22,6 +22,7 @@
 
 #include "src/binary.h"
 #include "src/common.h"
+#include "src/error.h"
 #include "src/feature.h"
 #include "src/opcode.h"
 #include "src/string-view.h"
@@ -63,7 +64,7 @@ class BinaryReaderDelegate {
 
   virtual ~BinaryReaderDelegate() {}
 
-  virtual bool OnError(ErrorLevel, const char* message) = 0;
+  virtual bool OnError(const Error&) = 0;
   virtual void OnSetState(const State* s) { state = s; }
 
   /* Module */
@@ -363,7 +364,7 @@ class BinaryReaderDelegate {
 Result ReadBinary(const void* data,
                   size_t size,
                   BinaryReaderDelegate* reader,
-                  const ReadBinaryOptions* options);
+                  const ReadBinaryOptions& options);
 
 size_t ReadU32Leb128(const uint8_t* ptr,
                      const uint8_t* end,

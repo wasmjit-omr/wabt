@@ -18,6 +18,7 @@ cmake_minimum_required(VERSION 2.6)
 project(WABT)
 
 option(BUILD_TESTS "Build GTest-based tests" ON)
+option(BUILD_TOOLS "Build wabt commandline tools" ON)
 option(RUN_RE2C "Run re2c" ON)
 option(USE_ASAN "Use address sanitizer" OFF)
 option(USE_MSAN "Use memory sanitizer" OFF)
@@ -81,14 +82,9 @@ if (WIN32)
   check_symbol_exists(ENABLE_VIRTUAL_TERMINAL_PROCESSING "windows.h" HAVE_WIN32_VT100)
 endif ()
 
-if (EMSCRIPTEN)
-  set(SIZEOF_SSIZE_T 4)
-  set(SIZEOF_SIZE_T 4)
-else ()
-  include(CheckTypeSize)
-  check_type_size(ssize_t SSIZE_T)
-  check_type_size(size_t SIZEOF_SIZE_T)
-endif ()
+include(CheckTypeSize)
+check_type_size(ssize_t SSIZE_T)
+check_type_size(size_t SIZEOF_SIZE_T)
 
 configure_file(
   ${WABT_SOURCE_DIR}/src/config.h.in
@@ -234,7 +230,8 @@ add_custom_target(everything)
 add_library(libwabt STATIC
   src/token.cc
   src/opcode.cc
-  src/error-handler.cc
+  src/opcode-code-table.c
+  src/error-formatter.cc
   src/hash-util.cc
   src/filenames.cc
   src/string-view.cc
@@ -242,7 +239,6 @@ add_library(libwabt STATIC
   src/expr-visitor.cc
   src/lexer-source.cc
   src/lexer-source-line-finder.cc
-  src/wast-parser-lexer-shared.cc
   ${WAST_LEXER_GEN_CC}
   src/wast-parser.cc
   src/type-checker.cc
@@ -319,44 +315,49 @@ if (NOT EMSCRIPTEN)
     )
   endfunction()
 
-  # wat2wasm
-  wabt_executable(wat2wasm src/tools/wat2wasm.cc)
+  if (BUILD_TOOLS)
+    # wat2wasm
+    wabt_executable(wat2wasm src/tools/wat2wasm.cc)
 
-  # wast2json
-  wabt_executable(wast2json src/tools/wast2json.cc)
+    # wast2json
+    wabt_executable(wast2json src/tools/wast2json.cc)
 
-  # wasm2wat
-  wabt_executable(wasm2wat src/tools/wasm2wat.cc)
+    # wasm2wat
+    wabt_executable(wasm2wat src/tools/wasm2wat.cc)
 
-  # wasm2c
-  wabt_executable(wasm2c
-    src/tools/wasm2c.cc src/c-writer.cc)
+    # wasm2c
+    wabt_executable(wasm2c
+      src/tools/wasm2c.cc src/c-writer.cc)
 
-  # wasm-opcodecnt
-  wabt_executable(wasm-opcodecnt
-    src/tools/wasm-opcodecnt.cc src/binary-reader-opcnt.cc)
+    # wasm-opcodecnt
+    wabt_executable(wasm-opcodecnt
+      src/tools/wasm-opcodecnt.cc src/binary-reader-opcnt.cc)
 
-  # wasm-objdump
-  wabt_executable(wasm-objdump
-    src/tools/wasm-objdump.cc src/binary-reader-objdump.cc)
+    # wasm-objdump
+    wabt_executable(wasm-objdump
+      src/tools/wasm-objdump.cc src/binary-reader-objdump.cc)
 
-  # wasm-interp
-  wabt_executable(wasm-interp src/tools/wasm-interp.cc)
-  if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
-    target_link_libraries(wasm-interp m)
+    # wasm-interp
+    wabt_executable(wasm-interp src/tools/wasm-interp.cc)
+    if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
+      target_link_libraries(wasm-interp m)
+    endif ()
+
+    # spectest-interp
+    wabt_executable(spectest-interp src/tools/spectest-interp.cc)
+    if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
+      target_link_libraries(spectest-interp m)
+    endif ()
+
+    # wat-desugar
+    wabt_executable(wat-desugar src/tools/wat-desugar.cc)
+
+    # wasm-validate
+    wabt_executable(wasm-validate src/tools/wasm-validate.cc)
+
+    # wasm-strip
+    wabt_executable(wasm-strip src/tools/wasm-strip.cc)
   endif ()
-
-  # spectest-interp
-  wabt_executable(spectest-interp src/tools/spectest-interp.cc)
-  if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
-    target_link_libraries(spectest-interp m)
-  endif ()
-
-  # wat-desugar
-  wabt_executable(wat-desugar src/tools/wat-desugar.cc)
-
-  # wasm-validate
-  wabt_executable(wasm-validate src/tools/wasm-validate.cc)
 
   find_package(Threads)
   if (BUILD_TESTS)
@@ -389,6 +390,7 @@ if (NOT EMSCRIPTEN)
     # wabt-unittests
     set(UNITTESTS_SRCS
       src/test-circular-array.cc
+      src/test-interp.cc
       src/test-intrusive-list.cc
       src/test-literal.cc
       src/test-string-view.cc
@@ -416,7 +418,19 @@ if (NOT EMSCRIPTEN)
   )
 
   # install
-  install(TARGETS ${WABT_EXECUTABLES} DESTINATION bin)
+  if (BUILD_TOOLS OR BUILD_TESTS)
+    install(TARGETS ${WABT_EXECUTABLES} DESTINATION bin)
+    if (UNIX)
+      if (NOT CMAKE_INSTALL_MANDIR)
+        include(GNUInstallDirs)
+      endif ()
+      file(GLOB MAN_FILES "${CMAKE_CURRENT_SOURCE_DIR}/man/*.1")
+      foreach(MAN_FILE ${MAN_FILES})
+        install(FILES ${MAN_FILE}
+          DESTINATION ${CMAKE_INSTALL_MANDIR}/man1/)
+      endforeach()
+    endif ()
+  endif ()
 
 else ()
   # emscripten stuff
