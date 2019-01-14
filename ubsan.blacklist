@@ -10,3 +10,6 @@ src:*/stl_tree.h
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59829
 src:*/stl_vector.h
 src:*/stl_iterator.h
+
+# Ignore all OMR problems for now
+src:*/third_party/omr/*
