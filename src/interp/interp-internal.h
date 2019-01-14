@@ -76,6 +76,11 @@ inline v128 ReadV128(const uint8_t** pc) {
   return ReadUx<v128>(pc);
 }
 
+inline Opcode ReadOpcodeAt(const uint8_t* pc) {
+  uint32_t value = ReadU32At(pc);
+  return Opcode(static_cast<Opcode::Enum>(value));
+}
+
 inline Opcode ReadOpcode(const uint8_t** pc) {
   uint32_t value = ReadU32(pc);
   return Opcode(static_cast<Opcode::Enum>(value));

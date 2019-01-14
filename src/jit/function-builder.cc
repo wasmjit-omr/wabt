@@ -18,6 +18,7 @@
 #include "wabtjit.h"
 #include "src/cast.h"
 #include "src/interp/interp.h"
+#include "src/interp/interp-internal.h"
 #include "ilgen/VirtualMachineState.hpp"
 #include "infra/Assert.hpp"
 
@@ -28,45 +29,6 @@
 namespace wabt {
 
 namespace jit {
-
-// The following functions are required to be able to properly parse opcodes. However, their
-// original definitions are defined with static linkage in src/interp.cc. Because of this, the only
-// way to use them is to simply copy their definitions here.
-
-template <typename T>
-inline T ReadUxAt(const uint8_t* pc) {
-  T result;
-  memcpy(&result, pc, sizeof(T));
-  return result;
-}
-
-template <typename T>
-inline T ReadUx(const uint8_t** pc) {
-  T result = ReadUxAt<T>(*pc);
-  *pc += sizeof(T);
-  return result;
-}
-
-inline uint8_t ReadU8(const uint8_t** pc) {
-  return ReadUx<uint8_t>(pc);
-}
-
-inline uint32_t ReadU32(const uint8_t** pc) {
-  return ReadUx<uint32_t>(pc);
-}
-
-inline uint64_t ReadU64(const uint8_t** pc) {
-  return ReadUx<uint64_t>(pc);
-}
-
-inline Opcode ReadOpcode(const uint8_t** pc) {
-  uint32_t value = ReadU32(pc);
-  return Opcode(static_cast<Opcode::Enum>(value));
-}
-
-inline Opcode ReadOpcodeAt(const uint8_t* pc) {
-  return ReadOpcode(&pc);
-}
 
 #define CHECK_TRAP_IN_HELPER(...)                \
   do {                                           \
@@ -241,7 +203,7 @@ bool FunctionBuilder::buildIL() {
   SetUpLocals(this, &pc, &state->stack);
   setVMState(state);
 
-  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(ReadOpcodeAt(pc).GetName())),
+  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(interp::ReadOpcodeAt(pc).GetName())),
                           pc);
   AppendBuilder(workItems_[0].builder);
 
@@ -267,10 +229,10 @@ void FunctionBuilder::SetUpLocals(TR::IlBuilder* b, const uint8_t** pc, VirtualS
 
   if (fn_->local_count == 0) return;
 
-  Opcode opcode = ReadOpcode(pc);
+  Opcode opcode = interp::ReadOpcode(pc);
   TR_ASSERT_FATAL(opcode == Opcode::InterpAlloca, "Function with locals is missing alloca");
 
-  auto alloc_num = ReadU32(pc);
+  auto alloc_num = interp::ReadU32(pc);
   TR_ASSERT_FATAL(alloc_num == fn_->local_count,
                   "Function has wrong alloca size (%u != %u)",
                   alloc_num, fn_->local_count);
@@ -545,8 +507,8 @@ void FunctionBuilder::EmitIntRemainder(TR::IlBuilder* b, const uint8_t* pc, Virt
 template <typename T>
 TR::IlValue* FunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack) {
   auto th_addr = b->ConstAddress(thread_);
-  auto mem_id = b->ConstInt32(ReadU32(pc));
-  auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
+  auto mem_id = b->ConstInt32(interp::ReadU32(pc));
+  auto offset = b->ConstInt64(static_cast<uint64_t>(interp::ReadU32(pc)));
 
   auto address = b->Call("MemoryTranslationHelper",
                          4,
@@ -686,7 +648,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
                            const uint8_t* istream,
                            const uint8_t* pc,
                            VirtualStack& stack) {
-  Opcode opcode = ReadOpcode(&pc);
+  Opcode opcode = interp::ReadOpcode(&pc);
   TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
 
   switch (opcode) {
@@ -705,7 +667,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::Br: {
-      auto target = &istream[ReadU32(&pc)];
+      auto target = &istream[interp::ReadU32(&pc)];
       auto it = std::find_if(workItems_.cbegin(), workItems_.cend(), [&](const BytecodeWorkItem& b) {
         return target == b.pc;
       });
@@ -714,7 +676,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       } else {
         int32_t next_index = static_cast<int32_t>(workItems_.size());
         workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
-                                                      const_cast<char*>(ReadOpcodeAt(target).GetName())),
+                                                      const_cast<char*>(interp::ReadOpcodeAt(target).GetName())),
                                 target);
         b->AddFallThroughBuilder(workItems_[next_index].builder);
       }
@@ -735,27 +697,27 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       return true;
 
     case Opcode::I32Const: {
-      stack.Push(b->ConstInt32(ReadU32(&pc)));
+      stack.Push(b->ConstInt32(interp::ReadU32(&pc)));
       break;
     }
 
     case Opcode::I64Const: {
-      stack.Push(b->ConstInt64(ReadU64(&pc)));
+      stack.Push(b->ConstInt64(interp::ReadU64(&pc)));
       break;
     }
 
     case Opcode::F32Const: {
-      stack.Push(b->ConstFloat(ReadUx<float>(&pc)));
+      stack.Push(b->ConstFloat(interp::ReadUx<float>(&pc)));
       break;
     }
 
     case Opcode::F64Const: {
-      stack.Push(b->ConstDouble(ReadUx<double>(&pc)));
+      stack.Push(b->ConstDouble(interp::ReadUx<double>(&pc)));
       break;
     }
 
     case Opcode::GetGlobal: {
-      interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
+      interp::Global* g = thread_->env()->GetGlobal(interp::ReadU32(&pc));
 
       // The type of value stored in a global will never change, so we're safe
       // to use the current type of the global.
@@ -775,7 +737,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::SetGlobal: {
-      interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
+      interp::Global* g = thread_->env()->GetGlobal(interp::ReadU32(&pc));
       assert(g->mutable_);
 
       // See note for get_global
@@ -790,7 +752,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::GetLocal: {
       Type t;
-      uint32_t off = GetLocalOffset(&stack, &t, ReadU32(&pc));
+      uint32_t off = GetLocalOffset(&stack, &t, interp::ReadU32(&pc));
 
       if (t == Type::V128)
         return false;
@@ -801,7 +763,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::SetLocal: {
       auto* value = stack.Pop();
-      uint32_t off = GetLocalOffset(&stack, nullptr, ReadU32(&pc));
+      uint32_t off = GetLocalOffset(&stack, nullptr, interp::ReadU32(&pc));
 
       b->StoreIndirect("Value", TypeFieldName(value->getDataType()), PickPhys(b, off), value);
       break;
@@ -809,7 +771,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::TeeLocal: {
       auto* value = stack.Top();
-      uint32_t off = GetLocalOffset(&stack, nullptr, ReadU32(&pc));
+      uint32_t off = GetLocalOffset(&stack, nullptr, interp::ReadU32(&pc));
 
       b->StoreIndirect("Value", TypeFieldName(value->getDataType()), PickPhys(b, off), value);
       break;
@@ -817,7 +779,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::Call: {
       auto th_addr = b->ConstAddress(thread_);
-      auto offset = ReadU32(&pc);
+      auto offset = interp::ReadU32(&pc);
       auto current_pc = b->Const(pc);
 
       auto meta_it = thread_->env()->jit_meta_.find(offset);
@@ -847,8 +809,8 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::CallIndirect: {
       auto th_addr = b->ConstAddress(thread_);
-      auto table_index = b->ConstInt32(ReadU32(&pc));
-      auto sig_index = ReadU32(&pc);
+      auto table_index = b->ConstInt32(interp::ReadU32(&pc));
+      auto sig_index = interp::ReadU32(&pc);
       auto entry_index = stack.Pop();
       auto current_pc = b->Const(pc);
 
@@ -873,7 +835,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::InterpCallHost: {
-      Index func_index = ReadU32(&pc);
+      Index func_index = interp::ReadU32(&pc);
       auto* sig = thread_->env()->GetFuncSignature(thread_->env()->GetFunc(func_index)->sig_index);
 
       MoveToPhysStack(b, pc, &stack, sig->param_types.size());
@@ -1688,7 +1650,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      break;
 
     case Opcode::InterpBrUnless: {
-      auto target = &istream[ReadU32(&pc)];
+      auto target = &istream[interp::ReadU32(&pc)];
       auto condition = stack.Pop();
       auto it = std::find_if(workItems_.cbegin(), workItems_.cend(), [&](const BytecodeWorkItem& b) {
         return pc == b.pc;
@@ -1698,7 +1660,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       } else {
         int32_t next_index = static_cast<int32_t>(workItems_.size());
         workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
-                                                      const_cast<char*>(ReadOpcodeAt(pc).GetName())),
+                                                      const_cast<char*>(interp::ReadOpcodeAt(pc).GetName())),
                                 target);
         b->IfCmpEqualZero(&workItems_[next_index].builder, condition);
       }
@@ -1710,8 +1672,8 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::InterpDropKeep: {
-      uint32_t drop_count = ReadU32(&pc);
-      uint32_t keep_count = ReadU32(&pc);
+      uint32_t drop_count = interp::ReadU32(&pc);
+      uint32_t keep_count = interp::ReadU32(&pc);
       stack.DropKeep(drop_count, keep_count);
       break;
     }
@@ -1731,7 +1693,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
   } else {
     int32_t next_index = static_cast<int32_t>(workItems_.size());
     workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
-                                                  const_cast<char*>(ReadOpcodeAt(pc).GetName())),
+                                                  const_cast<char*>(interp::ReadOpcodeAt(pc).GetName())),
                             pc);
     b->AddFallThroughBuilder(workItems_[next_index].builder);
   }
