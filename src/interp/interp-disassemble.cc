@@ -56,8 +56,8 @@ void Environment::Disassemble(Stream* stream,
         break;
 
       case Opcode::BrTable: {
-        Index num_targets = ReadU32(&pc);
-        IstreamOffset table_offset = ReadU32(&pc);
+        const Index num_targets = ReadU32(&pc);
+        const IstreamOffset table_offset = ReadU32(&pc);
         stream->Writef("%s %%[-1], $#%" PRIindex ", table:$%u\n",
                        opcode.GetName(), num_targets, table_offset);
         break;
@@ -71,37 +71,37 @@ void Environment::Disassemble(Stream* stream,
         break;
 
       case Opcode::MemorySize: {
-        Index memory_index = ReadU32(&pc);
+        const Index memory_index = ReadU32(&pc);
         stream->Writef("%s $%" PRIindex "\n", opcode.GetName(), memory_index);
         break;
       }
 
       case Opcode::I32Const:
-        stream->Writef("%s $%u\n", opcode.GetName(), ReadU32(&pc));
+        stream->Writef("%s %u\n", opcode.GetName(), ReadU32(&pc));
         break;
 
       case Opcode::I64Const:
-        stream->Writef("%s $%" PRIu64 "\n", opcode.GetName(), ReadU64(&pc));
+        stream->Writef("%s %" PRIu64 "\n", opcode.GetName(), ReadU64(&pc));
         break;
 
       case Opcode::F32Const:
-        stream->Writef("%s $%g\n", opcode.GetName(),
+        stream->Writef("%s %g\n", opcode.GetName(),
                        Bitcast<float>(ReadU32(&pc)));
         break;
 
       case Opcode::F64Const:
-        stream->Writef("%s $%g\n", opcode.GetName(),
+        stream->Writef("%s %g\n", opcode.GetName(),
                        Bitcast<double>(ReadU64(&pc)));
         break;
 
-      case Opcode::GetLocal:
-      case Opcode::GetGlobal:
+      case Opcode::LocalGet:
+      case Opcode::GlobalGet:
         stream->Writef("%s $%u\n", opcode.GetName(), ReadU32(&pc));
         break;
 
-      case Opcode::SetLocal:
-      case Opcode::SetGlobal:
-      case Opcode::TeeLocal:
+      case Opcode::LocalSet:
+      case Opcode::GlobalSet:
+      case Opcode::LocalTee:
         stream->Writef("%s $%u, %%[-1]\n", opcode.GetName(), ReadU32(&pc));
         break;
 
@@ -112,7 +112,7 @@ void Environment::Disassemble(Stream* stream,
 
       case Opcode::CallIndirect:
       case Opcode::ReturnCallIndirect: {
-        Index table_index = ReadU32(&pc);
+        const Index table_index = ReadU32(&pc);
         stream->Writef("%s $%" PRIindex ":%u, %%[-1]\n", opcode.GetName(),
                        table_index, ReadU32(&pc));
         break;
@@ -144,13 +144,13 @@ void Environment::Disassemble(Stream* stream,
       case Opcode::F32Load:
       case Opcode::F64Load:
       case Opcode::V128Load: {
-        Index memory_index = ReadU32(&pc);
+        const Index memory_index = ReadU32(&pc);
         stream->Writef("%s $%" PRIindex ":%%[-1]+$%u\n", opcode.GetName(),
                        memory_index, ReadU32(&pc));
         break;
       }
 
-      case Opcode::AtomicWake:
+      case Opcode::AtomicNotify:
       case Opcode::I32AtomicStore:
       case Opcode::I64AtomicStore:
       case Opcode::I32AtomicStore8:
@@ -160,46 +160,46 @@ void Environment::Disassemble(Stream* stream,
       case Opcode::I64AtomicStore32:
       case Opcode::I32AtomicRmwAdd:
       case Opcode::I64AtomicRmwAdd:
-      case Opcode::I32AtomicRmw8UAdd:
-      case Opcode::I32AtomicRmw16UAdd:
-      case Opcode::I64AtomicRmw8UAdd:
-      case Opcode::I64AtomicRmw16UAdd:
-      case Opcode::I64AtomicRmw32UAdd:
+      case Opcode::I32AtomicRmw8AddU:
+      case Opcode::I32AtomicRmw16AddU:
+      case Opcode::I64AtomicRmw8AddU:
+      case Opcode::I64AtomicRmw16AddU:
+      case Opcode::I64AtomicRmw32AddU:
       case Opcode::I32AtomicRmwSub:
       case Opcode::I64AtomicRmwSub:
-      case Opcode::I32AtomicRmw8USub:
-      case Opcode::I32AtomicRmw16USub:
-      case Opcode::I64AtomicRmw8USub:
-      case Opcode::I64AtomicRmw16USub:
-      case Opcode::I64AtomicRmw32USub:
+      case Opcode::I32AtomicRmw8SubU:
+      case Opcode::I32AtomicRmw16SubU:
+      case Opcode::I64AtomicRmw8SubU:
+      case Opcode::I64AtomicRmw16SubU:
+      case Opcode::I64AtomicRmw32SubU:
       case Opcode::I32AtomicRmwAnd:
       case Opcode::I64AtomicRmwAnd:
-      case Opcode::I32AtomicRmw8UAnd:
-      case Opcode::I32AtomicRmw16UAnd:
-      case Opcode::I64AtomicRmw8UAnd:
-      case Opcode::I64AtomicRmw16UAnd:
-      case Opcode::I64AtomicRmw32UAnd:
+      case Opcode::I32AtomicRmw8AndU:
+      case Opcode::I32AtomicRmw16AndU:
+      case Opcode::I64AtomicRmw8AndU:
+      case Opcode::I64AtomicRmw16AndU:
+      case Opcode::I64AtomicRmw32AndU:
       case Opcode::I32AtomicRmwOr:
       case Opcode::I64AtomicRmwOr:
-      case Opcode::I32AtomicRmw8UOr:
-      case Opcode::I32AtomicRmw16UOr:
-      case Opcode::I64AtomicRmw8UOr:
-      case Opcode::I64AtomicRmw16UOr:
-      case Opcode::I64AtomicRmw32UOr:
+      case Opcode::I32AtomicRmw8OrU:
+      case Opcode::I32AtomicRmw16OrU:
+      case Opcode::I64AtomicRmw8OrU:
+      case Opcode::I64AtomicRmw16OrU:
+      case Opcode::I64AtomicRmw32OrU:
       case Opcode::I32AtomicRmwXor:
       case Opcode::I64AtomicRmwXor:
-      case Opcode::I32AtomicRmw8UXor:
-      case Opcode::I32AtomicRmw16UXor:
-      case Opcode::I64AtomicRmw8UXor:
-      case Opcode::I64AtomicRmw16UXor:
-      case Opcode::I64AtomicRmw32UXor:
+      case Opcode::I32AtomicRmw8XorU:
+      case Opcode::I32AtomicRmw16XorU:
+      case Opcode::I64AtomicRmw8XorU:
+      case Opcode::I64AtomicRmw16XorU:
+      case Opcode::I64AtomicRmw32XorU:
       case Opcode::I32AtomicRmwXchg:
       case Opcode::I64AtomicRmwXchg:
-      case Opcode::I32AtomicRmw8UXchg:
-      case Opcode::I32AtomicRmw16UXchg:
-      case Opcode::I64AtomicRmw8UXchg:
-      case Opcode::I64AtomicRmw16UXchg:
-      case Opcode::I64AtomicRmw32UXchg:
+      case Opcode::I32AtomicRmw8XchgU:
+      case Opcode::I32AtomicRmw16XchgU:
+      case Opcode::I64AtomicRmw8XchgU:
+      case Opcode::I64AtomicRmw16XchgU:
+      case Opcode::I64AtomicRmw32XchgU:
       case Opcode::I32Store8:
       case Opcode::I32Store16:
       case Opcode::I32Store:
@@ -210,7 +210,7 @@ void Environment::Disassemble(Stream* stream,
       case Opcode::F32Store:
       case Opcode::F64Store:
       case Opcode::V128Store: {
-        Index memory_index = ReadU32(&pc);
+        const Index memory_index = ReadU32(&pc);
         stream->Writef("%s $%" PRIindex ":%%[-2]+$%u, %%[-1]\n",
                        opcode.GetName(), memory_index, ReadU32(&pc));
         break;
@@ -220,12 +220,12 @@ void Environment::Disassemble(Stream* stream,
       case Opcode::I64AtomicWait:
       case Opcode::I32AtomicRmwCmpxchg:
       case Opcode::I64AtomicRmwCmpxchg:
-      case Opcode::I32AtomicRmw8UCmpxchg:
-      case Opcode::I32AtomicRmw16UCmpxchg:
-      case Opcode::I64AtomicRmw8UCmpxchg:
-      case Opcode::I64AtomicRmw16UCmpxchg:
-      case Opcode::I64AtomicRmw32UCmpxchg: {
-        Index memory_index = ReadU32(&pc);
+      case Opcode::I32AtomicRmw8CmpxchgU:
+      case Opcode::I32AtomicRmw16CmpxchgU:
+      case Opcode::I64AtomicRmw8CmpxchgU:
+      case Opcode::I64AtomicRmw16CmpxchgU:
+      case Opcode::I64AtomicRmw32CmpxchgU: {
+        const Index memory_index = ReadU32(&pc);
         stream->Writef("%s $%" PRIindex ":%%[-3]+$%u, %%[-2], %%[-1]\n",
                        opcode.GetName(), memory_index, ReadU32(&pc));
         break;
@@ -420,39 +420,39 @@ void Environment::Disassemble(Stream* stream,
       case Opcode::F64Trunc:
       case Opcode::F64Nearest:
       case Opcode::F64Sqrt:
-      case Opcode::I32TruncSF32:
-      case Opcode::I32TruncUF32:
-      case Opcode::I64TruncSF32:
-      case Opcode::I64TruncUF32:
+      case Opcode::I32TruncF32S:
+      case Opcode::I32TruncF32U:
+      case Opcode::I64TruncF32S:
+      case Opcode::I64TruncF32U:
       case Opcode::F64PromoteF32:
       case Opcode::I32ReinterpretF32:
-      case Opcode::I32TruncSF64:
-      case Opcode::I32TruncUF64:
-      case Opcode::I64TruncSF64:
-      case Opcode::I64TruncUF64:
+      case Opcode::I32TruncF64S:
+      case Opcode::I32TruncF64U:
+      case Opcode::I64TruncF64S:
+      case Opcode::I64TruncF64U:
       case Opcode::F32DemoteF64:
       case Opcode::I64ReinterpretF64:
       case Opcode::I32WrapI64:
-      case Opcode::F32ConvertSI64:
-      case Opcode::F32ConvertUI64:
-      case Opcode::F64ConvertSI64:
-      case Opcode::F64ConvertUI64:
+      case Opcode::F32ConvertI64S:
+      case Opcode::F32ConvertI64U:
+      case Opcode::F64ConvertI64S:
+      case Opcode::F64ConvertI64U:
       case Opcode::F64ReinterpretI64:
-      case Opcode::I64ExtendSI32:
-      case Opcode::I64ExtendUI32:
-      case Opcode::F32ConvertSI32:
-      case Opcode::F32ConvertUI32:
+      case Opcode::I64ExtendI32S:
+      case Opcode::I64ExtendI32U:
+      case Opcode::F32ConvertI32S:
+      case Opcode::F32ConvertI32U:
       case Opcode::F32ReinterpretI32:
-      case Opcode::F64ConvertSI32:
-      case Opcode::F64ConvertUI32:
-      case Opcode::I32TruncSSatF32:
-      case Opcode::I32TruncUSatF32:
-      case Opcode::I64TruncSSatF32:
-      case Opcode::I64TruncUSatF32:
-      case Opcode::I32TruncSSatF64:
-      case Opcode::I32TruncUSatF64:
-      case Opcode::I64TruncSSatF64:
-      case Opcode::I64TruncUSatF64:
+      case Opcode::F64ConvertI32S:
+      case Opcode::F64ConvertI32U:
+      case Opcode::I32TruncSatF32S:
+      case Opcode::I32TruncSatF32U:
+      case Opcode::I64TruncSatF32S:
+      case Opcode::I64TruncSatF32U:
+      case Opcode::I32TruncSatF64S:
+      case Opcode::I32TruncSatF64U:
+      case Opcode::I64TruncSatF64S:
+      case Opcode::I64TruncSatF64U:
       case Opcode::I32Extend16S:
       case Opcode::I32Extend8S:
       case Opcode::I64Extend16S:
@@ -483,14 +483,14 @@ void Environment::Disassemble(Stream* stream,
       case Opcode::F64X2Abs:
       case Opcode::F32X4Sqrt:
       case Opcode::F64X2Sqrt:
-      case Opcode::F32X4ConvertSI32X4:
-      case Opcode::F32X4ConvertUI32X4:
-      case Opcode::F64X2ConvertSI64X2:
-      case Opcode::F64X2ConvertUI64X2:
-      case Opcode::I32X4TruncSF32X4Sat:
-      case Opcode::I32X4TruncUF32X4Sat:
-      case Opcode::I64X2TruncSF64X2Sat:
-      case Opcode::I64X2TruncUF64X2Sat:
+      case Opcode::F32X4ConvertI32X4S:
+      case Opcode::F32X4ConvertI32X4U:
+      case Opcode::F64X2ConvertI64X2S:
+      case Opcode::F64X2ConvertI64X2U:
+      case Opcode::I32X4TruncSatF32X4S:
+      case Opcode::I32X4TruncSatF32X4U:
+      case Opcode::I64X2TruncSatF64X2S:
+      case Opcode::I64X2TruncSatF64X2U:
         stream->Writef("%s %%[-1]\n", opcode.GetName());
         break;
 
@@ -541,14 +541,14 @@ void Environment::Disassemble(Stream* stream,
         break;
 
       case Opcode::InterpDropKeep: {
-        uint32_t drop = ReadU32(&pc);
-        uint32_t keep = ReadU32(&pc);
+        const uint32_t drop = ReadU32(&pc);
+        const uint32_t keep = ReadU32(&pc);
         stream->Writef("%s $%u $%u\n", opcode.GetName(), drop, keep);
         break;
       }
 
       case Opcode::InterpData: {
-        uint32_t num_bytes = ReadU32(&pc);
+        const uint32_t num_bytes = ReadU32(&pc);
         stream->Writef("%s $%u\n", opcode.GetName(), num_bytes);
         /* for now, the only reason this is emitted is for br_table, so display
          * it as a list of table entries */
@@ -574,11 +574,40 @@ void Environment::Disassemble(Stream* stream,
       }
 
       case Opcode::V128Const: {
-        stream->Writef("%s $0x%08x 0x%08x 0x%08x 0x%08x\n", opcode.GetName(),
+        stream->Writef("%s 0x%08x 0x%08x 0x%08x 0x%08x\n", opcode.GetName(),
                        ReadU32(&pc), ReadU32(&pc), ReadU32(&pc), ReadU32(&pc));
 
         break;
       }
+
+      case Opcode::MemoryInit:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::MemoryDrop:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::MemoryCopy:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::MemoryFill:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::TableInit:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::TableDrop:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::TableCopy:
+        WABT_UNREACHABLE;
+        break;
+
       // The following opcodes are either never generated or should never be
       // executed.
       case Opcode::Block:

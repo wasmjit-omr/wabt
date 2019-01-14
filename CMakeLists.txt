@@ -26,6 +26,7 @@ option(USE_LSAN "Use leak sanitizer" OFF)
 option(USE_UBSAN "Use undefined behavior sanitizer" OFF)
 option(CODE_COVERAGE "Build with code coverage enabled" OFF)
 option(WITH_EXCEPTIONS "Build with exceptions enabled" ON)
+option(WERROR "Build with warnings as errors" OFF)
 
 set(OMR_DDR OFF CACHE BOOL "Enable DDR")
 set(OMR_EXAMPLE OFF CACHE BOOL "")
@@ -99,7 +100,11 @@ if (COMPILER_IS_MSVC)
   #   seems to not like float compare w/ HUGE_VALF; bug?
   # disable warnings C4267 and C4244: conversion/truncation from larger to smaller type.
   # disable warning C4800: implicit conversion from larger int to bool
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W3 -wd4018 -wd4056 -wd4756 -wd4267 -wd4244 -wd4800 -WX -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W3 -wd4018 -wd4056 -wd4756 -wd4267 -wd4244 -wd4800 -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
+
+  if (WERROR)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -WX")
+  endif ()
 
   if (NOT WITH_EXCEPTIONS)
     # disable exception use in C++ library
@@ -110,6 +115,10 @@ else ()
   #   interfaces, etc.
   # disable -Wpointer-arith: this is a GCC extension, and doesn't work in MSVC.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wpointer-arith -g -std=c++11 -Wold-style-cast -Wuninitialized")
+
+  if (WERROR)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+  endif ()
 
   if (NOT WITH_EXCEPTIONS)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
@@ -437,6 +446,7 @@ if (NOT EMSCRIPTEN)
 
     # wabt-unittests
     set(UNITTESTS_SRCS
+      src/test-binary-reader.cc
       src/test-circular-array.cc
       src/test-interp.cc
       src/test-intrusive-list.cc
@@ -452,22 +462,22 @@ if (NOT EMSCRIPTEN)
       SOURCES ${UNITTESTS_SRCS}
       LIBS libgtest ${CMAKE_THREAD_LIBS_INIT}
     )
-  endif ()
 
-  if (NOT CMAKE_VERSION VERSION_LESS "3.2")
-    set(USES_TERMINAL USES_TERMINAL)
-  endif ()
+    if (NOT CMAKE_VERSION VERSION_LESS "3.2")
+      set(USES_TERMINAL USES_TERMINAL)
+    endif ()
 
-  # test running
-  find_package(PythonInterp 2.7 REQUIRED)
-  set(RUN_TESTS_PY ${WABT_SOURCE_DIR}/test/run-tests.py)
-  add_custom_target(run-tests
-    COMMAND ${CMAKE_BINARY_DIR}/wabt-unittests
-    COMMAND ${PYTHON_EXECUTABLE} ${RUN_TESTS_PY} --bindir ${CMAKE_BINARY_DIR}
-    DEPENDS ${WABT_EXECUTABLES}
-    WORKING_DIRECTORY ${WABT_SOURCE_DIR}
-    ${USES_TERMINAL}
-  )
+    # test running
+    find_package(PythonInterp 2.7 REQUIRED)
+    set(RUN_TESTS_PY ${WABT_SOURCE_DIR}/test/run-tests.py)
+    add_custom_target(run-tests
+      COMMAND ${CMAKE_BINARY_DIR}/wabt-unittests
+      COMMAND ${PYTHON_EXECUTABLE} ${RUN_TESTS_PY} --bindir ${CMAKE_BINARY_DIR}
+      DEPENDS ${WABT_EXECUTABLES}
+      WORKING_DIRECTORY ${WABT_SOURCE_DIR}
+      ${USES_TERMINAL}
+    )
+  endif ()
 
   # install
   if (BUILD_TOOLS OR BUILD_TESTS)

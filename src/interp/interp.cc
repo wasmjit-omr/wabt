@@ -1628,33 +1628,33 @@ Result Thread::Run(int num_instructions) {
         CHECK_TRAP(PushRep<double>(ReadU64(&pc)));
         break;
 
-      case Opcode::GetGlobal: {
+      case Opcode::GlobalGet: {
         Index index = ReadU32(&pc);
         assert(index < env_->globals_.size());
         CHECK_TRAP(Push(env_->globals_[index].typed_value.value));
         break;
       }
 
-      case Opcode::SetGlobal: {
+      case Opcode::GlobalSet: {
         Index index = ReadU32(&pc);
         assert(index < env_->globals_.size());
         env_->globals_[index].typed_value.value = Pop();
         break;
       }
 
-      case Opcode::GetLocal: {
+      case Opcode::LocalGet: {
         Value value = Pick(ReadU32(&pc));
         CHECK_TRAP(Push(value));
         break;
       }
 
-      case Opcode::SetLocal: {
+      case Opcode::LocalSet: {
         Value value = Pop();
         Pick(ReadU32(&pc)) = value;
         break;
       }
 
-      case Opcode::TeeLocal:
+      case Opcode::LocalTee:
         Pick(ReadU32(&pc)) = Top();
         break;
 
@@ -1726,15 +1726,36 @@ Result Thread::Run(int num_instructions) {
         break;
       }
 
-      case Opcode::ReturnCall:
-        // TODO(binji): Implement.
-        TRAP(Unreachable);
-        break;
+      case Opcode::ReturnCall: {
+        IstreamOffset offset = ReadU32(&pc);
+        GOTO(offset);
 
-      case Opcode::ReturnCallIndirect:
-        // TODO(binji): Implement.
-        TRAP(Unreachable);
         break;
+      }
+
+      case Opcode::ReturnCallIndirect:{
+        Index table_index = ReadU32(&pc);
+        Table* table = &env_->tables_[table_index];
+        Index sig_index = ReadU32(&pc);
+        Index entry_index = Pop<uint32_t>();
+        TRAP_IF(entry_index >= table->func_indexes.size(), UndefinedTableIndex);
+        Index func_index = table->func_indexes[entry_index];
+        TRAP_IF(func_index == kInvalidIndex, UninitializedTableElement);
+        Func* func = env_->funcs_[func_index].get();
+        TRAP_UNLESS(env_->FuncSignaturesAreEqual(func->sig_index, sig_index),
+                    IndirectCallSignatureMismatch);
+        if (func->is_host) { // Emulate a call/return for imported functions
+          CHECK_TRAP(CallHost(cast<HostFunc>(func)));
+          if (call_stack_top_ == 0) {
+            result = Result::Returned;
+            goto exit_loop;
+          }
+          GOTO(PopCall());
+        } else {
+          GOTO(cast<DefinedFunc>(func)->offset);
+        }
+        break;
+      }
 
       case Opcode::I32Load8S:
         CHECK_TRAP(Load<int8_t, uint32_t>(&pc));
@@ -1891,19 +1912,19 @@ Result Thread::Run(int num_instructions) {
   case Opcode::I64AtomicRmw##rmwop:                                 \
     CHECK_TRAP(AtomicRmw<uint64_t, uint64_t>(func<uint64_t>, &pc)); \
     break;                                                          \
-  case Opcode::I32AtomicRmw8U##rmwop:                               \
+  case Opcode::I32AtomicRmw8##rmwop##U:                             \
     CHECK_TRAP(AtomicRmw<uint8_t, uint32_t>(func<uint32_t>, &pc));  \
     break;                                                          \
-  case Opcode::I32AtomicRmw16U##rmwop:                              \
+  case Opcode::I32AtomicRmw16##rmwop##U:                            \
     CHECK_TRAP(AtomicRmw<uint16_t, uint32_t>(func<uint32_t>, &pc)); \
     break;                                                          \
-  case Opcode::I64AtomicRmw8U##rmwop:                               \
+  case Opcode::I64AtomicRmw8##rmwop##U:                             \
     CHECK_TRAP(AtomicRmw<uint8_t, uint64_t>(func<uint64_t>, &pc));  \
     break;                                                          \
-  case Opcode::I64AtomicRmw16U##rmwop:                              \
+  case Opcode::I64AtomicRmw16##rmwop##U:                            \
     CHECK_TRAP(AtomicRmw<uint16_t, uint64_t>(func<uint64_t>, &pc)); \
     break;                                                          \
-  case Opcode::I64AtomicRmw32U##rmwop:                              \
+  case Opcode::I64AtomicRmw32##rmwop##U:                            \
     CHECK_TRAP(AtomicRmw<uint32_t, uint64_t>(func<uint64_t>, &pc)); \
     break /* no semicolon */
 
@@ -1924,23 +1945,23 @@ Result Thread::Run(int num_instructions) {
         CHECK_TRAP(AtomicRmwCmpxchg<uint64_t, uint64_t>(&pc));
         break;
 
-      case Opcode::I32AtomicRmw8UCmpxchg:
+      case Opcode::I32AtomicRmw8CmpxchgU:
         CHECK_TRAP(AtomicRmwCmpxchg<uint8_t, uint32_t>(&pc));
         break;
 
-      case Opcode::I32AtomicRmw16UCmpxchg:
+      case Opcode::I32AtomicRmw16CmpxchgU:
         CHECK_TRAP(AtomicRmwCmpxchg<uint16_t, uint32_t>(&pc));
         break;
 
-      case Opcode::I64AtomicRmw8UCmpxchg:
+      case Opcode::I64AtomicRmw8CmpxchgU:
         CHECK_TRAP(AtomicRmwCmpxchg<uint8_t, uint64_t>(&pc));
         break;
 
-      case Opcode::I64AtomicRmw16UCmpxchg:
+      case Opcode::I64AtomicRmw16CmpxchgU:
         CHECK_TRAP(AtomicRmwCmpxchg<uint16_t, uint64_t>(&pc));
         break;
 
-      case Opcode::I64AtomicRmw32UCmpxchg:
+      case Opcode::I64AtomicRmw32CmpxchgU:
         CHECK_TRAP(AtomicRmwCmpxchg<uint32_t, uint64_t>(&pc));
         break;
 
@@ -2337,35 +2358,35 @@ Result Thread::Run(int num_instructions) {
         CHECK_TRAP(Binop(Ge<double>));
         break;
 
-      case Opcode::I32TruncSF32:
+      case Opcode::I32TruncF32S:
         CHECK_TRAP(UnopTrap(IntTrunc<int32_t, float>));
         break;
 
-      case Opcode::I32TruncSSatF32:
+      case Opcode::I32TruncSatF32S:
         CHECK_TRAP(Unop(IntTruncSat<int32_t, float>));
         break;
 
-      case Opcode::I32TruncSF64:
+      case Opcode::I32TruncF64S:
         CHECK_TRAP(UnopTrap(IntTrunc<int32_t, double>));
         break;
 
-      case Opcode::I32TruncSSatF64:
+      case Opcode::I32TruncSatF64S:
         CHECK_TRAP(Unop(IntTruncSat<int32_t, double>));
         break;
 
-      case Opcode::I32TruncUF32:
+      case Opcode::I32TruncF32U:
         CHECK_TRAP(UnopTrap(IntTrunc<uint32_t, float>));
         break;
 
-      case Opcode::I32TruncUSatF32:
+      case Opcode::I32TruncSatF32U:
         CHECK_TRAP(Unop(IntTruncSat<uint32_t, float>));
         break;
 
-      case Opcode::I32TruncUF64:
+      case Opcode::I32TruncF64U:
         CHECK_TRAP(UnopTrap(IntTrunc<uint32_t, double>));
         break;
 
-      case Opcode::I32TruncUSatF64:
+      case Opcode::I32TruncSatF64U:
         CHECK_TRAP(Unop(IntTruncSat<uint32_t, double>));
         break;
 
@@ -2373,59 +2394,59 @@ Result Thread::Run(int num_instructions) {
         CHECK_TRAP(Push<uint32_t>(Pop<uint64_t>()));
         break;
 
-      case Opcode::I64TruncSF32:
+      case Opcode::I64TruncF32S:
         CHECK_TRAP(UnopTrap(IntTrunc<int64_t, float>));
         break;
 
-      case Opcode::I64TruncSSatF32:
+      case Opcode::I64TruncSatF32S:
         CHECK_TRAP(Unop(IntTruncSat<int64_t, float>));
         break;
 
-      case Opcode::I64TruncSF64:
+      case Opcode::I64TruncF64S:
         CHECK_TRAP(UnopTrap(IntTrunc<int64_t, double>));
         break;
 
-      case Opcode::I64TruncSSatF64:
+      case Opcode::I64TruncSatF64S:
         CHECK_TRAP(Unop(IntTruncSat<int64_t, double>));
         break;
 
-      case Opcode::I64TruncUF32:
+      case Opcode::I64TruncF32U:
         CHECK_TRAP(UnopTrap(IntTrunc<uint64_t, float>));
         break;
 
-      case Opcode::I64TruncUSatF32:
+      case Opcode::I64TruncSatF32U:
         CHECK_TRAP(Unop(IntTruncSat<uint64_t, float>));
         break;
 
-      case Opcode::I64TruncUF64:
+      case Opcode::I64TruncF64U:
         CHECK_TRAP(UnopTrap(IntTrunc<uint64_t, double>));
         break;
 
-      case Opcode::I64TruncUSatF64:
+      case Opcode::I64TruncSatF64U:
         CHECK_TRAP(Unop(IntTruncSat<uint64_t, double>));
         break;
 
-      case Opcode::I64ExtendSI32:
+      case Opcode::I64ExtendI32S:
         CHECK_TRAP(Push<uint64_t>(Pop<int32_t>()));
         break;
 
-      case Opcode::I64ExtendUI32:
+      case Opcode::I64ExtendI32U:
         CHECK_TRAP(Push<uint64_t>(Pop<uint32_t>()));
         break;
 
-      case Opcode::F32ConvertSI32:
+      case Opcode::F32ConvertI32S:
         CHECK_TRAP(Push<float>(Pop<int32_t>()));
         break;
 
-      case Opcode::F32ConvertUI32:
+      case Opcode::F32ConvertI32U:
         CHECK_TRAP(Push<float>(Pop<uint32_t>()));
         break;
 
-      case Opcode::F32ConvertSI64:
+      case Opcode::F32ConvertI64S:
         CHECK_TRAP(Push<float>(Pop<int64_t>()));
         break;
 
-      case Opcode::F32ConvertUI64:
+      case Opcode::F32ConvertI64U:
         CHECK_TRAP(Push<float>(wabt_convert_uint64_to_float(Pop<uint64_t>())));
         break;
 
@@ -2457,19 +2478,19 @@ Result Thread::Run(int num_instructions) {
         CHECK_TRAP(PushRep<float>(Pop<uint32_t>()));
         break;
 
-      case Opcode::F64ConvertSI32:
+      case Opcode::F64ConvertI32S:
         CHECK_TRAP(Push<double>(Pop<int32_t>()));
         break;
 
-      case Opcode::F64ConvertUI32:
+      case Opcode::F64ConvertI32U:
         CHECK_TRAP(Push<double>(Pop<uint32_t>()));
         break;
 
-      case Opcode::F64ConvertSI64:
+      case Opcode::F64ConvertI64S:
         CHECK_TRAP(Push<double>(Pop<int64_t>()));
         break;
 
-      case Opcode::F64ConvertUI64:
+      case Opcode::F64ConvertI64U:
         CHECK_TRAP(
             Push<double>(wabt_convert_uint64_to_double(Pop<uint64_t>())));
         break;
@@ -2563,7 +2584,7 @@ Result Thread::Run(int num_instructions) {
 
       case Opcode::I32AtomicWait:
       case Opcode::I64AtomicWait:
-      case Opcode::AtomicWake:
+      case Opcode::AtomicNotify:
         // TODO(binji): Implement.
         TRAP(Unreachable);
         break;
@@ -3275,37 +3296,66 @@ Result Thread::Run(int num_instructions) {
         CHECK_TRAP(SimdUnop<v128, int64_t>(FloatSqrt<double>));
         break;
 
-      case Opcode::F32X4ConvertSI32X4:
+      case Opcode::F32X4ConvertI32X4S:
         CHECK_TRAP(SimdUnop<v128, int32_t>(SimdConvert<float, int32_t>));
         break;
 
-      case Opcode::F32X4ConvertUI32X4:
+      case Opcode::F32X4ConvertI32X4U:
         CHECK_TRAP(SimdUnop<v128, uint32_t>(SimdConvert<float, uint32_t>));
         break;
 
-      case Opcode::F64X2ConvertSI64X2:
+      case Opcode::F64X2ConvertI64X2S:
         CHECK_TRAP(SimdUnop<v128, int64_t>(SimdConvert<double, int64_t>));
         break;
 
-      case Opcode::F64X2ConvertUI64X2:
+      case Opcode::F64X2ConvertI64X2U:
         CHECK_TRAP(SimdUnop<v128, uint64_t>(SimdConvert<double, uint64_t>));
         break;
 
-      case Opcode::I32X4TruncSF32X4Sat:
+      case Opcode::I32X4TruncSatF32X4S:
         CHECK_TRAP(SimdUnop<v128, int32_t>(IntTruncSat<int32_t, float>));
         break;
 
-      case Opcode::I32X4TruncUF32X4Sat:
+      case Opcode::I32X4TruncSatF32X4U:
         CHECK_TRAP(SimdUnop<v128, uint32_t>(IntTruncSat<uint32_t, float>));
         break;
 
-      case Opcode::I64X2TruncSF64X2Sat:
+      case Opcode::I64X2TruncSatF64X2S:
         CHECK_TRAP(SimdUnop<v128, int64_t>(IntTruncSat<int64_t, double>));
         break;
 
-      case Opcode::I64X2TruncUF64X2Sat:
+      case Opcode::I64X2TruncSatF64X2U:
         CHECK_TRAP(SimdUnop<v128, uint64_t>(IntTruncSat<uint64_t, double>));
         break;
+
+      case Opcode::MemoryInit:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::MemoryDrop:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::MemoryCopy:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::MemoryFill:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::TableInit:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::TableDrop:
+        WABT_UNREACHABLE;
+        break;
+
+      case Opcode::TableCopy:
+        WABT_UNREACHABLE;
+        break;
+
       // The following opcodes are either never generated or should never be
       // executed.
       case Opcode::Block:

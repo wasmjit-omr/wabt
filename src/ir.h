@@ -160,8 +160,8 @@ enum class ExprType {
   AtomicRmw,
   AtomicRmwCmpxchg,
   AtomicStore,
+  AtomicNotify,
   AtomicWait,
-  AtomicWake,
   Binary,
   Block,
   Br,
@@ -173,13 +173,20 @@ enum class ExprType {
   Const,
   Convert,
   Drop,
-  GetGlobal,
-  GetLocal,
+  GlobalGet,
+  GlobalSet,
   If,
   IfExcept,
   Load,
+  LocalGet,
+  LocalSet,
+  LocalTee,
   Loop,
+  MemoryCopy,
+  MemoryDrop,
+  MemoryFill,
   MemoryGrow,
+  MemoryInit,
   MemorySize,
   Nop,
   Rethrow,
@@ -187,12 +194,12 @@ enum class ExprType {
   ReturnCall,
   ReturnCallIndirect,
   Select,
-  SetGlobal,
-  SetLocal,
   SimdLaneOp,
   SimdShuffleOp,
   Store,
-  TeeLocal,
+  TableCopy,
+  TableDrop,
+  TableInit,
   Ternary,
   Throw,
   Try,
@@ -250,6 +257,9 @@ class ExprMixin : public Expr {
 typedef ExprMixin<ExprType::Drop> DropExpr;
 typedef ExprMixin<ExprType::MemoryGrow> MemoryGrowExpr;
 typedef ExprMixin<ExprType::MemorySize> MemorySizeExpr;
+typedef ExprMixin<ExprType::MemoryCopy> MemoryCopyExpr;
+typedef ExprMixin<ExprType::MemoryFill> MemoryFillExpr;
+typedef ExprMixin<ExprType::TableCopy> TableCopyExpr;
 typedef ExprMixin<ExprType::Nop> NopExpr;
 typedef ExprMixin<ExprType::Rethrow> RethrowExpr;
 typedef ExprMixin<ExprType::Return> ReturnExpr;
@@ -301,13 +311,18 @@ class VarExpr : public ExprMixin<TypeEnum> {
 typedef VarExpr<ExprType::Br> BrExpr;
 typedef VarExpr<ExprType::BrIf> BrIfExpr;
 typedef VarExpr<ExprType::Call> CallExpr;
-typedef VarExpr<ExprType::GetGlobal> GetGlobalExpr;
-typedef VarExpr<ExprType::GetLocal> GetLocalExpr;
+typedef VarExpr<ExprType::GlobalGet> GlobalGetExpr;
+typedef VarExpr<ExprType::GlobalSet> GlobalSetExpr;
+typedef VarExpr<ExprType::LocalGet> LocalGetExpr;
+typedef VarExpr<ExprType::LocalSet> LocalSetExpr;
+typedef VarExpr<ExprType::LocalTee> LocalTeeExpr;
 typedef VarExpr<ExprType::ReturnCall> ReturnCallExpr;
-typedef VarExpr<ExprType::SetGlobal> SetGlobalExpr;
-typedef VarExpr<ExprType::SetLocal> SetLocalExpr;
-typedef VarExpr<ExprType::TeeLocal> TeeLocalExpr;
 typedef VarExpr<ExprType::Throw> ThrowExpr;
+
+typedef VarExpr<ExprType::MemoryInit> MemoryInitExpr;
+typedef VarExpr<ExprType::MemoryDrop> MemoryDropExpr;
+typedef VarExpr<ExprType::TableInit> TableInitExpr;
+typedef VarExpr<ExprType::TableDrop> TableDropExpr;
 
 class CallIndirectExpr : public ExprMixin<ExprType::CallIndirect> {
  public:
@@ -317,7 +332,12 @@ class CallIndirectExpr : public ExprMixin<ExprType::CallIndirect> {
   FuncDeclaration decl;
 };
 
-typedef CallIndirectExpr ReturnCallIndirectExpr;
+class ReturnCallIndirectExpr : public ExprMixin<ExprType::ReturnCallIndirect> {
+ public:
+  explicit ReturnCallIndirectExpr(const Location &loc = Location())
+      : ExprMixin<ExprType::ReturnCallIndirect>(loc) {}
+      FuncDeclaration decl;
+};
 
 template <ExprType TypeEnum>
 class BlockExprBase : public ExprMixin<TypeEnum> {
@@ -403,7 +423,7 @@ typedef LoadStoreExpr<ExprType::AtomicStore> AtomicStoreExpr;
 typedef LoadStoreExpr<ExprType::AtomicRmw> AtomicRmwExpr;
 typedef LoadStoreExpr<ExprType::AtomicRmwCmpxchg> AtomicRmwCmpxchgExpr;
 typedef LoadStoreExpr<ExprType::AtomicWait> AtomicWaitExpr;
-typedef LoadStoreExpr<ExprType::AtomicWake> AtomicWakeExpr;
+typedef LoadStoreExpr<ExprType::AtomicNotify> AtomicNotifyExpr;
 
 struct Exception {
   explicit Exception(string_view name) : name(name.to_string()) {}
@@ -490,8 +510,7 @@ struct Func {
   std::string name;
   FuncDeclaration decl;
   LocalTypes local_types;
-  BindingHash param_bindings;
-  BindingHash local_bindings;
+  BindingHash bindings;
   ExprList exprs;
 };
 
@@ -512,7 +531,11 @@ struct Table {
 };
 
 struct ElemSegment {
+  explicit ElemSegment(string_view name) : name(name.to_string()) {}
+
+  std::string name;
   Var table_var;
+  bool passive = false;
   ExprList offset;
   VarVector vars;
 };
@@ -525,7 +548,11 @@ struct Memory {
 };
 
 struct DataSegment {
+  explicit DataSegment(string_view name) : name(name.to_string()) {}
+
+  std::string name;
   Var memory_var;
+  bool passive = false;
   ExprList offset;
   std::vector<uint8_t> data;
 };
@@ -705,8 +732,10 @@ class TableModuleField : public ModuleFieldMixin<ModuleFieldType::Table> {
 class ElemSegmentModuleField
     : public ModuleFieldMixin<ModuleFieldType::ElemSegment> {
  public:
-  explicit ElemSegmentModuleField(const Location& loc = Location())
-      : ModuleFieldMixin<ModuleFieldType::ElemSegment>(loc) {}
+  explicit ElemSegmentModuleField(const Location& loc = Location(),
+                                  string_view name = string_view())
+      : ModuleFieldMixin<ModuleFieldType::ElemSegment>(loc),
+        elem_segment(name) {}
 
   ElemSegment elem_segment;
 };
@@ -723,8 +752,10 @@ class MemoryModuleField : public ModuleFieldMixin<ModuleFieldType::Memory> {
 class DataSegmentModuleField
     : public ModuleFieldMixin<ModuleFieldType::DataSegment> {
  public:
-  explicit DataSegmentModuleField(const Location& loc = Location())
-      : ModuleFieldMixin<ModuleFieldType::DataSegment>(loc) {}
+  explicit DataSegmentModuleField(const Location& loc = Location(),
+                                  string_view name = string_view())
+      : ModuleFieldMixin<ModuleFieldType::DataSegment>(loc),
+        data_segment(name) {}
 
   DataSegment data_segment;
 };
@@ -767,6 +798,12 @@ struct Module {
   const Export* GetExport(string_view) const;
   Exception* GetExcept(const Var&) const;
   Index GetExceptIndex(const Var&) const;
+  const DataSegment* GetDataSegment(const Var&) const;
+  DataSegment* GetDataSegment(const Var&);
+  Index GetDataSegmentIndex(const Var&) const;
+  const ElemSegment* GetElemSegment(const Var&) const;
+  ElemSegment* GetElemSegment(const Var&);
+  Index GetElemSegmentIndex(const Var&) const;
 
   bool IsImport(ExternalKind kind, const Var&) const;
   bool IsImport(const Export& export_) const {
@@ -819,6 +856,8 @@ struct Module {
   BindingHash func_type_bindings;
   BindingHash table_bindings;
   BindingHash memory_bindings;
+  BindingHash data_segment_bindings;
+  BindingHash elem_segment_bindings;
 };
 
 enum class ScriptModuleType {
