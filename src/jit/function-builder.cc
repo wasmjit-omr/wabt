@@ -1720,7 +1720,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::InterpDropKeep: {
       uint32_t drop_count = ReadU32(&pc);
-      uint8_t keep_count = *pc++;
+      uint32_t keep_count = ReadU32(&pc);
       stack.DropKeep(drop_count, keep_count);
       break;
     }
