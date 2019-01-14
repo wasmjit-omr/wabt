@@ -105,7 +105,7 @@ static const Index kInvalidIndex = ~0;
 static const Offset kInvalidOffset = ~0;
 
 template <typename Dst, typename Src>
-Dst Bitcast(Src value) {
+Dst Bitcast(Src&& value) {
   static_assert(sizeof(Src) == sizeof(Dst), "Bitcast sizes must match.");
   Dst result;
   memcpy(&result, &value, sizeof(result));
@@ -230,8 +230,8 @@ enum class LinkingEntryType {
   StackPointer = 1,
   SymbolInfo = 2,
   DataSize = 3,
-  DataAlignment = 4,
   SegmentInfo = 5,
+  InitFunctions = 6,
 };
 
 enum class SymbolBinding {
@@ -262,11 +262,6 @@ struct Limits {
 enum class LimitsShareable { Allowed, NotAllowed };
 
 enum { WABT_USE_NATURAL_ALIGNMENT = 0xFFFFFFFF };
-
-enum class NameSectionSubsection {
-  Function = 1,
-  Local = 2,
-};
 
 Result ReadFile(string_view filename, std::vector<uint8_t>* out_data);
 

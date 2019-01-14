@@ -393,6 +393,8 @@ struct Func {
 
   Type GetParamType(Index index) const { return decl.GetParamType(index); }
   Type GetResultType(Index index) const { return decl.GetResultType(index); }
+  Type GetLocalType(Index index) const;
+  Type GetLocalType(const Var& var) const;
   Index GetNumParams() const { return decl.GetNumParams(); }
   Index GetNumLocals() const { return local_types.size(); }
   Index GetNumParamsAndLocals() const {
@@ -674,8 +676,10 @@ struct Module {
   const Func* GetFunc(const Var&) const;
   Func* GetFunc(const Var&);
   Index GetTableIndex(const Var&) const;
+  const Table* GetTable(const Var&) const;
   Table* GetTable(const Var&);
   Index GetMemoryIndex(const Var&) const;
+  const Memory* GetMemory(const Var&) const;
   Memory* GetMemory(const Var&);
   Index GetGlobalIndex(const Var&) const;
   const Global* GetGlobal(const Var&) const;
@@ -683,6 +687,11 @@ struct Module {
   const Export* GetExport(string_view) const;
   Exception* GetExcept(const Var&) const;
   Index GetExceptIndex(const Var&) const;
+
+  bool IsImport(ExternalKind kind, const Var&) const;
+  bool IsImport(const Export& export_) const {
+    return IsImport(export_.kind, export_.var);
+  }
 
   // TODO(binji): move this into a builder class?
   void AppendField(std::unique_ptr<DataSegmentModuleField>);

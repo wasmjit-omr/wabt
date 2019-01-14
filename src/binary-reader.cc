@@ -108,7 +108,7 @@ class BinaryReader {
   Result ReadGlobalHeader(Type* out_type, bool* out_mutable) WABT_WARN_UNUSED;
   Result ReadExceptionType(TypeVector& sig) WABT_WARN_UNUSED;
   Result ReadFunctionBody(Offset end_offset) WABT_WARN_UNUSED;
-  Result ReadNamesSection(Offset section_size) WABT_WARN_UNUSED;
+  Result ReadNameSection(Offset section_size) WABT_WARN_UNUSED;
   Result ReadRelocSection(Offset section_size) WABT_WARN_UNUSED;
   Result ReadLinkingSection(Offset section_size) WABT_WARN_UNUSED;
   Result ReadCustomSection(Offset section_size) WABT_WARN_UNUSED;
@@ -135,6 +135,7 @@ class BinaryReader {
   std::vector<Index> target_depths_;
   const ReadBinaryOptions* options_ = nullptr;
   BinarySection last_known_section_ = BinarySection::Invalid;
+  bool did_read_names_section_ = false;
   Index num_signatures_ = 0;
   Index num_imports_ = 0;
   Index num_func_imports_ = 0;
@@ -822,6 +823,22 @@ Result BinaryReader::ReadFunctionBody(Offset end_offset) {
       case Opcode::F64Min:
       case Opcode::F64Max:
       case Opcode::F64Copysign:
+      case Opcode::I8X16Add:
+      case Opcode::I16X8Add:
+      case Opcode::I32X4Add:
+      case Opcode::I64X2Add:
+      case Opcode::I8X16Sub:
+      case Opcode::I16X8Sub:
+      case Opcode::I32X4Sub:
+      case Opcode::I64X2Sub:
+      case Opcode::I8X16Mul:
+      case Opcode::I16X8Mul:
+      case Opcode::I32X4Mul:
+      case Opcode::I8X16AddSaturateS:
+      case Opcode::I8X16AddSaturateU:
+      case Opcode::I16X8AddSaturateS:
+      case Opcode::I16X8AddSaturateU:
+        ERROR_UNLESS_OPCODE_ENABLED(opcode);
         CALLBACK(OnBinaryExpr, opcode);
         CALLBACK0(OnOpcodeBare);
         break;
@@ -882,6 +899,17 @@ Result BinaryReader::ReadFunctionBody(Offset end_offset) {
       case Opcode::F64Trunc:
       case Opcode::F64Nearest:
       case Opcode::F64Sqrt:
+      case Opcode::I8X16Splat:
+      case Opcode::I16X8Splat:
+      case Opcode::I32X4Splat:
+      case Opcode::I64X2Splat:
+      case Opcode::F32X4Splat:
+      case Opcode::F64X2Splat:
+      case Opcode::I8X16Neg:
+      case Opcode::I16X8Neg:
+      case Opcode::I32X4Neg:
+      case Opcode::I64X2Neg:
+        ERROR_UNLESS_OPCODE_ENABLED(opcode);
         CALLBACK(OnUnaryExpr, opcode);
         CALLBACK0(OnOpcodeBare);
         break;
@@ -1122,7 +1150,7 @@ Result BinaryReader::ReadFunctionBody(Offset end_offset) {
   return Result::Ok;
 }
 
-Result BinaryReader::ReadNamesSection(Offset section_size) {
+Result BinaryReader::ReadNameSection(Offset section_size) {
   CALLBACK(BeginNamesSection, section_size);
   Index i = 0;
   Offset previous_read_end = read_end_;
@@ -1272,6 +1300,7 @@ Result BinaryReader::ReadLinkingSection(Offset section_size) {
                  "invalid sub-section size: extends past end");
     read_end_ = subsection_end;
 
+    uint32_t count;
     switch (static_cast<LinkingEntryType>(linking_type)) {
       case LinkingEntryType::StackPointer: {
         uint32_t stack_ptr;
@@ -1279,11 +1308,10 @@ Result BinaryReader::ReadLinkingSection(Offset section_size) {
         CALLBACK(OnStackGlobal, stack_ptr);
         break;
       }
-      case LinkingEntryType::SymbolInfo: {
-        uint32_t info_count;
-        CHECK_RESULT(ReadU32Leb128(&info_count, "info count"));
-        CALLBACK(OnSymbolInfoCount, info_count);
-        while (info_count--) {
+      case LinkingEntryType::SymbolInfo:
+        CHECK_RESULT(ReadU32Leb128(&count, "info count"));
+        CALLBACK(OnSymbolInfoCount, count);
+        while (count--) {
           string_view name;
           uint32_t info;
           CHECK_RESULT(ReadStr(&name, "symbol name"));
@@ -1291,24 +1319,16 @@ Result BinaryReader::ReadLinkingSection(Offset section_size) {
           CALLBACK(OnSymbolInfo, name, info);
         }
         break;
-      }
       case LinkingEntryType::DataSize: {
         uint32_t data_size;
         CHECK_RESULT(ReadU32Leb128(&data_size, "data size"));
         CALLBACK(OnDataSize, data_size);
         break;
       }
-      case LinkingEntryType::DataAlignment: {
-        uint32_t data_alignment;
-        CHECK_RESULT(ReadU32Leb128(&data_alignment, "data alignment"));
-        CALLBACK(OnDataAlignment, data_alignment);
-        break;
-      }
-      case LinkingEntryType::SegmentInfo: {
-        uint32_t info_count;
-        CHECK_RESULT(ReadU32Leb128(&info_count, "info count"));
-        CALLBACK(OnSegmentInfoCount, info_count);
-        for (Index i = 0; i < info_count; i++) {
+      case LinkingEntryType::SegmentInfo:
+        CHECK_RESULT(ReadU32Leb128(&count, "info count"));
+        CALLBACK(OnSegmentInfoCount, count);
+        for (Index i = 0; i < count; i++) {
           string_view name;
           uint32_t alignment;
           uint32_t flags;
@@ -1318,7 +1338,17 @@ Result BinaryReader::ReadLinkingSection(Offset section_size) {
           CALLBACK(OnSegmentInfo, i, name, alignment, flags);
         }
         break;
-      }
+      case LinkingEntryType::InitFunctions:
+        CHECK_RESULT(ReadU32Leb128(&count, "info count"));
+        CALLBACK(OnInitFunctionCount, count);
+        while (count--) {
+          uint32_t priority;
+          uint32_t func;
+          CHECK_RESULT(ReadU32Leb128(&priority, "priority"));
+          CHECK_RESULT(ReadU32Leb128(&func, "function index"));
+          CALLBACK(OnInitFunction, priority, func);
+        }
+        break;
       default:
         // Unknown subsection, skip it.
         state_.offset = subsection_end;
@@ -1368,10 +1398,9 @@ Result BinaryReader::ReadCustomSection(Offset section_size) {
   CHECK_RESULT(ReadStr(&section_name, "section name"));
   CALLBACK(BeginCustomSection, section_size, section_name);
 
-  bool name_section_ok = last_known_section_ >= BinarySection::Import;
-  if (options_->read_debug_names && name_section_ok &&
-      section_name == WABT_BINARY_SECTION_NAME) {
-    CHECK_RESULT(ReadNamesSection(section_size));
+  if (options_->read_debug_names && section_name == WABT_BINARY_SECTION_NAME) {
+    CHECK_RESULT(ReadNameSection(section_size));
+    did_read_names_section_ = true;
   } else if (section_name.rfind(WABT_BINARY_SECTION_RELOC, 0) == 0) {
     // Reloc sections always begin with "reloc."
     CHECK_RESULT(ReadRelocSection(section_size));
@@ -1750,6 +1779,10 @@ Result BinaryReader::ReadSections() {
                      section == BinarySection::Custom ||
                      section > last_known_section_,
                  "section %s out of order", GetSectionName(section));
+
+    ERROR_UNLESS(!did_read_names_section_ || section == BinarySection::Custom,
+                 "%s section can not occur after Name section",
+                 GetSectionName(section));
 
     CALLBACK(BeginSection, section, section_size);
 

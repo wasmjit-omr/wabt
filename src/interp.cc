@@ -835,6 +835,29 @@ Result Thread::Unop(UnopFunc<R, T> func) {
   return PushRep<R>(func(value));
 }
 
+// {i8, i16, 132, i64}{16, 8, 4, 2}.(neg)
+template <typename T, typename L, typename R, typename P>
+Result Thread::SimdUnop(UnopFunc<R, P> func) {
+  auto value = PopRep<T>();
+
+  // Calculate how many Lanes according to input lane data type.
+  constexpr int32_t lanes = sizeof(T)/sizeof(L);
+
+  // Define SIMD data array for Simd add by Lanes.
+  L simd_data_ret[lanes];
+  L simd_data_0[lanes];
+
+  // Convert intput SIMD data to array.
+  memcpy(simd_data_0, &value, sizeof(T));
+
+  // Constuct the Simd value by Lane data and Lane nums.
+  for(int32_t i = 0; i < lanes; i++) {
+    simd_data_ret[i] = static_cast<L>(func(simd_data_0[i]));
+  }
+
+  return PushRep<T>(Bitcast<T>(simd_data_ret));
+}
+
 template <typename R, typename T>
 Result Thread::UnopTrap(UnopTrapFunc<R, T> func) {
   auto value = PopRep<T>();
@@ -850,6 +873,32 @@ Result Thread::Binop(BinopFunc<R, T> func) {
   return PushRep<R>(func(lhs_rep, rhs_rep));
 }
 
+// {i8, i16, 132, i64}{16, 8, 4, 2}.(add/sub/mul)
+template <typename T, typename L, typename R, typename P>
+Result Thread::SimdBinop(BinopFunc<R, P> func) {
+  auto rhs_rep = PopRep<T>();
+  auto lhs_rep = PopRep<T>();
+
+  // Calculate how many Lanes according to input lane data type.
+  constexpr int32_t lanes = sizeof(T)/sizeof(L);
+
+  // Define SIMD data array for Simd add by Lanes.
+  L simd_data_ret[lanes];
+  L simd_data_0[lanes];
+  L simd_data_1[lanes];
+
+  // Convert intput SIMD data to array.
+  memcpy(simd_data_0, &lhs_rep, sizeof(T));
+  memcpy(simd_data_1, &rhs_rep, sizeof(T));
+
+  // Constuct the Simd value by Lane data and Lane nums.
+  for(int32_t i = 0; i < lanes; i++) {
+    simd_data_ret[i] = static_cast<L>(func(simd_data_0[i], simd_data_1[i]));
+  }
+
+  return PushRep<T>(Bitcast<T>(simd_data_ret));
+}
+
 template <typename R, typename T>
 Result Thread::BinopTrap(BinopTrapFunc<R, T> func) {
   auto rhs_rep = PopRep<T>();
@@ -863,6 +912,21 @@ Result Thread::BinopTrap(BinopTrapFunc<R, T> func) {
 template <typename T>
 ValueTypeRep<T> Add(ValueTypeRep<T> lhs_rep, ValueTypeRep<T> rhs_rep) {
   return ToRep(FromRep<T>(lhs_rep) + FromRep<T>(rhs_rep));
+}
+
+template <typename T, typename R>
+ValueTypeRep<T> AddSaturate(ValueTypeRep<T> lhs_rep, ValueTypeRep<T> rhs_rep) {
+  T max = std::numeric_limits<R>::max();
+  T min = std::numeric_limits<R>::min(); 
+  T result = static_cast<T>(lhs_rep) + static_cast<T>(rhs_rep);
+
+  if(result < min) {
+    return ToRep(min);
+  } else if (result > max) {
+    return ToRep(max);
+  } else {
+    return ToRep(result);
+  }
 }
 
 // {i,f}{32,64}.sub
@@ -1021,6 +1085,12 @@ ValueTypeRep<T> IntRotr(ValueTypeRep<T> lhs_rep, ValueTypeRep<T> rhs_rep) {
 template <typename R, typename T>
 ValueTypeRep<R> IntEqz(ValueTypeRep<T> v_rep) {
   return ToRep(v_rep == 0);
+}
+
+template <typename T>
+ValueTypeRep<T> IntNeg(ValueTypeRep<T> v_rep) {
+  T tmp = static_cast<T>(v_rep);
+  return ToRep(-tmp);
 }
 
 // f{32,64}.abs
@@ -1214,6 +1284,23 @@ ValueTypeRep<T> IntExtendS(ValueTypeRep<T> v_rep) {
 template <typename T>
 ValueTypeRep<T> Xchg(ValueTypeRep<T> lhs_rep, ValueTypeRep<T> rhs_rep) {
   return rhs_rep;
+}
+
+// i(8,16,32,64) f(32,64) X (2,4,8,16) splat ==> v128
+template <typename T, typename V>
+ValueTypeRep<T> SimdSplat(V lane_data) {
+  // Calculate how many Lanes according to input lane data type.
+  int32_t lanes = sizeof(T)/sizeof(V);
+
+  // Define SIMD data array by Lanes.
+  V simd_data[sizeof(T)/sizeof(V)];
+
+  // Constuct the Simd value by Land data and Lane nums.
+  for(int32_t i = 0; i < lanes; i++) {
+    simd_data[i] = lane_data;
+  }
+
+  return ToRep(Bitcast<T>(simd_data));
 }
 
 bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn) {
@@ -2314,6 +2401,117 @@ Result Thread::Run(int num_instructions) {
         break;
       }
 
+      case Opcode::I8X16Splat: {
+        uint8_t lane_data = Pop<uint32_t>();
+        CHECK_TRAP(Push<v128>(SimdSplat<v128, uint8_t>(lane_data)));
+        break;
+      }
+
+      case Opcode::I16X8Splat: {
+        uint16_t lane_data = Pop<uint32_t>();
+        CHECK_TRAP(Push<v128>(SimdSplat<v128, uint16_t>(lane_data)));
+        break;
+      }
+
+      case Opcode::I32X4Splat: {
+        uint32_t lane_data = Pop<uint32_t>();
+        CHECK_TRAP(Push<v128>(SimdSplat<v128, uint32_t>(lane_data)));
+        break;
+      }
+
+      case Opcode::I64X2Splat: {
+        uint64_t lane_data = Pop<uint64_t>();
+        CHECK_TRAP(Push<v128>(SimdSplat<v128, uint64_t>(lane_data)));
+        break;
+      }
+
+      case Opcode::F32X4Splat: {
+        float lane_data = Pop<float>();
+        CHECK_TRAP(Push<v128>(SimdSplat<v128, float>(lane_data)));
+        break;
+      }
+
+      case Opcode::F64X2Splat: {
+        double lane_data = Pop<double>();
+        CHECK_TRAP(Push<v128>(SimdSplat<v128, double>(lane_data)));
+        break;
+      }
+
+      case Opcode::I8X16Add:
+        CHECK_TRAP(SimdBinop<v128, uint8_t>(Add<uint32_t>));
+        break;
+
+      case Opcode::I16X8Add:
+        CHECK_TRAP(SimdBinop<v128, uint16_t>(Add<uint32_t>));
+        break;
+
+      case Opcode::I32X4Add:
+        CHECK_TRAP(SimdBinop<v128, uint32_t>(Add<uint32_t>));
+        break;
+
+      case Opcode::I64X2Add:
+        CHECK_TRAP(SimdBinop<v128, uint64_t>(Add<uint64_t>));
+        break;
+
+      case Opcode::I8X16Sub:
+        CHECK_TRAP(SimdBinop<v128, uint8_t>(Sub<uint32_t>));
+        break;
+
+      case Opcode::I16X8Sub:
+        CHECK_TRAP(SimdBinop<v128, uint16_t>(Sub<uint32_t>));
+        break;
+
+      case Opcode::I32X4Sub:
+        CHECK_TRAP(SimdBinop<v128, uint32_t>(Sub<uint32_t>));
+        break;
+
+      case Opcode::I64X2Sub:
+        CHECK_TRAP(SimdBinop<v128, uint64_t>(Sub<uint64_t>));
+        break;
+
+      case Opcode::I8X16Mul:
+        CHECK_TRAP(SimdBinop<v128, uint8_t>(Mul<uint32_t>));
+        break;
+
+      case Opcode::I16X8Mul:
+        CHECK_TRAP(SimdBinop<v128, uint16_t>(Mul<uint32_t>));
+        break;
+
+      case Opcode::I32X4Mul:
+        CHECK_TRAP(SimdBinop<v128, uint32_t>(Mul<uint32_t>));
+        break;
+
+      case Opcode::I8X16Neg:
+        CHECK_TRAP(SimdUnop<v128, int8_t>(IntNeg<int32_t>));
+        break;
+
+      case Opcode::I16X8Neg:
+        CHECK_TRAP(SimdUnop<v128, int16_t>(IntNeg<int32_t>));
+        break;
+
+      case Opcode::I32X4Neg:
+        CHECK_TRAP(SimdUnop<v128, int32_t>(IntNeg<int32_t>));
+        break;
+
+      case Opcode::I64X2Neg:
+        CHECK_TRAP(SimdUnop<v128, int64_t>(IntNeg<int64_t>));
+        break;
+
+      case Opcode::I8X16AddSaturateS:
+        CHECK_TRAP(SimdBinop<v128, int8_t>(AddSaturate<int32_t, int8_t>));
+        break;
+
+      case Opcode::I8X16AddSaturateU:
+        CHECK_TRAP(SimdBinop<v128, uint8_t>(AddSaturate<uint32_t, uint8_t>));
+        break;
+
+      case Opcode::I16X8AddSaturateS:
+        CHECK_TRAP(SimdBinop<v128, int16_t>(AddSaturate<int32_t, int16_t>));
+        break;
+
+      case Opcode::I16X8AddSaturateU:
+        CHECK_TRAP(SimdBinop<v128, uint16_t>(AddSaturate<uint32_t, uint16_t>));
+        break;
       // The following opcodes are either never generated or should never be
       // executed.
       case Opcode::Block:
@@ -2774,6 +2972,42 @@ void Thread::Trace(Stream* stream) {
       break;
     }
 
+    case Opcode::I8X16Splat:
+    case Opcode::I16X8Splat:
+    case Opcode::I32X4Splat:
+    case Opcode::I64X2Splat:
+    case Opcode::F32X4Splat:
+    case Opcode::F64X2Splat:
+    case Opcode::I8X16Neg:
+    case Opcode::I16X8Neg:
+    case Opcode::I32X4Neg:
+    case Opcode::I64X2Neg: {
+      stream->Writef("%s $0x%08x 0x%08x 0x%08x 0x%08x \n", opcode.GetName(), Top().v128_bits.v[0],
+                                Top().v128_bits.v[1], Top().v128_bits.v[2], Top().v128_bits.v[3]);
+      break;
+    }
+
+    case Opcode::I8X16Add: 
+    case Opcode::I16X8Add: 
+    case Opcode::I32X4Add: 
+    case Opcode::I64X2Add:
+    case Opcode::I8X16Sub: 
+    case Opcode::I16X8Sub: 
+    case Opcode::I32X4Sub: 
+    case Opcode::I64X2Sub:
+    case Opcode::I8X16Mul: 
+    case Opcode::I16X8Mul: 
+    case Opcode::I32X4Mul: 
+    case Opcode::I8X16AddSaturateS: 
+    case Opcode::I8X16AddSaturateU: 
+    case Opcode::I16X8AddSaturateS: 
+    case Opcode::I16X8AddSaturateU: { 
+      stream->Writef("%s $0x%08x %08x %08x %08x  $0x%08x %08x %08x %08x\n", opcode.GetName(), Pick(2).v128_bits.v[0],
+                       Pick(2).v128_bits.v[1], Pick(2).v128_bits.v[2], Pick(2).v128_bits.v[3],Pick(1).v128_bits.v[0],
+                       Pick(1).v128_bits.v[1], Pick(1).v128_bits.v[2], Pick(1).v128_bits.v[3]);
+      break;
+    }
+
     // The following opcodes are either never generated or should never be
     // executed.
     case Opcode::Block:
@@ -3071,6 +3305,21 @@ void Environment::Disassemble(Stream* stream,
       case Opcode::F64Le:
       case Opcode::F64Gt:
       case Opcode::F64Ge:
+      case Opcode::I8X16Add:
+      case Opcode::I16X8Add:
+      case Opcode::I32X4Add:
+      case Opcode::I64X2Add:
+      case Opcode::I8X16Sub:
+      case Opcode::I16X8Sub:
+      case Opcode::I32X4Sub:
+      case Opcode::I64X2Sub:
+      case Opcode::I8X16Mul:
+      case Opcode::I16X8Mul:
+      case Opcode::I32X4Mul:
+      case Opcode::I8X16AddSaturateS:
+      case Opcode::I8X16AddSaturateU:
+      case Opcode::I16X8AddSaturateS:
+      case Opcode::I16X8AddSaturateU:
         stream->Writef("%s %%[-2], %%[-1]\n", opcode.GetName());
         break;
 
@@ -3134,6 +3383,16 @@ void Environment::Disassemble(Stream* stream,
       case Opcode::I64Extend16S:
       case Opcode::I64Extend32S:
       case Opcode::I64Extend8S:
+      case Opcode::I8X16Splat:
+      case Opcode::I16X8Splat:
+      case Opcode::I32X4Splat:
+      case Opcode::I64X2Splat:
+      case Opcode::F32X4Splat:
+      case Opcode::F64X2Splat:
+      case Opcode::I8X16Neg:
+      case Opcode::I16X8Neg:
+      case Opcode::I32X4Neg:
+      case Opcode::I64X2Neg:
         stream->Writef("%s %%[-1]\n", opcode.GetName());
         break;
 

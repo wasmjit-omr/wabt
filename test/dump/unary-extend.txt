@@ -1,5 +1,5 @@
 ;;; TOOL: run-objdump
-;;; FLAGS: -v --enable-threads
+;;; ARGS: -v --enable-sign-extension
 (module
   (func
     i32.const 0

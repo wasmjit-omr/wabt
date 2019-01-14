@@ -100,9 +100,11 @@ argument to the executable (which by default is `out/wat2wasm`).
 The currently supported list of keys:
 
 - `TOOL`: a set of preconfigured keys, see below.
-- `EXE`: the executable to run, defaults to out/wat2wasm
+- `RUN`: the executable to run, defaults to out/wat2wasm
 - `STDIN_FILE`: the file to use for STDIN instead of the contents of this file.
-- `FLAGS`: additional flags to pass to the executable
+- `ARGS`: additional args to pass to the executable
+- `ARGS{N}`: additional args to the Nth `RUN` command (zero-based)
+- `ARGS*`: additional args to all `RUN` commands
 - `ENV`: environment variables to set, separated by spaces
 - `ERROR`: the expected return value from the executable, defaults to 0
 - `SLOW`: if defined, this test's timeout is doubled.
@@ -136,9 +138,13 @@ The currently supported list of tools (see
   interpreter
 - `run-opcodecnt`: parse a wasm text file, convert it to binary, then display
   opcode usage counts.
-- `run-gen-spec-js`:parse wasm spec test text file, convert it to a JSON file
+- `run-gen-spec-js`: parse wasm spec test text file, convert it to a JSON file
   and a collection of `.wasm` and `.wast` files, then take all of these files
   and generate a JavaScript file that will execute the same tests.
+- `run-spec-wasm2c`: similar to `run-gen-spec-js`, but the output instead will
+  be C source files, that are then compiled with the default C compiler (`cc`).
+  Finally, the native executable is run.
+
 
 ## Test subdirectories
 

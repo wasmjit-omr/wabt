@@ -514,7 +514,31 @@ Token WastLexer::GetToken(WastParser* parser) {
       <i> "i64.atomic.rmw16_u.cmpxchg" { RETURN_OPCODE(AtomicRmwCmpxchg, I64AtomicRmw16UCmpxchg); }
       <i> "i64.atomic.rmw32_u.cmpxchg" { RETURN_OPCODE(AtomicRmwCmpxchg, I64AtomicRmw32UCmpxchg); }
       <i> "v128.const"           { RETURN_OPCODE(Const, V128Const); }
-
+      <i> "i8x16.splat"          { RETURN_OPCODE(Unary, I8X16Splat); }
+      <i> "i16x8.splat"          { RETURN_OPCODE(Unary, I16X8Splat); }
+      <i> "i32x4.splat"          { RETURN_OPCODE(Unary, I32X4Splat); }
+      <i> "i64x2.splat"          { RETURN_OPCODE(Unary, I64X2Splat); }
+      <i> "f32x4.splat"          { RETURN_OPCODE(Unary, F32X4Splat); }
+      <i> "f64x2.splat"          { RETURN_OPCODE(Unary, F64X2Splat); }
+      <i> "i8x16.add"            { RETURN_OPCODE(Binary, I8X16Add); }
+      <i> "i16x8.add"            { RETURN_OPCODE(Binary, I16X8Add); }
+      <i> "i32x4.add"            { RETURN_OPCODE(Binary, I32X4Add); }
+      <i> "i64x2.add"            { RETURN_OPCODE(Binary, I64X2Add); }
+      <i> "i8x16.sub"            { RETURN_OPCODE(Binary, I8X16Sub); }
+      <i> "i16x8.sub"            { RETURN_OPCODE(Binary, I16X8Sub); }
+      <i> "i32x4.sub"            { RETURN_OPCODE(Binary, I32X4Sub); }
+      <i> "i64x2.sub"            { RETURN_OPCODE(Binary, I64X2Sub); }
+      <i> "i8x16.mul"            { RETURN_OPCODE(Binary, I8X16Mul); }
+      <i> "i16x8.mul"            { RETURN_OPCODE(Binary, I16X8Mul); }
+      <i> "i32x4.mul"            { RETURN_OPCODE(Binary, I32X4Mul); }
+      <i> "i8x16.neg"            { RETURN_OPCODE(Unary, I8X16Neg); }
+      <i> "i16x8.neg"            { RETURN_OPCODE(Unary, I16X8Neg); }
+      <i> "i32x4.neg"            { RETURN_OPCODE(Unary, I32X4Neg); }
+      <i> "i64x2.neg"            { RETURN_OPCODE(Unary, I64X2Neg); }
+      <i> "i8x16.add_saturate_s" { RETURN_OPCODE(Binary, I8X16AddSaturateS); }
+      <i> "i8x16.add_saturate_u" { RETURN_OPCODE(Binary, I8X16AddSaturateU); }
+      <i> "i16x8.add_saturate_s" { RETURN_OPCODE(Binary, I16X8AddSaturateS); }
+      <i> "i16x8.add_saturate_u" { RETURN_OPCODE(Binary, I16X8AddSaturateU); }
 
       <i> "type"                { RETURN(Type); }
       <i> "func"                { RETURN(Func); }

@@ -328,6 +328,10 @@ if (NOT EMSCRIPTEN)
   # wasm2wat
   wabt_executable(wasm2wat src/tools/wasm2wat.cc)
 
+  # wasm2c
+  wabt_executable(wasm2c
+    src/tools/wasm2c.cc src/c-writer.cc)
+
   # wasm-opcodecnt
   wabt_executable(wasm-opcodecnt
     src/tools/wasm-opcodecnt.cc src/binary-reader-opcnt.cc)
@@ -376,7 +380,7 @@ if (NOT EMSCRIPTEN)
     # hexfloat-test
     set(HEXFLOAT_TEST_SRCS
       src/literal.cc
-      test/hexfloat.cc
+      src/test-hexfloat.cc
       third_party/gtest/googletest/src/gtest_main.cc
     )
     add_executable(hexfloat_test ${HEXFLOAT_TEST_SRCS})
@@ -389,6 +393,7 @@ if (NOT EMSCRIPTEN)
     set(UNITTESTS_SRCS
       src/test-circular-array.cc
       src/test-intrusive-list.cc
+      src/test-literal.cc
       src/test-string-view.cc
       src/test-filenames.cc
       src/test-utf8.cc

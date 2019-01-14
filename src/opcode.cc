@@ -112,6 +112,8 @@ bool Opcode::IsEnabled(const Features& features) const {
     case Opcode::I64Extend8S:
     case Opcode::I64Extend16S:
     case Opcode::I64Extend32S:
+      return features.sign_extension_enabled();
+
     case Opcode::AtomicWake:
     case Opcode::I32AtomicWait:
     case Opcode::I64AtomicWait:
@@ -181,6 +183,31 @@ bool Opcode::IsEnabled(const Features& features) const {
       return features.threads_enabled();
 
     case Opcode::V128Const:
+    case Opcode::I8X16Splat:
+    case Opcode::I16X8Splat:
+    case Opcode::I32X4Splat:
+    case Opcode::I64X2Splat:
+    case Opcode::F32X4Splat:
+    case Opcode::F64X2Splat:
+    case Opcode::I8X16Add:
+    case Opcode::I16X8Add:
+    case Opcode::I32X4Add:
+    case Opcode::I64X2Add:
+    case Opcode::I8X16Sub:
+    case Opcode::I16X8Sub:
+    case Opcode::I32X4Sub:
+    case Opcode::I64X2Sub:
+    case Opcode::I8X16Mul:
+    case Opcode::I16X8Mul:
+    case Opcode::I32X4Mul:
+    case Opcode::I8X16Neg:
+    case Opcode::I16X8Neg:
+    case Opcode::I32X4Neg:
+    case Opcode::I64X2Neg:
+    case Opcode::I8X16AddSaturateS:
+    case Opcode::I8X16AddSaturateU:
+    case Opcode::I16X8AddSaturateS:
+    case Opcode::I16X8AddSaturateU:
       return features.simd_enabled();
 
     // Interpreter opcodes are never "enabled".
