@@ -23,12 +23,12 @@
 #include <string>
 #include <vector>
 
-#include "src/binary-reader-interp.h"
 #include "src/binary-reader.h"
 #include "src/cast.h"
 #include "src/error-formatter.h"
 #include "src/feature.h"
-#include "src/interp.h"
+#include "src/interp/binary-reader-interp.h"
+#include "src/interp/interp.h"
 #include "src/literal.h"
 #include "src/option-parser.h"
 #include "src/resolve-names.h"
@@ -138,6 +138,9 @@ static void RunAllExports(interp::Module* module,
   TypedValues args;
   TypedValues results;
   for (const interp::Export& export_ : module->exports) {
+    if (export_.kind != ExternalKind::Func) {
+      continue;
+    }
     ExecResult exec_result = executor->RunExport(&export_, args);
     if (verbose == RunVerbosity::Verbose) {
       WriteCall(s_stdout_stream.get(), string_view(), export_.name, args,

@@ -15,7 +15,7 @@
  */
 
 #include "type-dictionary.h"
-#include "src/interp.h"
+#include "src/interp/interp.h"
 
 wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     using namespace wabt::interp;

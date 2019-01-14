@@ -17,7 +17,7 @@
 #include "function-builder.h"
 #include "wabtjit.h"
 #include "src/cast.h"
-#include "src/interp.h"
+#include "src/interp/interp.h"
 #include "ilgen/VirtualMachineState.hpp"
 #include "infra/Assert.hpp"
 

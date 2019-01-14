@@ -227,49 +227,51 @@ endif ()
 
 add_custom_target(everything)
 
-add_library(libwabt STATIC
-  src/token.cc
-  src/opcode.cc
-  src/opcode-code-table.c
-  src/error-formatter.cc
-  src/hash-util.cc
-  src/filenames.cc
-  src/string-view.cc
-  src/ir.cc
-  src/expr-visitor.cc
-  src/lexer-source.cc
-  src/lexer-source-line-finder.cc
-  ${WAST_LEXER_GEN_CC}
-  src/wast-parser.cc
-  src/type-checker.cc
-  src/validator.cc
-
+add_library(wabt STATIC
+  src/apply-names.cc
+  src/binary.cc
   src/binary-reader.cc
+  src/binary-reader-ir.cc
   src/binary-reader-logging.cc
   src/binary-writer.cc
   src/binary-writer-spec.cc
-  src/binary-reader-ir.cc
   src/binding-hash.cc
-  src/wat-writer.cc
-  src/interp.cc
-  src/binary-reader-interp.cc
-  src/apply-names.cc
-  src/generate-names.cc
-  src/resolve-names.cc
-
-  src/binary.cc
   src/color.cc
   src/common.cc
   src/config.cc
+  src/error-formatter.cc
+  src/expr-visitor.cc
   src/feature.cc
+  src/filenames.cc
+  src/generate-names.cc
+  src/hash-util.cc
+  src/ir.cc
   src/leb128.cc
+  src/lexer-source.cc
+  src/lexer-source-line-finder.cc
   src/literal.cc
+  src/opcode.cc
+  src/opcode-code-table.c
   src/option-parser.cc
+  src/resolve-names.cc
   src/stream.cc
+  src/string-view.cc
+  src/token.cc
   src/tracing.cc
+  src/type-checker.cc
   src/utf8.cc
+  src/validator.cc
+  src/wast-parser.cc
+  src/wat-writer.cc
+  ${WAST_LEXER_GEN_CC}
+
+  # TODO(binji): Move this into its own library?
+  src/interp/binary-reader-interp.cc
+  src/interp/interp.cc
+  src/interp/interp-disassemble.cc
+  src/interp/interp-trace.cc
 )
-set_target_properties(libwabt PROPERTIES OUTPUT_NAME wabt)
+
 
 function(add_omr)
   # Disable warnings when building all OMR components since OMR is more lax about some warnings.
@@ -283,7 +285,7 @@ endfunction()
 
 add_omr()
 add_subdirectory(src/jit)
-target_link_libraries(libwabt PUBLIC wabtjit)
+target_link_libraries(wabt PUBLIC wabtjit)
 
 if (NOT EMSCRIPTEN)
   if (CODE_COVERAGE)
@@ -295,68 +297,114 @@ if (NOT EMSCRIPTEN)
     endif ()
   endif ()
 
-  function(wabt_executable name)
-    # ARGV contains all arguments; remove the first one, ${name}, so it's just
-    # a list of sources.
-    list(REMOVE_AT ARGV 0)
+  function(wabt_executable)
+    cmake_parse_arguments(EXE "WITH_LIBM;INSTALL" "NAME" "SOURCES;LIBS" ${ARGN})
 
-    add_executable(${name} ${ARGV})
-    add_dependencies(everything ${name})
-    target_link_libraries(${name} libwabt)
-    set_property(TARGET ${name} PROPERTY CXX_STANDARD 11)
-    set_property(TARGET ${name} PROPERTY CXX_STANDARD_REQUIRED ON)
-    list(APPEND WABT_EXECUTABLES ${name})
-    set(WABT_EXECUTABLES ${WABT_EXECUTABLES} PARENT_SCOPE)
+    # Always link libwabt.
+    set(EXE_LIBS "${EXE_LIBS};wabt")
 
-    add_custom_target(${name}-copy-to-bin ALL
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${WABT_SOURCE_DIR}/bin
-      COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${name}> ${WABT_SOURCE_DIR}/bin
-      DEPENDS ${name}
-    )
+    # Optionally link libm.
+    if (EXE_WITH_LIBM AND (COMPILER_IS_CLANG OR COMPILER_IS_GNU))
+      set(EXE_LIBS "${EXE_LIBS};m")
+    endif ()
+
+    add_executable(${EXE_NAME} ${EXE_SOURCES})
+    add_dependencies(everything ${EXE_NAME})
+    target_link_libraries(${EXE_NAME} ${EXE_LIBS})
+    set_property(TARGET ${EXE_NAME} PROPERTY CXX_STANDARD 11)
+    set_property(TARGET ${EXE_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
+
+    if (EXE_INSTALL)
+      list(APPEND WABT_EXECUTABLES ${EXE_NAME})
+      set(WABT_EXECUTABLES ${WABT_EXECUTABLES} PARENT_SCOPE)
+
+      add_custom_target(${EXE_NAME}-copy-to-bin ALL
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${WABT_SOURCE_DIR}/bin
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${EXE_NAME}> ${WABT_SOURCE_DIR}/bin
+        DEPENDS ${EXE_NAME}
+      )
+    endif ()
   endfunction()
 
   if (BUILD_TOOLS)
     # wat2wasm
-    wabt_executable(wat2wasm src/tools/wat2wasm.cc)
+    wabt_executable(
+      NAME wat2wasm
+      SOURCES src/tools/wat2wasm.cc
+      INSTALL
+    )
 
     # wast2json
-    wabt_executable(wast2json src/tools/wast2json.cc)
+    wabt_executable(
+      NAME wast2json
+      SOURCES src/tools/wast2json.cc
+      INSTALL
+    )
 
     # wasm2wat
-    wabt_executable(wasm2wat src/tools/wasm2wat.cc)
+    wabt_executable(
+      NAME wasm2wat
+      SOURCES src/tools/wasm2wat.cc
+      INSTALL
+    )
 
     # wasm2c
-    wabt_executable(wasm2c
-      src/tools/wasm2c.cc src/c-writer.cc)
+    wabt_executable(
+      NAME wasm2c
+      SOURCES src/tools/wasm2c.cc src/c-writer.cc
+      INSTALL
+    )
 
     # wasm-opcodecnt
-    wabt_executable(wasm-opcodecnt
-      src/tools/wasm-opcodecnt.cc src/binary-reader-opcnt.cc)
+    wabt_executable(
+      NAME wasm-opcodecnt
+      SOURCES src/tools/wasm-opcodecnt.cc src/binary-reader-opcnt.cc
+      INSTALL
+    )
 
     # wasm-objdump
-    wabt_executable(wasm-objdump
-      src/tools/wasm-objdump.cc src/binary-reader-objdump.cc)
+    wabt_executable(
+      NAME wasm-objdump
+      SOURCES src/tools/wasm-objdump.cc src/binary-reader-objdump.cc
+      INSTALL
+    )
 
     # wasm-interp
-    wabt_executable(wasm-interp src/tools/wasm-interp.cc)
-    if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
-      target_link_libraries(wasm-interp m)
-    endif ()
+    wabt_executable(
+      NAME wasm-interp
+      SOURCES src/tools/wasm-interp.cc
+      WITH_LIBM
+      INSTALL
+    )
 
     # spectest-interp
-    wabt_executable(spectest-interp src/tools/spectest-interp.cc)
-    if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
-      target_link_libraries(spectest-interp m)
-    endif ()
+    wabt_executable(
+      NAME spectest-interp
+      SOURCES src/tools/spectest-interp.cc
+      WITH_LIBM
+      INSTALL
+    )
 
     # wat-desugar
-    wabt_executable(wat-desugar src/tools/wat-desugar.cc)
+    wabt_executable(
+      NAME wat-desugar
+      SOURCES src/tools/wat-desugar.cc
+      INSTALL
+    )
 
     # wasm-validate
-    wabt_executable(wasm-validate src/tools/wasm-validate.cc)
+    wabt_executable(
+      NAME wasm-validate
+      SOURCES src/tools/wasm-validate.cc
+      INSTALL
+    )
 
     # wasm-strip
-    wabt_executable(wasm-strip src/tools/wasm-strip.cc)
+    wabt_executable(
+      NAME wasm-strip
+      SOURCES src/tools/wasm-strip.cc
+      INSTALL
+    )
   endif ()
 
   find_package(Threads)
@@ -381,11 +429,11 @@ if (NOT EMSCRIPTEN)
       src/test-hexfloat.cc
       third_party/gtest/googletest/src/gtest_main.cc
     )
-    add_executable(hexfloat_test ${HEXFLOAT_TEST_SRCS})
-    add_dependencies(everything hexfloat_test)
-    target_link_libraries(hexfloat_test libgtest ${CMAKE_THREAD_LIBS_INIT})
-    set_property(TARGET hexfloat_test PROPERTY CXX_STANDARD 11)
-    set_property(TARGET hexfloat_test PROPERTY CXX_STANDARD_REQUIRED ON)
+    wabt_executable(
+      NAME hexfloat_test
+      SOURCES ${HEXFLOAT_TEST_SRCS}
+      LIBS libgtest ${CMAKE_THREAD_LIBS_INIT}
+    )
 
     # wabt-unittests
     set(UNITTESTS_SRCS
@@ -399,8 +447,11 @@ if (NOT EMSCRIPTEN)
       src/test-wast-parser.cc
       third_party/gtest/googletest/src/gtest_main.cc
     )
-    wabt_executable(wabt-unittests ${UNITTESTS_SRCS})
-    target_link_libraries(wabt-unittests libgtest ${CMAKE_THREAD_LIBS_INIT})
+    wabt_executable(
+      NAME wabt-unittests
+      SOURCES ${UNITTESTS_SRCS}
+      LIBS libgtest ${CMAKE_THREAD_LIBS_INIT}
+    )
   endif ()
 
   if (NOT CMAKE_VERSION VERSION_LESS "3.2")
@@ -411,6 +462,7 @@ if (NOT EMSCRIPTEN)
   find_package(PythonInterp 2.7 REQUIRED)
   set(RUN_TESTS_PY ${WABT_SOURCE_DIR}/test/run-tests.py)
   add_custom_target(run-tests
+    COMMAND ${CMAKE_BINARY_DIR}/wabt-unittests
     COMMAND ${PYTHON_EXECUTABLE} ${RUN_TESTS_PY} --bindir ${CMAKE_BINARY_DIR}
     DEPENDS ${WABT_EXECUTABLES}
     WORKING_DIRECTORY ${WABT_SOURCE_DIR}
@@ -439,7 +491,7 @@ else ()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-warn-absolute-paths")
   add_executable(libwabtjs src/emscripten-helpers.cc)
   add_dependencies(everything libwabtjs)
-  target_link_libraries(libwabtjs libwabt)
+  target_link_libraries(libwabtjs wabt)
   set_target_properties(libwabtjs PROPERTIES OUTPUT_NAME libwabt)
 
   set(WABT_POST_JS ${WABT_SOURCE_DIR}/src/wabt.post.js)
