@@ -11,23 +11,16 @@ matrix:
       dist: trusty
       sudo: required
       compiler: gcc
-<<<<<<< HEAD
 # Disabled because of JitBuilder problems on 32-bit
 #    - os: linux
 #      dist: trusty
 #      sudo: required
 #      compiler: gcc-i686
-=======
-    - os: linux
-      dist: trusty
-      sudo: required
-      compiler: gcc-i686
     - os: linux
       dist: trusty
       sudo: required
       compiler: clang
       env: WABT_DEPLOY=clang-release
->>>>>>> ad864f79b7340f60fc3a58448055f77cb9a6b3e3
     - os: linux
       dist: trusty
       sudo: required
