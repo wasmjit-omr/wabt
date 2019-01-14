@@ -56,18 +56,19 @@ TOOLS = {
         ('ARGS', ['%(in_file)s']),
     ],
     'run-objdump': [
-        ('RUN', 'test/run-objdump.py'),
-        ('ARGS', [
-                '%(in_file)s',
-                '--bindir=%(bindir)s',
-                '--no-error-cmdline',
-                '-o', '%(out_dir)s'
-                ]),
+        ('RUN', '%(wat2wasm)s %(in_file)s -o %(temp_file)s.wasm'),
+        ('RUN', '%(wasm-objdump)s -r -d %(temp_file)s.wasm'),
         ('VERBOSE-ARGS', ['-v']),
     ],
-    'run-wasm-link': [
-        ('RUN', 'test/run-wasm-link.py'),
-        ('ARGS', ['%(in_file)s', '--bindir=%(bindir)s', '-o', '%(out_dir)s']),
+    'run-objdump-gen-wasm': [
+        ('RUN', '%(gen_wasm_py)s %(in_file)s -o %(temp_file)s.wasm'),
+        ('RUN', '%(wasm-objdump)s -r -d %(temp_file)s.wasm'),
+        ('VERBOSE-ARGS', ['-v']),
+    ],
+    'run-objdump-spec': [
+        ('RUN', '%(wast2json)s %(in_file)s -o %(temp_file)s.json'),
+        # NOTE: wasm files must be passed in manually via ARGS1
+        ('RUN', '%(wasm-objdump)s -r -d'),
         ('VERBOSE-ARGS', ['-v']),
     ],
     'run-roundtrip': [
@@ -98,48 +99,32 @@ TOOLS = {
         ('VERBOSE-ARGS', ['--print-cmd', '-v']),
     ],
     'run-gen-wasm': [
-        ('RUN', 'test/run-gen-wasm.py'),
-        ('ARGS', [
-                '%(in_file)s',
-                '--bindir=%(bindir)s',
-                '--no-error-cmdline',
-                '-o',
-                '%(out_dir)s',
-                ]),
+        ('RUN', '%(gen_wasm_py)s %(in_file)s -o %(temp_file)s.wasm'),
+        ('RUN', '%(wasm-validate)s %(temp_file)s.wasm'),
+        ('RUN', '%(wasm2wat)s %(temp_file)s.wasm'),
+        ('VERBOSE-ARGS', ['--print-cmd', '-v']),
+    ],
+    'run-gen-wasm-bad': [
+        ('RUN', '%(gen_wasm_py)s %(in_file)s -o %(temp_file)s.wasm'),
+        ('RUN', '%(wasm-validate)s %(temp_file)s.wasm'),
+        ('ERROR', '1'),
+        ('RUN', '%(wasm2wat)s %(temp_file)s.wasm'),
+        ('ERROR', '1'),
         ('VERBOSE-ARGS', ['--print-cmd', '-v']),
     ],
     'run-gen-wasm-interp': [
-        ('RUN', 'test/run-gen-wasm-interp.py'),
-        ('ARGS', [
-                '%(in_file)s',
-                '--bindir=%(bindir)s',
-                '--run-all-exports',
-                '--no-error-cmdline',
-                '-o',
-                '%(out_dir)s',
-                ]),
+        ('RUN', '%(gen_wasm_py)s %(in_file)s -o %(temp_file)s.wasm'),
+        ('RUN', '%(wasm-interp)s --run-all-exports --disable-jit --no-stack-trace %(temp_file)s.wasm'),
         ('VERBOSE-ARGS', ['--print-cmd', '-v']),
     ],
     'run-opcodecnt': [
-        ('RUN', 'test/run-opcodecnt.py'),
-        ('ARGS', [
-                '%(in_file)s',
-                '--bindir=%(bindir)s',
-                '--no-error-cmdline',
-                '-o',
-                '%(out_dir)s',
-                ]),
+        ('RUN', '%(wat2wasm)s %(in_file)s -o %(temp_file)s.wasm'),
+        ('RUN', '%(wasm-opcodecnt)s %(temp_file)s.wasm'),
         ('VERBOSE-ARGS', ['--print-cmd', '-v']),
     ],
     'run-gen-spec-js': [
-        ('RUN', 'test/run-gen-spec-js.py'),
-        ('ARGS', [
-                '%(in_file)s',
-                '--bindir=%(bindir)s',
-                '--no-error-cmdline',
-                '-o',
-                '%(out_dir)s',
-                ]),
+        ('RUN', '%(wast2json)s %(in_file)s -o %(temp_file)s.json'),
+        ('RUN', '%(gen_spec_js_py)s %(temp_file)s.json'),
         ('VERBOSE-ARGS', ['--print-cmd', '-v']),
     ],
     'run-spec-wasm2c': [
@@ -209,11 +194,15 @@ def FixPythonExecutable(args):
 class CommandTemplate(object):
 
   def __init__(self, exe):
-    self.args = FixPythonExecutable(SplitArgs(exe))
+    self.args = SplitArgs(exe)
     self.verbose_args = []
+    self.expected_returncode = 0
 
   def AppendArgs(self, args):
     self.args += SplitArgs(args)
+
+  def SetExpectedReturncode(self, returncode):
+    self.expected_returncode = returncode
 
   def AppendVerboseArgs(self, args_list):
     for level, level_args in enumerate(args_list):
@@ -233,13 +222,17 @@ class CommandTemplate(object):
     if extra_args:
       args += extra_args
     args = self._Format(args, variables)
-    return Command(args)
+    return Command(self, FixPythonExecutable(args))
 
 
 class Command(object):
 
-  def __init__(self, args):
+  def __init__(self, template, args):
+    self.template = template
     self.args = args
+
+  def GetExpectedReturncode(self):
+    return self.template.expected_returncode
 
   def Run(self, cwd, timeout, console_out=False, env=None):
     process = None
@@ -294,36 +287,51 @@ class Command(object):
 
 class RunResult(object):
 
-  def __init__(self, last_cmd=None, stdout='', stderr='', returncode=0,
-               duration=0):
-    self.last_cmd = last_cmd
+  def __init__(self, cmd=None, stdout='', stderr='', returncode=0, duration=0):
+    self.cmd = cmd
     self.stdout = stdout
     self.stderr = stderr
     self.returncode = returncode
     self.duration = duration
 
+  def GetExpectedReturncode(self):
+    return self.cmd.GetExpectedReturncode()
+
   def Failed(self):
-    return self.returncode != 0
-
-  def Append(self, other):
-    assert isinstance(other, RunResult)
-
-    self.last_cmd = other.last_cmd
-
-    if other.stdout is not None:
-      self.stdout += other.stdout
-
-    if other.stderr is not None:
-      self.stderr += other.stderr
-
-    self.duration += other.duration
-
-    assert(self.returncode == 0)
-    self.returncode = other.returncode
+    return self.returncode != self.GetExpectedReturncode()
 
   def __repr__(self):
     return 'RunResult(%s, %s, %s, %s, %s)' % (
-        self.last_cmd, self.stdout, self.stderr, self.returncode, self.duration)
+        self.cmd, self.stdout, self.stderr, self.returncode, self.duration)
+
+
+class TestResult(object):
+
+  def __init__(self):
+    self.results = []
+    self.stdout = ''
+    self.stderr = ''
+    self.duration = 0
+
+  def GetLastCommand(self):
+    return self.results[-1].cmd
+
+  def GetLastFailure(self):
+    return [r for r in self.results if r.Failed()][-1]
+
+  def Failed(self):
+    return any(r.Failed() for r in self.results)
+
+  def Append(self, result):
+    self.results.append(result)
+
+    if result.stdout is not None:
+      self.stdout += result.stdout
+
+    if result.stderr is not None:
+      self.stderr += result.stderr
+
+    self.duration += result.duration
 
 
 class TestInfo(object):
@@ -338,7 +346,6 @@ class TestInfo(object):
     self.tool = None
     self.cmds = []
     self.env = {}
-    self.expected_error = 0
     self.slow = False
     self.skip = False
     self.is_roundtrip = False
@@ -368,7 +375,6 @@ class TestInfo(object):
       new_cmd.AppendArgs('--fold-exprs')
 
     result.env = self.env
-    result.expected_error = 0
     result.slow = self.slow
     result.skip = self.skip
     result.is_roundtrip = True
@@ -416,34 +422,37 @@ class TestInfo(object):
       self.ParseDirective(tool_key, tool_value)
 
   def GetCommand(self, index):
-    if index >= len(self.cmds):
+    try:
+      return self.cmds[index]
+    except IndexError:
       raise Error('Invalid command index: %s' % index)
-    return self.cmds[index]
 
   def GetLastCommand(self):
-    if not self.cmds:
-      self.SetTool('wat2wasm')
-    return self.cmds[-1]
+    return self.GetCommand(len(self.cmds) - 1)
 
-  def AppendArgsToAllCommands(self, args):
-    for cmd in self.cmds:
-      cmd.AppendArgs(args)
+  def ApplyToCommandBySuffix(self, suffix, fn):
+    if suffix == '':
+      fn(self.GetLastCommand())
+    elif re.match(r'^\d+$', suffix):
+      fn(self.GetCommand(int(suffix)))
+    elif suffix == '*':
+      for cmd in self.cmds:
+        fn(cmd)
+    else:
+      raise Error('Invalid directive suffix: %s' % suffix)
 
   def ParseDirective(self, key, value):
     if key == 'RUN':
       self.cmds.append(CommandTemplate(value))
     elif key == 'STDIN_FILE':
       self.input_filename = value
-    elif key == 'ARGS':
-      self.GetLastCommand().AppendArgs(value)
     elif key.startswith('ARGS'):
       suffix = key[len('ARGS'):]
-      if suffix == '*':
-        self.AppendArgsToAllCommands(value)
-      elif re.match(r'^\d+$', suffix):
-        self.GetCommand(int(suffix)).AppendArgs(value)
-    elif key == 'ERROR':
-      self.expected_error = int(value)
+      self.ApplyToCommandBySuffix(suffix, lambda cmd: cmd.AppendArgs(value))
+    elif key.startswith('ERROR'):
+      suffix = key[len('ERROR'):]
+      self.ApplyToCommandBySuffix(
+        suffix, lambda cmd: cmd.SetExpectedReturncode(int(value)))
     elif key == 'SLOW':
       self.slow = True
     elif key == 'SKIP':
@@ -519,10 +528,8 @@ class TestInfo(object):
     self.expected_stdout = ''.join(stdout_lines)
     self.expected_stderr = ''.join(stderr_lines)
 
-    # If the test didn't specify a executable (either via RUN or indirectly
-    # via TOOL, then use the default tool)
     if not self.cmds:
-      self.SetTool('wat2wasm')
+      raise Error('test has no commands')
 
   def CreateInputFile(self):
     gen_input_path = self.GetGeneratedInputFilename()
@@ -690,7 +697,7 @@ def RunTest(info, options, variables, verbose_level=0):
   variables['temp_file'] = os.path.join(
       out_dir, os.path.splitext(input_basename)[0])
 
-  final_result = RunResult()
+  test_result = TestResult()
 
   for cmd_template in info.cmds:
     cmd = cmd_template.GetCommand(variables, options.arg, verbose_level)
@@ -702,11 +709,11 @@ def RunTest(info, options, variables, verbose_level=0):
     except (Error, KeyboardInterrupt) as e:
       return e
 
-    final_result.Append(result)
-    if final_result.Failed():
+    test_result.Append(result)
+    if result.Failed():
       break
 
-  return final_result
+  return test_result
 
 
 def HandleTestResult(status, info, result, rebase=False):
@@ -715,19 +722,21 @@ def HandleTestResult(status, info, result, rebase=False):
       raise result
 
     if info.is_roundtrip:
-      if result.returncode == 0:
-        status.Passed(info, result.duration)
-      elif result.returncode == 2:
-        # run-roundtrip.py returns 2 if the file couldn't be parsed.
-        # it's likely a "bad-*" file.
-        status.Skipped(info)
+      if result.Failed():
+        if result.GetLastFailure().returncode == 2:
+          # run-roundtrip.py returns 2 if the file couldn't be parsed.
+          # it's likely a "bad-*" file.
+          status.Skipped(info)
+        else:
+          raise Error(result.stderr)
       else:
-        raise Error(stderr)
+        status.Passed(info, result.duration)
     else:
-      if result.returncode != info.expected_error:
+      if result.Failed():
         # This test has already failed, but diff it anyway.
-        msg = 'expected error code %d, got %d.' % (info.expected_error,
-                                                   result.returncode)
+        last_failure = result.GetLastFailure()
+        msg = 'expected error code %d, got %d.' % (
+            last_failure.GetExpectedReturncode(), last_failure.returncode)
         try:
           info.Diff(result.stdout, result.stderr)
         except Error as e:
@@ -888,6 +897,8 @@ def main(args):
   variables = {}
   variables['test_dir'] = os.path.abspath(TEST_DIR)
   variables['bindir'] = options.bindir
+  variables['gen_wasm_py'] = find_exe.GEN_WASM_PY
+  variables['gen_spec_js_py'] = find_exe.GEN_SPEC_JS_PY
   for exe_basename in find_exe.EXECUTABLES:
     exe_override = os.path.join(options.bindir, exe_basename)
     variables[exe_basename] = find_exe.FindExecutable(exe_basename,
@@ -928,7 +939,8 @@ def main(args):
   if status.failed:
     sys.stderr.write('**** FAILED %s\n' % ('*' * (80 - 14)))
     for info, result in status.failed_tests:
-      sys.stderr.write('- %s\n    %s\n' % (info.GetName(), result.last_cmd))
+      last_cmd = result.GetLastCommand() if result is not None else ''
+      sys.stderr.write('- %s\n    %s\n' % (info.GetName(), last_cmd))
     ret = 1
 
   return ret

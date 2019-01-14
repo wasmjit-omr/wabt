@@ -1,21 +1,9 @@
-;;; TOOL: run-gen-wasm
-;;; ARGS: --objdump
+;;; TOOL: run-objdump-gen-wasm
+;;; ARGS: -x
 magic
 version
 section("linking") {
-  section(LINKING_STACK_POINTER) {
-    stack_global[3]
-  }
-
-  section(LINKING_SYMBOL_INFO) {
-    num_symbols[3]
-    str("foo")
-    flags[1]
-    str("bar")
-    flags[2]
-    str("baz")
-    flags[0]
-  }
+  metadata_version[1]
 
   section(LINKING_SEGMENT_INFO) {
     count[2]
@@ -34,6 +22,31 @@ section("linking") {
     priority[6]
     func[0]
   }
+
+  section(LINKING_SYMBOL_TABLE) {
+    num_symbols[4]
+
+    type[0]
+    flags[1]
+    index[0]
+    str("func_sym")
+
+    type[2]
+    flags[2]
+    index[0]
+    str("global_sym")
+
+    type[1]
+    flags[4]
+    str("data_sym")
+    segment[1]
+    offset[2]
+    size[1]
+
+    type[0]
+    flags[0x10]
+    index[0]
+  }
 }
 (;; STDOUT ;;;
 
@@ -43,15 +56,18 @@ Section Details:
 
 Custom:
  - name: "linking"
-  - stack pointer global: 3
-  - symbol info [count=3]
-   - WEAK   <foo>
-   - LOCAL  <bar>
-   - GLOBAL <baz>
   - segment info [count=2]
    - 0: data1 align=4 flags=0
    - 1: data2 align=8 flags=0
   - init functions [count=2]
    - 1: priority=5
    - 0: priority=6
+  - symbol table [count=4]
+   - [0] F <func_sym> func=0 binding=weak vis=default
+   - [1] G <global_sym> global=0 binding=local vis=default
+   - [2] D <data_sym> segment=1 offset=2 size=1 binding=global vis=hidden
+   - [3] F <func_sym> func=0 undefined binding=global vis=default
+
+Code Disassembly:
+
 ;;; STDOUT ;;)

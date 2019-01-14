@@ -340,9 +340,6 @@ if (NOT EMSCRIPTEN)
   wabt_executable(wasm-objdump
     src/tools/wasm-objdump.cc src/binary-reader-objdump.cc)
 
-  # wasm-link
-  wabt_executable(wasm-link src/tools/wasm-link.cc src/binary-reader-linker.cc)
-
   # wasm-interp
   wabt_executable(wasm-interp src/tools/wasm-interp.cc)
   if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
@@ -431,23 +428,27 @@ else ()
   target_link_libraries(libwabtjs libwabt)
   set_target_properties(libwabtjs PROPERTIES OUTPUT_NAME libwabt)
 
-  set(WABT_PRE_JS ${WABT_SOURCE_DIR}/src/wabt.pre.js)
   set(WABT_POST_JS ${WABT_SOURCE_DIR}/src/wabt.post.js)
   set(EMSCRIPTEN_EXPORTED_JSON ${WABT_SOURCE_DIR}/src/emscripten-exported.json)
 
   set(LIBWABT_LINK_FLAGS
     --memory-init-file 0
-    --pre-js ${WABT_PRE_JS}
     --post-js ${WABT_POST_JS}
     -s EXPORTED_FUNCTIONS=\"@${EMSCRIPTEN_EXPORTED_JSON}\"
     -s RESERVED_FUNCTION_POINTERS=10
     -s NO_EXIT_RUNTIME=1
+    -s ALLOW_MEMORY_GROWTH=1
+    -s MODULARIZE=1
+    -s EXPORT_NAME=\"'WabtModule'\"
+    -s WASM=0
+    -Oz
+    --llvm-lto 1
   )
   string(REPLACE ";" " " LIBWABT_LINK_FLAGS_STR "${LIBWABT_LINK_FLAGS}")
 
   set_target_properties(libwabtjs
     PROPERTIES
     LINK_FLAGS "${LIBWABT_LINK_FLAGS_STR}"
-    LINK_DEPENDS "${WABT_PRE_JS};${WABT_POST_JS};${EMSCRIPTEN_EXPORTED_JSON}"
+    LINK_DEPENDS "${WABT_POST_JS};${EMSCRIPTEN_EXPORTED_JSON}"
   )
 endif ()

@@ -42,6 +42,7 @@ NAMED_VALUES = {
     'i64': 0x7e,  # -2
     'f32': 0x7d,  # -3
     'f64': 0x7c,  # -4
+    'v128': 0x7b,  # -5
     'anyfunc': 0x70,  # -0x10
     'function': 0x60,  # -0x20
     'void': 0x40,  # -0x40
@@ -63,15 +64,14 @@ NAMED_VALUES = {
     'DATA': 11,
 
     # name subsection codes
+    'NAME_MODULE': 0,
     'NAME_FUNCTION': 1,
     'NAME_LOCALS': 2,
 
     # linking subsection codes
-    'LINKING_STACK_POINTER': 1,
-    'LINKING_SYMBOL_INFO': 2,
-    'LINKING_DATA_SIZE': 3,
     'LINKING_SEGMENT_INFO': 5,
     'LINKING_INIT_FUNCTIONS': 6,
+    'LINKING_SYMBOL_TABLE': 8,
 
     # external kinds
     'func_kind': 0,
@@ -505,8 +505,8 @@ def p_error(p):
   raise Error('%d: syntax error, %s' % (p.lineno, p))
 
 
-parser = yacc.yacc(tabmodule='gen_wasm', debugfile='gen_wasm_debug.txt',
-                   outputdir=OUT_DIR)
+parser = yacc.yacc(debug=False, tabmodule='gen_wasm',
+                   debugfile='gen_wasm_debug.txt', outputdir=OUT_DIR)
 
 ################################################################################
 

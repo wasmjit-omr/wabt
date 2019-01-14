@@ -39,7 +39,7 @@ namespace {
 struct Label {
   Label(LabelType label_type,
         const std::string& name,
-        const BlockSignature& sig,
+        const TypeVector& sig,
         size_t type_stack_size,
         bool used = false)
       : label_type(label_type),
@@ -54,7 +54,7 @@ struct Label {
 
   LabelType label_type;
   const std::string& name;
-  const BlockSignature& sig;
+  const TypeVector& sig;
   size_t type_stack_size;
   bool used = false;
 };
@@ -152,7 +152,7 @@ class CWriter {
 
   void PushLabel(LabelType,
                  const std::string& name,
-                 const BlockSignature&,
+                 const FuncSignature&,
                  bool used = false);
   const Label* FindLabel(const Var& var);
   bool IsTopLabelUsed() const;
@@ -262,6 +262,9 @@ class CWriter {
   void Write(const LoadExpr&);
   void Write(const StoreExpr&);
   void Write(const UnaryExpr&);
+  void Write(const TernaryExpr&);
+  void Write(const SimdLaneOpExpr&);
+  void Write(const SimdShuffleOpExpr&);
 
   const WriteCOptions* options_ = nullptr;
   const Module* module_ = nullptr;
@@ -421,9 +424,16 @@ void CWriter::DropTypes(size_t count) {
 
 void CWriter::PushLabel(LabelType label_type,
                         const std::string& name,
-                        const BlockSignature& sig,
+                        const FuncSignature& sig,
                         bool used) {
-  label_stack_.emplace_back(label_type, name, sig, type_stack_.size(), used);
+  // TODO(binji): Add multi-value support.
+  if ((label_type != LabelType::Func && sig.GetNumParams() != 0) ||
+      sig.GetNumResults() > 1) {
+    UNIMPLEMENTED("multi value support");
+  }
+
+  label_stack_.emplace_back(label_type, name, sig.result_types,
+                            type_stack_.size(), used);
 }
 
 const Label* CWriter::FindLabel(const Var& var) {
@@ -485,8 +495,9 @@ std::string CWriter::MangleTypes(const TypeVector& types) {
     return std::string("v");
 
   std::string result;
-  for (auto type: types)
+  for (auto type : types) {
     result += MangleType(type);
+  }
   return result;
 }
 
@@ -496,7 +507,7 @@ std::string CWriter::MangleName(string_view name) {
   std::string result = "Z_";
 
   if (!name.empty()) {
-    for (char c: name) {
+    for (char c : name) {
       if ((isalnum(c) && c != kPrefix) || c == '_') {
         result += c;
       } else {
@@ -544,7 +555,7 @@ std::string CWriter::LegalizeName(string_view name) {
 std::string CWriter::DefineName(SymbolSet* set, string_view name) {
   std::string legal = LegalizeName(name);
   if (set->find(legal) != set->end()) {
-    std::string base = legal + "_";;
+    std::string base = legal + "_";
     size_t count = 0;
     do {
       legal = base + std::to_string(count++);
@@ -555,7 +566,7 @@ std::string CWriter::DefineName(SymbolSet* set, string_view name) {
 }
 
 string_view StripLeadingDollar(string_view name) {
-  if(!name.empty() && name[0] == '$') {
+  if (!name.empty() && name[0] == '$') {
     name.remove_prefix(1);
   }
   return name;
@@ -782,7 +793,7 @@ void CWriter::Write(const ResultType& rt) {
 void CWriter::Write(const Const& const_) {
   switch (const_.type) {
     case Type::I32:
-      Writef("%u" "u", static_cast<int32_t>(const_.u32));
+      Writef("%uu", static_cast<int32_t>(const_.u32));
       break;
 
     case Type::I64:
@@ -859,8 +870,9 @@ void CWriter::WriteInitExpr(const ExprList& expr_list) {
 }
 
 void CWriter::InitGlobalSymbols() {
-  for (const char* symbol : s_global_symbols)
+  for (const char* symbol : s_global_symbols) {
     global_syms_.insert(symbol);
+  }
 }
 
 std::string CWriter::GenerateHeaderGuard() const {
@@ -893,11 +905,13 @@ void CWriter::WriteFuncTypes() {
     Index num_results = func_type->GetNumResults();
     Write("  func_types[", func_type_index, "] = wasm_rt_register_func_type(",
           num_params, ", ", num_results);
-    for (Index i = 0; i < num_params; ++i)
+    for (Index i = 0; i < num_params; ++i) {
       Write(", ", TypeEnum(func_type->GetParamType(i)));
+    }
 
-    for (Index i = 0; i < num_results; ++i)
+    for (Index i = 0; i < num_results; ++i) {
       Write(", ", TypeEnum(func_type->GetResultType(i)));
+    }
 
     Write(");", Newline());
     ++func_type_index;
@@ -1223,7 +1237,8 @@ void CWriter::WriteExports(WriteExportsKind kind) {
         break;
       }
 
-      default: WABT_UNREACHABLE;
+      default:
+        WABT_UNREACHABLE;
     }
 
     if (kind == WriteExportsKind::Initializers) {
@@ -1276,7 +1291,7 @@ void CWriter::Write(const Func& func) {
   std::string label = DefineLocalScopeName(kImplicitFuncLabel);
   ResetTypeStack(0);
   std::string empty;  // Must not be temporary, since address is taken by Label.
-  PushLabel(LabelType::Func, empty, func.decl.sig.result_types);
+  PushLabel(LabelType::Func, empty, func.decl.sig);
   Write(func.exprs, LabelDecl(label));
   PopLabel();
   ResetTypeStack(0);
@@ -1306,7 +1321,7 @@ void CWriter::WriteParams() {
     Write("void");
   } else {
     std::vector<std::string> index_to_name;
-    MakeTypeBindingReverseMapping(func_->decl.sig.param_types,
+    MakeTypeBindingReverseMapping(func_->decl.sig.param_types.size(),
                                   func_->param_bindings, &index_to_name);
     Indent(4);
     for (Index i = 0; i < func_->GetNumParams(); ++i) {
@@ -1325,8 +1340,8 @@ void CWriter::WriteParams() {
 
 void CWriter::WriteLocals() {
   std::vector<std::string> index_to_name;
-  MakeTypeBindingReverseMapping(func_->local_types, func_->local_bindings,
-                                &index_to_name);
+  MakeTypeBindingReverseMapping(func_->local_types.size(),
+                                func_->local_bindings, &index_to_name);
   for (Type type : {Type::I32, Type::I64, Type::F32, Type::F64}) {
     Index local_index = 0;
     size_t count = 0;
@@ -1356,7 +1371,7 @@ void CWriter::WriteLocals() {
 void CWriter::WriteStackVarDeclarations() {
   for (Type type : {Type::I32, Type::I64, Type::F32, Type::F64}) {
     size_t count = 0;
-    for (const auto& pair: stack_var_sym_map_) {
+    for (const auto& pair : stack_var_sym_map_) {
       Type stp_type = pair.first.second;
       const std::string& name = pair.second;
 
@@ -1382,7 +1397,7 @@ void CWriter::WriteStackVarDeclarations() {
 }
 
 void CWriter::Write(const ExprList& exprs) {
-  for (const Expr& expr: exprs) {
+  for (const Expr& expr : exprs) {
     switch (expr.type()) {
       case ExprType::Binary:
         Write(*cast<BinaryExpr>(&expr));
@@ -1392,11 +1407,11 @@ void CWriter::Write(const ExprList& exprs) {
         const Block& block = cast<BlockExpr>(&expr)->block;
         std::string label = DefineLocalScopeName(block.label);
         size_t mark = MarkTypeStack();
-        PushLabel(LabelType::Block, block.label, block.sig);
+        PushLabel(LabelType::Block, block.label, block.decl.sig);
         Write(block.exprs, LabelDecl(label));
         ResetTypeStack(mark);
         PopLabel();
-        PushTypes(block.sig);
+        PushTypes(block.decl.sig.result_types);
         break;
       }
 
@@ -1416,8 +1431,9 @@ void CWriter::Write(const ExprList& exprs) {
         Write("switch (", StackVar(0), ") ", OpenBrace());
         DropTypes(1);
         Index i = 0;
-        for (const Var& var : bt_expr->targets)
+        for (const Var& var : bt_expr->targets) {
           Write("case ", i++, ": ", GotoLabel(var), Newline());
+        }
         Write("default: ");
         Write(GotoLabel(bt_expr->default_target), Newline(), CloseBrace(),
               Newline());
@@ -1438,8 +1454,9 @@ void CWriter::Write(const ExprList& exprs) {
 
         Write(GlobalVar(var), "(");
         for (Index i = 0; i < num_params; ++i) {
-          if (i != 0)
+          if (i != 0) {
             Write(", ");
+          }
           Write(StackVar(num_params - i - 1));
         }
         Write(");", Newline());
@@ -1491,16 +1508,6 @@ void CWriter::Write(const ExprList& exprs) {
         Write(*cast<ConvertExpr>(&expr));
         break;
 
-      case ExprType::CurrentMemory: {
-        assert(module_->memories.size() == 1);
-        Memory* memory = module_->memories[0];
-
-        PushType(Type::I32);
-        Write(StackVar(0), " = ", ExternalRef(memory->name), ".pages;",
-              Newline());
-        break;
-      }
-
       case ExprType::Drop:
         DropTypes(1);
         break;
@@ -1519,22 +1526,13 @@ void CWriter::Write(const ExprList& exprs) {
         break;
       }
 
-      case ExprType::GrowMemory: {
-        assert(module_->memories.size() == 1);
-        Memory* memory = module_->memories[0];
-
-        Write(StackVar(0), " = wasm_rt_grow_memory(", ExternalPtr(memory->name),
-              ", ", StackVar(0), ");", Newline());
-        break;
-      }
-
       case ExprType::If: {
         const IfExpr& if_ = *cast<IfExpr>(&expr);
         Write("if (", StackVar(0), ") ", OpenBrace());
         DropTypes(1);
         std::string label = DefineLocalScopeName(if_.true_.label);
         size_t mark = MarkTypeStack();
-        PushLabel(LabelType::If, if_.true_.label, if_.true_.sig);
+        PushLabel(LabelType::If, if_.true_.label, if_.true_.decl.sig);
         Write(if_.true_.exprs, CloseBrace());
         if (!if_.false_.empty()) {
           ResetTypeStack(mark);
@@ -1543,7 +1541,7 @@ void CWriter::Write(const ExprList& exprs) {
         ResetTypeStack(mark);
         Write(Newline(), LabelDecl(label));
         PopLabel();
-        PushTypes(if_.true_.sig);
+        PushTypes(if_.true_.decl.sig.result_types);
         break;
       }
 
@@ -1557,13 +1555,32 @@ void CWriter::Write(const ExprList& exprs) {
           Write(DefineLocalScopeName(block.label), ": ");
           Indent();
           size_t mark = MarkTypeStack();
-          PushLabel(LabelType::Loop, block.label, block.sig);
+          PushLabel(LabelType::Loop, block.label, block.decl.sig);
           Write(Newline(), block.exprs);
           ResetTypeStack(mark);
           PopLabel();
-          PushTypes(block.sig);
+          PushTypes(block.decl.sig.result_types);
           Dedent();
         }
+        break;
+      }
+
+      case ExprType::MemoryGrow: {
+        assert(module_->memories.size() == 1);
+        Memory* memory = module_->memories[0];
+
+        Write(StackVar(0), " = wasm_rt_grow_memory(", ExternalPtr(memory->name),
+              ", ", StackVar(0), ");", Newline());
+        break;
+      }
+
+      case ExprType::MemorySize: {
+        assert(module_->memories.size() == 1);
+        Memory* memory = module_->memories[0];
+
+        PushType(Type::I32);
+        Write(StackVar(0), " = ", ExternalRef(memory->name), ".pages;",
+              Newline());
         break;
       }
 
@@ -1614,6 +1631,20 @@ void CWriter::Write(const ExprList& exprs) {
         Write(*cast<UnaryExpr>(&expr));
         break;
 
+      case ExprType::Ternary:
+        Write(*cast<TernaryExpr>(&expr));
+        break;
+
+      case ExprType::SimdLaneOp: {
+        Write(*cast<SimdLaneOpExpr>(&expr));
+        break;
+      }
+
+      case ExprType::SimdShuffleOp: {
+        Write(*cast<SimdShuffleOpExpr>(&expr));
+        break;
+      }
+
       case ExprType::Unreachable:
         Write("UNREACHABLE;", Newline());
         return;
@@ -1624,9 +1655,10 @@ void CWriter::Write(const ExprList& exprs) {
       case ExprType::AtomicRmw:
       case ExprType::AtomicRmwCmpxchg:
       case ExprType::AtomicStore:
+      case ExprType::IfExcept:
       case ExprType::Rethrow:
       case ExprType::Throw:
-      case ExprType::TryBlock:
+      case ExprType::Try:
         UNIMPLEMENTED("...");
         break;
     }
@@ -2150,6 +2182,67 @@ void CWriter::Write(const UnaryExpr& expr) {
   }
 }
 
+void CWriter::Write(const TernaryExpr& expr) {
+  switch (expr.opcode) {
+    case Opcode::V128BitSelect: {
+      Type result_type = expr.opcode.GetResultType();
+      Write(StackVar(2, result_type), " = ", "v128.bitselect", "(", StackVar(0),
+            ", ", StackVar(1), ", ", StackVar(2), ");", Newline());
+      DropTypes(3);
+      PushType(result_type);
+      break;
+    }
+    default:
+      WABT_UNREACHABLE;
+  }
+}
+
+void CWriter::Write(const SimdLaneOpExpr& expr) {
+  Type result_type = expr.opcode.GetResultType();
+
+  switch (expr.opcode) {
+    case Opcode::I8X16ExtractLaneS:
+    case Opcode::I8X16ExtractLaneU:
+    case Opcode::I16X8ExtractLaneS:
+    case Opcode::I16X8ExtractLaneU:
+    case Opcode::I32X4ExtractLane:
+    case Opcode::I64X2ExtractLane:
+    case Opcode::F32X4ExtractLane:
+    case Opcode::F64X2ExtractLane: {
+      Write(StackVar(0, result_type), " = ", expr.opcode.GetName(), "(",
+            StackVar(0), ", lane Imm: ", expr.val, ");", Newline());
+      DropTypes(1);
+      break;
+    }
+    case Opcode::I8X16ReplaceLane:
+    case Opcode::I16X8ReplaceLane:
+    case Opcode::I32X4ReplaceLane:
+    case Opcode::I64X2ReplaceLane:
+    case Opcode::F32X4ReplaceLane:
+    case Opcode::F64X2ReplaceLane: {
+      Write(StackVar(1, result_type), " = ", expr.opcode.GetName(), "(",
+            StackVar(0), ", ", StackVar(1), ", lane Imm: ", expr.val, ");",
+            Newline());
+      DropTypes(2);
+      break;
+    }
+    default:
+      WABT_UNREACHABLE;
+  }
+
+  PushType(result_type);
+}
+
+void CWriter::Write(const SimdShuffleOpExpr& expr) {
+  Type result_type = expr.opcode.GetResultType();
+  Write(StackVar(1, result_type), " = ", expr.opcode.GetName(), "(",
+        StackVar(1), " ", StackVar(0), ", lane Imm: $0x%08x %08x %08x %08x",
+        expr.val.v[0], expr.val.v[1], expr.val.v[2], expr.val.v[3], ")",
+        Newline());
+  DropTypes(2);
+  PushType(result_type);
+}
+
 void CWriter::WriteCHeader() {
   stream_ = h_stream_;
   std::string guard = GenerateHeaderGuard();
@@ -2186,7 +2279,6 @@ Result CWriter::WriteModule(const Module& module) {
   WriteCSource();
   return result_;
 }
-
 
 }  // end anonymous namespace
 

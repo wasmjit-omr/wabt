@@ -825,7 +825,8 @@ static interp::Result DefaultHostCallback(const HostFunc* func,
                                           Index num_results,
                                           TypedValue* out_results,
                                           void* user_data) {
-  memset(out_results, 0, sizeof(TypedValue) * num_results);
+  memset(static_cast<void*>(out_results), 0,
+                            sizeof(TypedValue) * num_results);
   for (Index i = 0; i < num_results; ++i)
     out_results[i].type = sig->result_types[i];
 
@@ -847,7 +848,11 @@ class SpectestHostImportDelegate : public HostImportDelegate {
                           interp::Func* func,
                           interp::FuncSignature* func_sig,
                           const ErrorCallback& callback) override {
-    if (import->field_name == "print") {
+    if (import->field_name == "print" || import->field_name == "print_i32" ||
+        import->field_name == "print_f32" ||
+        import->field_name == "print_f64" ||
+        import->field_name == "print_i32_f32" ||
+        import->field_name == "print_f64_f64") {
       cast<HostFunc>(func)->callback = DefaultHostCallback;
       return wabt::Result::Ok;
     } else {
@@ -891,34 +896,23 @@ class SpectestHostImportDelegate : public HostImportDelegate {
   wabt::Result ImportGlobal(interp::GlobalImport* import,
                             interp::Global* global,
                             const ErrorCallback& callback) override {
-    if (import->field_name == "global") {
-      switch (global->typed_value.type) {
-        case Type::I32:
-          global->typed_value.value.i32 = 666;
-          break;
-
-        case Type::F32: {
-          float value = 666.6f;
-          memcpy(&global->typed_value.value.f32_bits, &value, sizeof(value));
-          break;
-        }
-
-        case Type::I64:
-          global->typed_value.value.i64 = 666;
-          break;
-
-        case Type::F64: {
-          double value = 666.6;
-          memcpy(&global->typed_value.value.f64_bits, &value, sizeof(value));
-          break;
-        }
-
-        default:
-          PrintError(callback, "bad type for host global import " PRIimport,
-                     PRINTF_IMPORT_ARG(*import));
-          return wabt::Result::Error;
-      }
-
+    if (import->field_name == "global_i32") {
+      global->typed_value.type = Type::I32;
+      global->typed_value.value.i32 = 666;
+      return wabt::Result::Ok;
+    } else if (import->field_name == "global_f32") {
+      global->typed_value.type = Type::F32;
+      float value = 666.6f;
+      memcpy(&global->typed_value.value.f32_bits, &value, sizeof(value));
+      return wabt::Result::Ok;
+    } else if (import->field_name == "global_i64") {
+      global->typed_value.type = Type::I64;
+      global->typed_value.value.i64 = 666;
+      return wabt::Result::Ok;
+    } else if (import->field_name == "global_f64") {
+      global->typed_value.type = Type::F64;
+      double value = 666.6;
+      memcpy(&global->typed_value.value.f64_bits, &value, sizeof(value));
       return wabt::Result::Ok;
     } else {
       PrintError(callback, "unknown host global import " PRIimport,
@@ -1099,8 +1093,9 @@ static wabt::Result ReadModule(string_view module_filename,
   if (Succeeded(result)) {
     const bool kReadDebugNames = true;
     const bool kStopOnFirstError = true;
+    const bool kFailOnCustomSectionError = true;
     ReadBinaryOptions options(s_features, s_log_stream.get(), kReadDebugNames,
-                              kStopOnFirstError);
+                              kStopOnFirstError, kFailOnCustomSectionError);
     result = ReadBinaryInterp(env, file_data.data(), file_data.size(),
                               &options, error_handler, out_module);
 
