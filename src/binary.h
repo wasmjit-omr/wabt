@@ -28,6 +28,7 @@
 #define WABT_BINARY_SECTION_RELOC "reloc"
 #define WABT_BINARY_SECTION_LINKING "linking"
 #define WABT_BINARY_SECTION_EXCEPTION "exception"
+#define WABT_BINARY_SECTION_DYLINK "dylink"
 
 #define WABT_FOREACH_BINARY_SECTION(V) \
   V(Custom, custom, 0)                 \
@@ -57,6 +58,18 @@ enum class BinarySection {
 };
 /* clang-format on */
 static const int kBinarySectionCount = WABT_ENUM_COUNT(BinarySection);
+
+enum class NameSectionSubsection {
+  Module = 0,
+  Function = 1,
+  Local = 2,
+};
+
+enum class SegmentFlags : uint8_t {
+  IndexZero = 0,
+  Passive = 1,
+  IndexOther = 2,
+};
 
 extern const char* g_section_name[];
 

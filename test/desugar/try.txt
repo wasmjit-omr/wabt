@@ -1,15 +1,13 @@
 ;;; TOOL: wat-desugar
-;;; FLAGS: --enable-exceptions
+;;; ARGS: --enable-exceptions
 (module
   (except $ex i32)
   (func (result i32)
     try $try1 (result i32)
       nop
       i32.const 7
-    catch $ex
+    catch
       nop
-    catch_all
-      rethrow $try1
     end
   )
 )
@@ -20,10 +18,8 @@
     try $try1 (result i32)
       nop
       i32.const 7
-    catch $ex
+    catch
       nop
-    catch_all
-      rethrow $try1
     end)
   (type (;0;) (func (result i32))))
 ;;; STDOUT ;;)

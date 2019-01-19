@@ -1,5 +1,4 @@
-;;; ERROR: 1
-;;; TOOL: run-gen-wasm
+;;; TOOL: run-gen-wasm-bad
 magic
 version
 section(TYPE) { count[1] function params[0] results[1] i32 }
@@ -12,18 +11,15 @@ section(CODE) {
   }
 }
 section("name") {
-  subsection[1]
-  length[10]
-  func_count[1]
-  index[0]
-  str("$F0")
-  subsection[1]
-  data[1]
-  data[1]
-  data[1]
+  section(NAME_FUNCTION) {
+    func_count[1]
+    index[0]
+    str("$F0")
+
+    data[1]  ;; extra unused data
+  }
 }
 (;; STDERR ;;;
-Error running "wasm2wat":
-000002c: error: unfinished sub-section (expected end: 0x30)
-
+000002c: error: unfinished sub-section (expected end: 0x2d)
+000002c: error: unfinished sub-section (expected end: 0x2d)
 ;;; STDERR ;;)

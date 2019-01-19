@@ -22,7 +22,7 @@
 #include "src/apply-names.h"
 #include "src/binary-reader.h"
 #include "src/binary-reader-ir.h"
-#include "src/error-handler.h"
+#include "src/error-formatter.h"
 #include "src/feature.h"
 #include "src/generate-names.h"
 #include "src/ir.h"
@@ -41,6 +41,7 @@ static Features s_features;
 static WriteWatOptions s_write_wat_options;
 static bool s_generate_names;
 static bool s_read_debug_names = true;
+static bool s_fail_on_custom_section_error = true;
 static std::unique_ptr<FileStream> s_log_stream;
 static bool s_validate = true;
 
@@ -76,8 +77,13 @@ static void ParseOptions(int argc, char** argv) {
   s_features.AddOptions(&parser);
   parser.AddOption("inline-exports", "Write all exports inline",
                    []() { s_write_wat_options.inline_export = true; });
+  parser.AddOption("inline-imports", "Write all imports inline",
+                   []() { s_write_wat_options.inline_import = true; });
   parser.AddOption("no-debug-names", "Ignore debug names in the binary file",
                    []() { s_read_debug_names = false; });
+  parser.AddOption("ignore-custom-section-errors",
+                   "Ignore errors in custom sections",
+                   []() { s_fail_on_custom_section_error = false; });
   parser.AddOption(
       "generate-names",
       "Give auto-generated names to non-named functions, types, etc.",
@@ -101,21 +107,23 @@ int ProgramMain(int argc, char** argv) {
   std::vector<uint8_t> file_data;
   result = ReadFile(s_infile.c_str(), &file_data);
   if (Succeeded(result)) {
-    ErrorHandlerFile error_handler(Location::Type::Binary);
+    Errors errors;
     Module module;
     const bool kStopOnFirstError = true;
     ReadBinaryOptions options(s_features, s_log_stream.get(),
-                              s_read_debug_names, kStopOnFirstError);
-    result = ReadBinaryIr(s_infile.c_str(), DataOrNull(file_data),
-                          file_data.size(), &options, &error_handler, &module);
+                              s_read_debug_names, kStopOnFirstError,
+                              s_fail_on_custom_section_error);
+    result = ReadBinaryIr(s_infile.c_str(), file_data.data(), file_data.size(),
+                          options, &errors, &module);
     if (Succeeded(result)) {
       if (Succeeded(result) && s_validate) {
-        WastLexer* lexer = nullptr;
-        result = ValidateModule(lexer, &module, &error_handler);
+        ValidateOptions options(s_features);
+        result = ValidateModule(&module, &errors, options);
       }
 
-      if (s_generate_names)
+      if (s_generate_names) {
         result = GenerateNames(&module);
+      }
 
       if (Succeeded(result)) {
         /* TODO(binji): This shouldn't fail; if a name can't be applied
@@ -125,11 +133,12 @@ int ProgramMain(int argc, char** argv) {
       }
 
       if (Succeeded(result)) {
-        FileStream stream(!s_outfile.empty() ? FileStream(s_outfile.c_str())
+        FileStream stream(!s_outfile.empty() ? FileStream(s_outfile)
                                              : FileStream(stdout));
-        result = WriteWat(&stream, &module, &s_write_wat_options);
+        result = WriteWat(&stream, &module, s_write_wat_options);
       }
     }
+    FormatErrorsToFile(errors, Location::Type::Binary);
   }
   return result != Result::Ok;
 }

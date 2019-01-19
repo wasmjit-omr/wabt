@@ -1,5 +1,5 @@
-;;; TOOL: run-objdump
-;;; FLAGS: --headers --spec
+;;; TOOL: run-objdump-spec
+;;; ARGS1: --headers %(temp_file)s.0.wasm %(temp_file)s.1.wasm
 (module
   (func (param $param2 i64))
 )
@@ -18,7 +18,7 @@ Sections:
 
 Code Disassembly:
 
-000016 func[0]:
+000017 func[0]:
  000018: 0b                         | end
 
 multi_file.1.wasm:	file format wasm 0x1
@@ -31,6 +31,6 @@ Sections:
 
 Code Disassembly:
 
-000016 func[0]:
+000017 func[0]:
  000018: 0b                         | end
 ;;; STDOUT ;;)

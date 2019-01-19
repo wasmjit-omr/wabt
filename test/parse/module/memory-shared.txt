@@ -1,1 +1,3 @@
-(module (memory (shared 1 1)))
+;;; TOOL: wat2wasm
+;;; ARGS: --enable-threads
+(module (memory 1 1 shared))

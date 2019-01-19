@@ -1,5 +1,4 @@
-;;; ERROR: 1
-;;; TOOL: run-gen-wasm
+;;; TOOL: run-gen-wasm-bad
 magic
 version
 section(TYPE) { count[1] function params[0] results[0] }
@@ -12,7 +11,6 @@ section(CODE) {
   }
 }
 (;; STDERR ;;;
-Error running "wasm2wat":
 0000019: error: expected valid local type
-
+0000019: error: expected valid local type
 ;;; STDERR ;;)

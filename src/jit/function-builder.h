@@ -23,7 +23,7 @@
 #include "ilgen/MethodBuilder.hpp"
 #include "ilgen/VirtualMachineState.hpp"
 
-#include "src/interp.h"
+#include "src/interp/interp.h"
 
 #include <type_traits>
 

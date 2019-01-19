@@ -1,5 +1,5 @@
 ;;; TOOL: run-objdump
-;;; FLAGS: -v
+;;; ARGS0: -v
 (module
   (func (param i32 i64 f32 f64)))
 (;; STDOUT ;;;
@@ -39,6 +39,6 @@ param-multi.wasm:	file format wasm 0x1
 
 Code Disassembly:
 
-000019 func[0]:
+00001a func[0]:
  00001b: 0b                         | end
 ;;; STDOUT ;;)

@@ -1,5 +1,5 @@
 ;;; TOOL: run-gen-wasm-interp
-;;; FLAGS: -v
+;;; ARGS: -v
 ;;; ERROR: 1
 magic
 version
@@ -12,9 +12,7 @@ section(CODE) {
   }
 }
 (;; STDERR ;;;
-Error running "wasm-interp":
 0000015: error: function signature count != function body count
-
 ;;; STDERR ;;)
 (;; STDOUT ;;;
 BeginModule(version: 1)

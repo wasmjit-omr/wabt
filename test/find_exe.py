@@ -25,8 +25,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 EXECUTABLES = [
     'wat2wasm', 'wast2json', 'wasm2wat', 'wasm-objdump', 'wasm-interp',
-    'wasm-opcodecnt', 'wat-desugar', 'wasm-link', 'spectest-interp',
+    'wasm-opcodecnt', 'wat-desugar', 'spectest-interp', 'wasm-validate',
+    'wasm2c', 'wasm-strip'
 ]
+
+GEN_WASM_PY = os.path.join(SCRIPT_DIR, 'gen-wasm.py')
+GEN_SPEC_JS_PY = os.path.join(SCRIPT_DIR, 'gen-spec-js.py')
 
 
 def GetDefaultPath():
@@ -80,10 +84,6 @@ def GetWasmdumpExecutable(override=None):
   return FindExecutable('wasm-objdump', override)
 
 
-def GetWasmlinkExecutable(override=None):
-  return FindExecutable('wasm-link', override)
-
-
 def GetWasmInterpExecutable(override=None):
   return FindExecutable('wasm-interp', override)
 
@@ -98,3 +98,15 @@ def GetWasmOpcodeCntExecutable(override=None):
 
 def GetWatDesugarExecutable(override=None):
   return FindExecutable('wat-desugar', override)
+
+
+def GetWasmValidateExecutable(override=None):
+  return FindExecutable('wasm-validate', override)
+
+
+def GetWasm2CExecutable(override=None):
+  return FindExecutable('wasm2c', override)
+
+
+def GetWasmStripExecutable(override=None):
+  return FindExecutable('wasm-strip', override)

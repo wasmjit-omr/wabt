@@ -21,7 +21,6 @@
 
 #include "config.h"
 
-#include "src/error-handler.h"
 #include "src/lexer-source.h"
 #include "src/wast-parser.h"
 
@@ -82,9 +81,8 @@
 
 namespace wabt {
 
-WastLexer::WastLexer(std::unique_ptr<LexerSource> source, const char* filename)
+WastLexer::WastLexer(std::unique_ptr<LexerSource> source, string_view filename)
     : source_(std::move(source)),
-      line_finder_(source_->Clone()),
       filename_(filename),
       line_(1),
       comment_nesting_(0),
@@ -103,17 +101,20 @@ WastLexer::~WastLexer() {
 }
 
 // static
-std::unique_ptr<WastLexer> WastLexer::CreateFileLexer(const char* filename) {
-  std::unique_ptr<LexerSource> source(new LexerSourceFile(filename));
-  return std::unique_ptr<WastLexer>(new WastLexer(std::move(source), filename));
+std::unique_ptr<WastLexer> WastLexer::CreateFileLexer(string_view filename) {
+  auto source = MakeUnique<LexerSourceFile>(filename);
+  if (!source->IsOpen()) {
+    return std::unique_ptr<WastLexer>();
+  }
+  return MakeUnique<WastLexer>(std::move(source), filename);
 }
 
 // static
-std::unique_ptr<WastLexer> WastLexer::CreateBufferLexer(const char* filename,
+std::unique_ptr<WastLexer> WastLexer::CreateBufferLexer(string_view filename,
                                                         const void* data,
                                                         size_t size) {
-  std::unique_ptr<LexerSource> source(new LexerSourceBuffer(data, size));
-  return std::unique_ptr<WastLexer>(new WastLexer(std::move(source), filename));
+  return MakeUnique<WastLexer>(MakeUnique<LexerSourceBuffer>(data, size),
+                               filename);
 }
 
 Location WastLexer::GetLocation() {
@@ -129,8 +130,9 @@ std::string WastLexer::GetText(size_t offset) {
 }
 
 Result WastLexer::Fill(size_t need) {
-  if (eof_)
+  if (eof_) {
     return Result::Error;
+  }
   size_t free = next_pos_ - buffer_;
   assert(static_cast<size_t>(cursor_ - buffer_) >= free);
   // Our buffer is too small, need to realloc.
@@ -146,8 +148,9 @@ Result WastLexer::Fill(size_t need) {
       new_buffer_size *= 2;
 
     char* new_buffer = new char[new_buffer_size];
-    if (limit_ > next_pos_)
+    if (limit_ > next_pos_) {
       memmove(new_buffer, next_pos_, limit_ - next_pos_);
+    }
     buffer_ = new_buffer;
     buffer_size_ = new_buffer_size;
     next_pos_ = new_buffer + (next_pos_ - old_buffer) - free;
@@ -159,8 +162,9 @@ Result WastLexer::Fill(size_t need) {
     delete[] old_buffer;
   } else {
     // Shift everything down to make more room in the buffer.
-    if (limit_ > next_pos_)
+    if (limit_ > next_pos_) {
       memmove(buffer_, next_pos_, limit_ - next_pos_);
+    }
     next_pos_ -= free;
     marker_ -= free;
     cursor_ -= free;
@@ -252,7 +256,8 @@ Token WastLexer::GetToken(WastParser* parser) {
       <i> "i64"                 { RETURN_TYPE(ValueType, I64); }
       <i> "f32"                 { RETURN_TYPE(ValueType, F32); }
       <i> "f64"                 { RETURN_TYPE(ValueType, F64); }
-      <i> "anyfunc"             { RETURN(Anyfunc); }
+      <i> "v128"                { RETURN_TYPE(ValueType, V128); }
+      <i> "funcref"             { RETURN(Funcref); }
       <i> "mut"                 { RETURN(Mut); }
       <i> "nop"                 { RETURN_OPCODE0(Nop); }
       <i> "block"               { RETURN_OPCODE0(Block); }
@@ -268,11 +273,11 @@ Token WastLexer::GetToken(WastParser* parser) {
       <i> "drop"                { RETURN_OPCODE0(Drop); }
       <i> "end"                 { RETURN_OPCODE0(End); }
       <i> "return"              { RETURN_OPCODE0(Return); }
-      <i> "get_local"           { RETURN_OPCODE0(GetLocal); }
-      <i> "set_local"           { RETURN_OPCODE0(SetLocal); }
-      <i> "tee_local"           { RETURN_OPCODE0(TeeLocal); }
-      <i> "get_global"          { RETURN_OPCODE0(GetGlobal); }
-      <i> "set_global"          { RETURN_OPCODE0(SetGlobal); }
+      <i> "local.get"           { RETURN_OPCODE0(LocalGet); }
+      <i> "local.set"           { RETURN_OPCODE0(LocalSet); }
+      <i> "local.tee"           { RETURN_OPCODE0(LocalTee); }
+      <i> "global.get"          { RETURN_OPCODE0(GlobalGet); }
+      <i> "global.set"          { RETURN_OPCODE0(GlobalSet); }
       <i> "i32.load"            { RETURN_OPCODE(Load, I32Load); }
       <i> "i64.load"            { RETURN_OPCODE(Load, I64Load); }
       <i> "f32.load"            { RETURN_OPCODE(Load, F32Load); }
@@ -405,47 +410,56 @@ Token WastLexer::GetToken(WastParser* parser) {
       <i> "f64.gt"              { RETURN_OPCODE(Compare, F64Gt); }
       <i> "f32.ge"              { RETURN_OPCODE(Compare, F32Ge); }
       <i> "f64.ge"              { RETURN_OPCODE(Compare, F64Ge); }
-      <i> "i64.extend_s/i32"    { RETURN_OPCODE(Convert, I64ExtendSI32); }
-      <i> "i64.extend_u/i32"    { RETURN_OPCODE(Convert, I64ExtendUI32); }
-      <i> "i32.wrap/i64"        { RETURN_OPCODE(Convert, I32WrapI64); }
-      <i> "i32.trunc_s/f32"     { RETURN_OPCODE(Convert, I32TruncSF32); }
-      <i> "i64.trunc_s/f32"     { RETURN_OPCODE(Convert, I64TruncSF32); }
-      <i> "i32.trunc_s/f64"     { RETURN_OPCODE(Convert, I32TruncSF64); }
-      <i> "i64.trunc_s/f64"     { RETURN_OPCODE(Convert, I64TruncSF64); }
-      <i> "i32.trunc_u/f32"     { RETURN_OPCODE(Convert, I32TruncUF32); }
-      <i> "i64.trunc_u/f32"     { RETURN_OPCODE(Convert, I64TruncUF32); }
-      <i> "i32.trunc_u/f64"     { RETURN_OPCODE(Convert, I32TruncUF64); }
-      <i> "i64.trunc_u/f64"     { RETURN_OPCODE(Convert, I64TruncUF64); }
-      <i> "i32.trunc_s:sat/f32" { RETURN_OPCODE(Convert, I32TruncSSatF32); }
-      <i> "i64.trunc_s:sat/f32" { RETURN_OPCODE(Convert, I64TruncSSatF32); }
-      <i> "i32.trunc_s:sat/f64" { RETURN_OPCODE(Convert, I32TruncSSatF64); }
-      <i> "i64.trunc_s:sat/f64" { RETURN_OPCODE(Convert, I64TruncSSatF64); }
-      <i> "i32.trunc_u:sat/f32" { RETURN_OPCODE(Convert, I32TruncUSatF32); }
-      <i> "i64.trunc_u:sat/f32" { RETURN_OPCODE(Convert, I64TruncUSatF32); }
-      <i> "i32.trunc_u:sat/f64" { RETURN_OPCODE(Convert, I32TruncUSatF64); }
-      <i> "i64.trunc_u:sat/f64" { RETURN_OPCODE(Convert, I64TruncUSatF64); }
-      <i> "f32.convert_s/i32"   { RETURN_OPCODE(Convert, F32ConvertSI32); }
-      <i> "f64.convert_s/i32"   { RETURN_OPCODE(Convert, F64ConvertSI32); }
-      <i> "f32.convert_s/i64"   { RETURN_OPCODE(Convert, F32ConvertSI64); }
-      <i> "f64.convert_s/i64"   { RETURN_OPCODE(Convert, F64ConvertSI64); }
-      <i> "f32.convert_u/i32"   { RETURN_OPCODE(Convert, F32ConvertUI32); }
-      <i> "f64.convert_u/i32"   { RETURN_OPCODE(Convert, F64ConvertUI32); }
-      <i> "f32.convert_u/i64"   { RETURN_OPCODE(Convert, F32ConvertUI64); }
-      <i> "f64.convert_u/i64"   { RETURN_OPCODE(Convert, F64ConvertUI64); }
-      <i> "f64.promote/f32"     { RETURN_OPCODE(Convert, F64PromoteF32); }
-      <i> "f32.demote/f64"      { RETURN_OPCODE(Convert, F32DemoteF64); }
-      <i> "f32.reinterpret/i32" { RETURN_OPCODE(Convert, F32ReinterpretI32); }
-      <i> "i32.reinterpret/f32" { RETURN_OPCODE(Convert, I32ReinterpretF32); }
-      <i> "f64.reinterpret/i64" { RETURN_OPCODE(Convert, F64ReinterpretI64); }
-      <i> "i64.reinterpret/f64" { RETURN_OPCODE(Convert, I64ReinterpretF64); }
+      <i> "i64.extend_i32_s"    { RETURN_OPCODE(Convert, I64ExtendI32S); }
+      <i> "i64.extend_i32_u"    { RETURN_OPCODE(Convert, I64ExtendI32U); }
+      <i> "i32.wrap_i64"        { RETURN_OPCODE(Convert, I32WrapI64); }
+      <i> "i32.trunc_f32_s"     { RETURN_OPCODE(Convert, I32TruncF32S); }
+      <i> "i64.trunc_f32_s"     { RETURN_OPCODE(Convert, I64TruncF32S); }
+      <i> "i32.trunc_f64_s"     { RETURN_OPCODE(Convert, I32TruncF64S); }
+      <i> "i64.trunc_f64_s"     { RETURN_OPCODE(Convert, I64TruncF64S); }
+      <i> "i32.trunc_f32_u"     { RETURN_OPCODE(Convert, I32TruncF32U); }
+      <i> "i64.trunc_f32_u"     { RETURN_OPCODE(Convert, I64TruncF32U); }
+      <i> "i32.trunc_f64_u"     { RETURN_OPCODE(Convert, I32TruncF64U); }
+      <i> "i64.trunc_f64_u"     { RETURN_OPCODE(Convert, I64TruncF64U); }
+      <i> "i32.trunc_sat_f32_s" { RETURN_OPCODE(Convert, I32TruncSatF32S); }
+      <i> "i64.trunc_sat_f32_s" { RETURN_OPCODE(Convert, I64TruncSatF32S); }
+      <i> "i32.trunc_sat_f64_s" { RETURN_OPCODE(Convert, I32TruncSatF64S); }
+      <i> "i64.trunc_sat_f64_s" { RETURN_OPCODE(Convert, I64TruncSatF64S); }
+      <i> "i32.trunc_sat_f32_u" { RETURN_OPCODE(Convert, I32TruncSatF32U); }
+      <i> "i64.trunc_sat_f32_u" { RETURN_OPCODE(Convert, I64TruncSatF32U); }
+      <i> "i32.trunc_sat_f64_u" { RETURN_OPCODE(Convert, I32TruncSatF64U); }
+      <i> "i64.trunc_sat_f64_u" { RETURN_OPCODE(Convert, I64TruncSatF64U); }
+      <i> "f32.convert_i32_s"   { RETURN_OPCODE(Convert, F32ConvertI32S); }
+      <i> "f64.convert_i32_s"   { RETURN_OPCODE(Convert, F64ConvertI32S); }
+      <i> "f32.convert_i64_s"   { RETURN_OPCODE(Convert, F32ConvertI64S); }
+      <i> "f64.convert_i64_s"   { RETURN_OPCODE(Convert, F64ConvertI64S); }
+      <i> "f32.convert_i32_u"   { RETURN_OPCODE(Convert, F32ConvertI32U); }
+      <i> "f64.convert_i32_u"   { RETURN_OPCODE(Convert, F64ConvertI32U); }
+      <i> "f32.convert_i64_u"   { RETURN_OPCODE(Convert, F32ConvertI64U); }
+      <i> "f64.convert_i64_u"   { RETURN_OPCODE(Convert, F64ConvertI64U); }
+      <i> "f64.promote_f32"     { RETURN_OPCODE(Convert, F64PromoteF32); }
+      <i> "f32.demote_f64"      { RETURN_OPCODE(Convert, F32DemoteF64); }
+      <i> "f32.reinterpret_i32" { RETURN_OPCODE(Convert, F32ReinterpretI32); }
+      <i> "i32.reinterpret_f32" { RETURN_OPCODE(Convert, I32ReinterpretF32); }
+      <i> "f64.reinterpret_i64" { RETURN_OPCODE(Convert, F64ReinterpretI64); }
+      <i> "i64.reinterpret_f64" { RETURN_OPCODE(Convert, I64ReinterpretF64); }
       <i> "select"              { RETURN_OPCODE0(Select); }
       <i> "unreachable"         { RETURN_OPCODE0(Unreachable); }
-      <i> "current_memory"      { RETURN_OPCODE0(CurrentMemory); }
-      <i> "grow_memory"         { RETURN_OPCODE0(GrowMemory); }
+      <i> "memory.size"         { RETURN_OPCODE0(MemorySize); }
+      <i> "memory.grow"         { RETURN_OPCODE0(MemoryGrow); }
+      <i> "memory.init"         { RETURN_OPCODE0(MemoryInit); }
+      <i> "memory.drop"         { RETURN_OPCODE0(MemoryDrop); }
+      <i> "memory.copy"         { RETURN_OPCODE0(MemoryCopy); }
+      <i> "memory.fill"         { RETURN_OPCODE0(MemoryFill); }
+      <i> "current_memory"      { RETURN_OPCODE0(MemorySize); }
+      <i> "grow_memory"         { RETURN_OPCODE0(MemoryGrow); }
+      <i> "table.init"         { RETURN_OPCODE0(TableInit); }
+      <i> "table.drop"         { RETURN_OPCODE0(TableDrop); }
+      <i> "table.copy"         { RETURN_OPCODE0(TableCopy); }
 
-      <i> "i32.wait"            { RETURN_OPCODE(Wait, I32Wait); }
-      <i> "i64.wait"            { RETURN_OPCODE(Wait, I64Wait); }
-      <i> "wake"                { RETURN_OPCODE0(Wake); }
+      <i> "i32.atomic.wait"     { RETURN_OPCODE(AtomicWait, I32AtomicWait); }
+      <i> "i64.atomic.wait"     { RETURN_OPCODE(AtomicWait, I64AtomicWait); }
+      <i> "atomic.notify"       { RETURN_OPCODE0(AtomicNotify); }
       <i> "i32.atomic.load"     { RETURN_OPCODE(AtomicLoad, I32AtomicLoad); }
       <i> "i64.atomic.load"     { RETURN_OPCODE(AtomicLoad, I64AtomicLoad); }
       <i> "i32.atomic.load8_u"  { RETURN_OPCODE(AtomicLoad, I32AtomicLoad8U); }
@@ -462,53 +476,236 @@ Token WastLexer::GetToken(WastParser* parser) {
       <i> "i64.atomic.store32"  { RETURN_OPCODE(AtomicStore, I64AtomicStore32); }
       <i> "i32.atomic.rmw.add"         { RETURN_OPCODE(AtomicRmw, I32AtomicRmwAdd); }
       <i> "i64.atomic.rmw.add"         { RETURN_OPCODE(AtomicRmw, I64AtomicRmwAdd); }
-      <i> "i32.atomic.rmw8_u.add"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8UAdd); }
-      <i> "i32.atomic.rmw16_u.add"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16UAdd); }
-      <i> "i64.atomic.rmw8_u.add"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8UAdd); }
-      <i> "i64.atomic.rmw16_u.add"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16UAdd); }
-      <i> "i64.atomic.rmw32_u.add"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32UAdd); }
+      <i> "i32.atomic.rmw8.add_u"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8AddU); }
+      <i> "i32.atomic.rmw16.add_u"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16AddU); }
+      <i> "i64.atomic.rmw8.add_u"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8AddU); }
+      <i> "i64.atomic.rmw16.add_u"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16AddU); }
+      <i> "i64.atomic.rmw32.add_u"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32AddU); }
       <i> "i32.atomic.rmw.sub"         { RETURN_OPCODE(AtomicRmw, I32AtomicRmwSub); }
       <i> "i64.atomic.rmw.sub"         { RETURN_OPCODE(AtomicRmw, I64AtomicRmwSub); }
-      <i> "i32.atomic.rmw8_u.sub"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8USub); }
-      <i> "i32.atomic.rmw16_u.sub"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16USub); }
-      <i> "i64.atomic.rmw8_u.sub"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8USub); }
-      <i> "i64.atomic.rmw16_u.sub"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16USub); }
-      <i> "i64.atomic.rmw32_u.sub"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32USub); }
+      <i> "i32.atomic.rmw8.sub_u"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8SubU); }
+      <i> "i32.atomic.rmw16.sub_u"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16SubU); }
+      <i> "i64.atomic.rmw8.sub_u"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8SubU); }
+      <i> "i64.atomic.rmw16.sub_u"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16SubU); }
+      <i> "i64.atomic.rmw32.sub_u"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32SubU); }
       <i> "i32.atomic.rmw.and"         { RETURN_OPCODE(AtomicRmw, I32AtomicRmwAnd); }
       <i> "i64.atomic.rmw.and"         { RETURN_OPCODE(AtomicRmw, I64AtomicRmwAnd); }
-      <i> "i32.atomic.rmw8_u.and"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8UAnd); }
-      <i> "i32.atomic.rmw16_u.and"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16UAnd); }
-      <i> "i64.atomic.rmw8_u.and"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8UAnd); }
-      <i> "i64.atomic.rmw16_u.and"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16UAnd); }
-      <i> "i64.atomic.rmw32_u.and"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32UAnd); }
+      <i> "i32.atomic.rmw8.and_u"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8AndU); }
+      <i> "i32.atomic.rmw16.and_u"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16AndU); }
+      <i> "i64.atomic.rmw8.and_u"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8AndU); }
+      <i> "i64.atomic.rmw16.and_u"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16AndU); }
+      <i> "i64.atomic.rmw32.and_u"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32AndU); }
       <i> "i32.atomic.rmw.or"          { RETURN_OPCODE(AtomicRmw, I32AtomicRmwOr); }
       <i> "i64.atomic.rmw.or"          { RETURN_OPCODE(AtomicRmw, I64AtomicRmwOr); }
-      <i> "i32.atomic.rmw8_u.or"       { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8UOr); }
-      <i> "i32.atomic.rmw16_u.or"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16UOr); }
-      <i> "i64.atomic.rmw8_u.or"       { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8UOr); }
-      <i> "i64.atomic.rmw16_u.or"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16UOr); }
-      <i> "i64.atomic.rmw32_u.or"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32UOr); }
+      <i> "i32.atomic.rmw8.or_u"       { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8OrU); }
+      <i> "i32.atomic.rmw16.or_u"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16OrU); }
+      <i> "i64.atomic.rmw8.or_u"       { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8OrU); }
+      <i> "i64.atomic.rmw16.or_u"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16OrU); }
+      <i> "i64.atomic.rmw32.or_u"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32OrU); }
       <i> "i32.atomic.rmw.xor"         { RETURN_OPCODE(AtomicRmw, I32AtomicRmwXor); }
       <i> "i64.atomic.rmw.xor"         { RETURN_OPCODE(AtomicRmw, I64AtomicRmwXor); }
-      <i> "i32.atomic.rmw8_u.xor"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8UXor); }
-      <i> "i32.atomic.rmw16_u.xor"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16UXor); }
-      <i> "i64.atomic.rmw8_u.xor"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8UXor); }
-      <i> "i64.atomic.rmw16_u.xor"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16UXor); }
-      <i> "i64.atomic.rmw32_u.xor"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32UXor); }
+      <i> "i32.atomic.rmw8.xor_u"      { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8XorU); }
+      <i> "i32.atomic.rmw16.xor_u"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16XorU); }
+      <i> "i64.atomic.rmw8.xor_u"      { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8XorU); }
+      <i> "i64.atomic.rmw16.xor_u"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16XorU); }
+      <i> "i64.atomic.rmw32.xor_u"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32XorU); }
       <i> "i32.atomic.rmw.xchg"        { RETURN_OPCODE(AtomicRmw, I32AtomicRmwXchg); }
       <i> "i64.atomic.rmw.xchg"        { RETURN_OPCODE(AtomicRmw, I64AtomicRmwXchg); }
-      <i> "i32.atomic.rmw8_u.xchg"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8UXchg); }
-      <i> "i32.atomic.rmw16_u.xchg"    { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16UXchg); }
-      <i> "i64.atomic.rmw8_u.xchg"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8UXchg); }
-      <i> "i64.atomic.rmw16_u.xchg"    { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16UXchg); }
-      <i> "i64.atomic.rmw32_u.xchg"    { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32UXchg); }
+      <i> "i32.atomic.rmw8.xchg_u"     { RETURN_OPCODE(AtomicRmw, I32AtomicRmw8XchgU); }
+      <i> "i32.atomic.rmw16.xchg_u"    { RETURN_OPCODE(AtomicRmw, I32AtomicRmw16XchgU); }
+      <i> "i64.atomic.rmw8.xchg_u"     { RETURN_OPCODE(AtomicRmw, I64AtomicRmw8XchgU); }
+      <i> "i64.atomic.rmw16.xchg_u"    { RETURN_OPCODE(AtomicRmw, I64AtomicRmw16XchgU); }
+      <i> "i64.atomic.rmw32.xchg_u"    { RETURN_OPCODE(AtomicRmw, I64AtomicRmw32XchgU); }
       <i> "i32.atomic.rmw.cmpxchg"     { RETURN_OPCODE(AtomicRmwCmpxchg, I32AtomicRmwCmpxchg); }
       <i> "i64.atomic.rmw.cmpxchg"     { RETURN_OPCODE(AtomicRmwCmpxchg, I64AtomicRmwCmpxchg); }
-      <i> "i32.atomic.rmw8_u.cmpxchg"  { RETURN_OPCODE(AtomicRmwCmpxchg, I32AtomicRmw8UCmpxchg); }
-      <i> "i32.atomic.rmw16_u.cmpxchg" { RETURN_OPCODE(AtomicRmwCmpxchg, I32AtomicRmw16UCmpxchg); }
-      <i> "i64.atomic.rmw8_u.cmpxchg"  { RETURN_OPCODE(AtomicRmwCmpxchg, I64AtomicRmw8UCmpxchg); }
-      <i> "i64.atomic.rmw16_u.cmpxchg" { RETURN_OPCODE(AtomicRmwCmpxchg, I64AtomicRmw16UCmpxchg); }
-      <i> "i64.atomic.rmw32_u.cmpxchg" { RETURN_OPCODE(AtomicRmwCmpxchg, I64AtomicRmw32UCmpxchg); }
+      <i> "i32.atomic.rmw8.cmpxchg_u"  { RETURN_OPCODE(AtomicRmwCmpxchg, I32AtomicRmw8CmpxchgU); }
+      <i> "i32.atomic.rmw16.cmpxchg_u" { RETURN_OPCODE(AtomicRmwCmpxchg, I32AtomicRmw16CmpxchgU); }
+      <i> "i64.atomic.rmw8.cmpxchg_u"  { RETURN_OPCODE(AtomicRmwCmpxchg, I64AtomicRmw8CmpxchgU); }
+      <i> "i64.atomic.rmw16.cmpxchg_u" { RETURN_OPCODE(AtomicRmwCmpxchg, I64AtomicRmw16CmpxchgU); }
+      <i> "i64.atomic.rmw32.cmpxchg_u" { RETURN_OPCODE(AtomicRmwCmpxchg, I64AtomicRmw32CmpxchgU); }
+      <i> "v128.const"           { RETURN_OPCODE(Const, V128Const); }
+      <i> "v128.load"            { RETURN_OPCODE(Load,  V128Load); }
+      <i> "v128.store"           { RETURN_OPCODE(Store, V128Store); }
+      <i> "i8x16.splat"          { RETURN_OPCODE(Unary, I8X16Splat); }
+      <i> "i16x8.splat"          { RETURN_OPCODE(Unary, I16X8Splat); }
+      <i> "i32x4.splat"          { RETURN_OPCODE(Unary, I32X4Splat); }
+      <i> "i64x2.splat"          { RETURN_OPCODE(Unary, I64X2Splat); }
+      <i> "f32x4.splat"          { RETURN_OPCODE(Unary, F32X4Splat); }
+      <i> "f64x2.splat"          { RETURN_OPCODE(Unary, F64X2Splat); }
+      <i> "i8x16.extract_lane_s" { RETURN_OPCODE(SimdLaneOp, I8X16ExtractLaneS); }
+      <i> "i8x16.extract_lane_u" { RETURN_OPCODE(SimdLaneOp, I8X16ExtractLaneU); }
+      <i> "i16x8.extract_lane_s" { RETURN_OPCODE(SimdLaneOp, I16X8ExtractLaneS); }
+      <i> "i16x8.extract_lane_u" { RETURN_OPCODE(SimdLaneOp, I16X8ExtractLaneU); }
+      <i> "i32x4.extract_lane"   { RETURN_OPCODE(SimdLaneOp, I32X4ExtractLane); }
+      <i> "i64x2.extract_lane"   { RETURN_OPCODE(SimdLaneOp, I64X2ExtractLane); }
+      <i> "f32x4.extract_lane"   { RETURN_OPCODE(SimdLaneOp, F32X4ExtractLane); }
+      <i> "f64x2.extract_lane"   { RETURN_OPCODE(SimdLaneOp, F64X2ExtractLane); }
+      <i> "i8x16.replace_lane"   { RETURN_OPCODE(SimdLaneOp, I8X16ReplaceLane); }
+      <i> "i16x8.replace_lane"   { RETURN_OPCODE(SimdLaneOp, I16X8ReplaceLane); }
+      <i> "i32x4.replace_lane"   { RETURN_OPCODE(SimdLaneOp, I32X4ReplaceLane); }
+      <i> "i64x2.replace_lane"   { RETURN_OPCODE(SimdLaneOp, I64X2ReplaceLane); }
+      <i> "f32x4.replace_lane"   { RETURN_OPCODE(SimdLaneOp, F32X4ReplaceLane); }
+      <i> "f64x2.replace_lane"   { RETURN_OPCODE(SimdLaneOp, F64X2ReplaceLane); }
+      <i> "v8x16.shuffle"        { RETURN_OPCODE(SimdShuffleOp, V8X16Shuffle); }
+      <i> "i8x16.add"            { RETURN_OPCODE(Binary, I8X16Add); }
+      <i> "i16x8.add"            { RETURN_OPCODE(Binary, I16X8Add); }
+      <i> "i32x4.add"            { RETURN_OPCODE(Binary, I32X4Add); }
+      <i> "i64x2.add"            { RETURN_OPCODE(Binary, I64X2Add); }
+      <i> "i8x16.sub"            { RETURN_OPCODE(Binary, I8X16Sub); }
+      <i> "i16x8.sub"            { RETURN_OPCODE(Binary, I16X8Sub); }
+      <i> "i32x4.sub"            { RETURN_OPCODE(Binary, I32X4Sub); }
+      <i> "i64x2.sub"            { RETURN_OPCODE(Binary, I64X2Sub); }
+      <i> "i8x16.mul"            { RETURN_OPCODE(Binary, I8X16Mul); }
+      <i> "i16x8.mul"            { RETURN_OPCODE(Binary, I16X8Mul); }
+      <i> "i32x4.mul"            { RETURN_OPCODE(Binary, I32X4Mul); }
+      <i> "i8x16.neg"            { RETURN_OPCODE(Unary, I8X16Neg); }
+      <i> "i16x8.neg"            { RETURN_OPCODE(Unary, I16X8Neg); }
+      <i> "i32x4.neg"            { RETURN_OPCODE(Unary, I32X4Neg); }
+      <i> "i64x2.neg"            { RETURN_OPCODE(Unary, I64X2Neg); }
+      <i> "i8x16.add_saturate_s" { RETURN_OPCODE(Binary, I8X16AddSaturateS); }
+      <i> "i8x16.add_saturate_u" { RETURN_OPCODE(Binary, I8X16AddSaturateU); }
+      <i> "i16x8.add_saturate_s" { RETURN_OPCODE(Binary, I16X8AddSaturateS); }
+      <i> "i16x8.add_saturate_u" { RETURN_OPCODE(Binary, I16X8AddSaturateU); }
+      <i> "i8x16.sub_saturate_s" { RETURN_OPCODE(Binary, I8X16SubSaturateS); }
+      <i> "i8x16.sub_saturate_u" { RETURN_OPCODE(Binary, I8X16SubSaturateU); }
+      <i> "i16x8.sub_saturate_s" { RETURN_OPCODE(Binary, I16X8SubSaturateS); }
+      <i> "i16x8.sub_saturate_u" { RETURN_OPCODE(Binary, I16X8SubSaturateU); }
+      <i> "i8x16.shl"            { RETURN_OPCODE(Binary, I8X16Shl); }
+      <i> "i16x8.shl"            { RETURN_OPCODE(Binary, I16X8Shl); }
+      <i> "i32x4.shl"            { RETURN_OPCODE(Binary, I32X4Shl); }
+      <i> "i64x2.shl"            { RETURN_OPCODE(Binary, I64X2Shl); }
+      <i> "i8x16.shr_s"          { RETURN_OPCODE(Binary, I8X16ShrS); }
+      <i> "i8x16.shr_u"          { RETURN_OPCODE(Binary, I8X16ShrU); }
+      <i> "i16x8.shr_s"          { RETURN_OPCODE(Binary, I16X8ShrS); }
+      <i> "i16x8.shr_u"          { RETURN_OPCODE(Binary, I16X8ShrU); }
+      <i> "i32x4.shr_s"          { RETURN_OPCODE(Binary, I32X4ShrS); }
+      <i> "i32x4.shr_u"          { RETURN_OPCODE(Binary, I32X4ShrU); }
+      <i> "i64x2.shr_s"          { RETURN_OPCODE(Binary, I64X2ShrS); }
+      <i> "i64x2.shr_u"          { RETURN_OPCODE(Binary, I64X2ShrU); }
+      <i> "v128.and"             { RETURN_OPCODE(Binary, V128And); }
+      <i> "v128.or"              { RETURN_OPCODE(Binary, V128Or); }
+      <i> "v128.xor"             { RETURN_OPCODE(Binary, V128Xor); }
+      <i> "v128.not"             { RETURN_OPCODE(Unary, V128Not); }
+      <i> "v128.bitselect"       { RETURN_OPCODE(Ternary, V128BitSelect); }
+      <i> "i8x16.any_true"       { RETURN_OPCODE(Unary,  I8X16AnyTrue); }
+      <i> "i16x8.any_true"       { RETURN_OPCODE(Unary,  I16X8AnyTrue); }
+      <i> "i32x4.any_true"       { RETURN_OPCODE(Unary,  I32X4AnyTrue); }
+      <i> "i64x2.any_true"       { RETURN_OPCODE(Unary,  I64X2AnyTrue); }
+      <i> "i8x16.all_true"       { RETURN_OPCODE(Unary,  I8X16AllTrue); }
+      <i> "i16x8.all_true"       { RETURN_OPCODE(Unary,  I16X8AllTrue); }
+      <i> "i32x4.all_true"       { RETURN_OPCODE(Unary,  I32X4AllTrue); }
+      <i> "i64x2.all_true"       { RETURN_OPCODE(Unary,  I64X2AllTrue); }
+      <i> "i8x16.eq"             { RETURN_OPCODE(Compare, I8X16Eq); }
+      <i> "i16x8.eq"             { RETURN_OPCODE(Compare, I16X8Eq); }
+      <i> "i32x4.eq"             { RETURN_OPCODE(Compare, I32X4Eq); }
+      <i> "f32x4.eq"             { RETURN_OPCODE(Compare, F32X4Eq); }
+      <i> "f64x2.eq"             { RETURN_OPCODE(Compare, F64X2Eq); }
+      <i> "i8x16.ne"             { RETURN_OPCODE(Compare, I8X16Ne); }
+      <i> "i16x8.ne"             { RETURN_OPCODE(Compare, I16X8Ne); }
+      <i> "i32x4.ne"             { RETURN_OPCODE(Compare, I32X4Ne); }
+      <i> "f32x4.ne"             { RETURN_OPCODE(Compare, F32X4Ne); }
+      <i> "f64x2.ne"             { RETURN_OPCODE(Compare, F64X2Ne); }
+      <i> "i8x16.lt_s"           { RETURN_OPCODE(Compare, I8X16LtS); }
+      <i> "i8x16.lt_u"           { RETURN_OPCODE(Compare, I8X16LtU); }
+      <i> "i16x8.lt_s"           { RETURN_OPCODE(Compare, I16X8LtS); }
+      <i> "i16x8.lt_u"           { RETURN_OPCODE(Compare, I16X8LtU); }
+      <i> "i32x4.lt_s"           { RETURN_OPCODE(Compare, I32X4LtS); }
+      <i> "i32x4.lt_u"           { RETURN_OPCODE(Compare, I32X4LtU); }
+      <i> "f32x4.lt"             { RETURN_OPCODE(Compare, F32X4Lt); }
+      <i> "f64x2.lt"             { RETURN_OPCODE(Compare, F64X2Lt); }
+      <i> "i8x16.le_s"           { RETURN_OPCODE(Compare, I8X16LeS); }
+      <i> "i8x16.le_u"           { RETURN_OPCODE(Compare, I8X16LeU); }
+      <i> "i16x8.le_s"           { RETURN_OPCODE(Compare, I16X8LeS); }
+      <i> "i16x8.le_u"           { RETURN_OPCODE(Compare, I16X8LeU); }
+      <i> "i32x4.le_s"           { RETURN_OPCODE(Compare, I32X4LeS); }
+      <i> "i32x4.le_u"           { RETURN_OPCODE(Compare, I32X4LeU); }
+      <i> "f32x4.le"             { RETURN_OPCODE(Compare, F32X4Le); }
+      <i> "f64x2.le"             { RETURN_OPCODE(Compare, F64X2Le); }
+      <i> "i8x16.gt_s"           { RETURN_OPCODE(Compare, I8X16GtS); }
+      <i> "i8x16.gt_u"           { RETURN_OPCODE(Compare, I8X16GtU); }
+      <i> "i16x8.gt_s"           { RETURN_OPCODE(Compare, I16X8GtS); }
+      <i> "i16x8.gt_u"           { RETURN_OPCODE(Compare, I16X8GtU); }
+      <i> "i32x4.gt_s"           { RETURN_OPCODE(Compare, I32X4GtS); }
+      <i> "i32x4.gt_u"           { RETURN_OPCODE(Compare, I32X4GtU); }
+      <i> "f32x4.gt"             { RETURN_OPCODE(Compare, F32X4Gt); }
+      <i> "f64x2.gt"             { RETURN_OPCODE(Compare, F64X2Gt); }
+      <i> "i8x16.ge_s"           { RETURN_OPCODE(Compare, I8X16GeS); }
+      <i> "i8x16.ge_u"           { RETURN_OPCODE(Compare, I8X16GeU); }
+      <i> "i16x8.ge_s"           { RETURN_OPCODE(Compare, I16X8GeS); }
+      <i> "i16x8.ge_u"           { RETURN_OPCODE(Compare, I16X8GeU); }
+      <i> "i32x4.ge_s"           { RETURN_OPCODE(Compare, I32X4GeS); }
+      <i> "i32x4.ge_u"           { RETURN_OPCODE(Compare, I32X4GeU); }
+      <i> "f32x4.ge"             { RETURN_OPCODE(Compare, F32X4Ge); }
+      <i> "f64x2.ge"             { RETURN_OPCODE(Compare, F64X2Ge); }
+      <i> "f32x4.neg"            { RETURN_OPCODE(Unary, F32X4Neg); }
+      <i> "f64x2.neg"            { RETURN_OPCODE(Unary, F64X2Neg); }
+      <i> "f32x4.abs"            { RETURN_OPCODE(Unary, F32X4Abs); }
+      <i> "f64x2.abs"            { RETURN_OPCODE(Unary, F64X2Abs); }
+      <i> "f32x4.min"            { RETURN_OPCODE(Binary, F32X4Min); }
+      <i> "f64x2.min"            { RETURN_OPCODE(Binary, F64X2Min); }
+      <i> "f32x4.max"            { RETURN_OPCODE(Binary, F32X4Max); }
+      <i> "f64x2.max"            { RETURN_OPCODE(Binary, F64X2Max); }
+      <i> "f32x4.add"            { RETURN_OPCODE(Binary, F32X4Add); }
+      <i> "f64x2.add"            { RETURN_OPCODE(Binary, F64X2Add); }
+      <i> "f32x4.sub"            { RETURN_OPCODE(Binary, F32X4Sub); }
+      <i> "f64x2.sub"            { RETURN_OPCODE(Binary, F64X2Sub); }
+      <i> "f32x4.div"            { RETURN_OPCODE(Binary, F32X4Div); }
+      <i> "f64x2.div"            { RETURN_OPCODE(Binary, F64X2Div); }
+      <i> "f32x4.mul"            { RETURN_OPCODE(Binary, F32X4Mul); }
+      <i> "f64x2.mul"            { RETURN_OPCODE(Binary, F64X2Mul); }
+      <i> "f32x4.sqrt"           { RETURN_OPCODE(Unary, F32X4Sqrt); }
+      <i> "f64x2.sqrt"           { RETURN_OPCODE(Unary, F64X2Sqrt); }
+      <i> "f32x4.convert_i32x4_s" { RETURN_OPCODE(Unary, F32X4ConvertI32X4S); }
+      <i> "f32x4.convert_i32x4_u" { RETURN_OPCODE(Unary, F32X4ConvertI32X4U); }
+      <i> "f64x2.convert_i64x2_s" { RETURN_OPCODE(Unary, F64X2ConvertI64X2S); }
+      <i> "f64x2.convert_i64x2_u" { RETURN_OPCODE(Unary, F64X2ConvertI64X2U); }
+      <i> "i32x4.trunc_sat_f32x4_s" { RETURN_OPCODE(Unary, I32X4TruncSatF32X4S); }
+      <i> "i32x4.trunc_sat_f32x4_u" { RETURN_OPCODE(Unary, I32X4TruncSatF32X4U); }
+      <i> "i64x2.trunc_sat_f64x2_s" { RETURN_OPCODE(Unary, I64X2TruncSatF64X2S); }
+      <i> "i64x2.trunc_sat_f64x2_u" { RETURN_OPCODE(Unary, I64X2TruncSatF64X2U); }
+      <i> "return_call"           { RETURN_OPCODE0(ReturnCall); }
+      <i> "return_call_indirect"  { RETURN_OPCODE0(ReturnCallIndirect); }
+
+      // Deprecated names.
+      <i> "anyfunc"             { RETURN(Funcref); }
+      <i> "get_local"           { RETURN_OPCODE0(LocalGet); }
+      <i> "set_local"           { RETURN_OPCODE0(LocalSet); }
+      <i> "tee_local"           { RETURN_OPCODE0(LocalTee); }
+      <i> "get_global"          { RETURN_OPCODE0(GlobalGet); }
+      <i> "set_global"          { RETURN_OPCODE0(GlobalSet); }
+      <i> "i64.extend_s/i32"    { RETURN_OPCODE(Convert, I64ExtendI32S); }
+      <i> "i64.extend_u/i32"    { RETURN_OPCODE(Convert, I64ExtendI32U); }
+      <i> "i32.wrap/i64"        { RETURN_OPCODE(Convert, I32WrapI64); }
+      <i> "i32.trunc_s/f32"     { RETURN_OPCODE(Convert, I32TruncF32S); }
+      <i> "i64.trunc_s/f32"     { RETURN_OPCODE(Convert, I64TruncF32S); }
+      <i> "i32.trunc_s/f64"     { RETURN_OPCODE(Convert, I32TruncF64S); }
+      <i> "i64.trunc_s/f64"     { RETURN_OPCODE(Convert, I64TruncF64S); }
+      <i> "i32.trunc_u/f32"     { RETURN_OPCODE(Convert, I32TruncF32U); }
+      <i> "i64.trunc_u/f32"     { RETURN_OPCODE(Convert, I64TruncF32U); }
+      <i> "i32.trunc_u/f64"     { RETURN_OPCODE(Convert, I32TruncF64U); }
+      <i> "i64.trunc_u/f64"     { RETURN_OPCODE(Convert, I64TruncF64U); }
+      <i> "f32.convert_s/i32"   { RETURN_OPCODE(Convert, F32ConvertI32S); }
+      <i> "f64.convert_s/i32"   { RETURN_OPCODE(Convert, F64ConvertI32S); }
+      <i> "f32.convert_s/i64"   { RETURN_OPCODE(Convert, F32ConvertI64S); }
+      <i> "f64.convert_s/i64"   { RETURN_OPCODE(Convert, F64ConvertI64S); }
+      <i> "f32.convert_u/i32"   { RETURN_OPCODE(Convert, F32ConvertI32U); }
+      <i> "f64.convert_u/i32"   { RETURN_OPCODE(Convert, F64ConvertI32U); }
+      <i> "f32.convert_u/i64"   { RETURN_OPCODE(Convert, F32ConvertI64U); }
+      <i> "f64.convert_u/i64"   { RETURN_OPCODE(Convert, F64ConvertI64U); }
+      <i> "f64.promote/f32"     { RETURN_OPCODE(Convert, F64PromoteF32); }
+      <i> "f32.demote/f64"      { RETURN_OPCODE(Convert, F32DemoteF64); }
+      <i> "f32.reinterpret/i32" { RETURN_OPCODE(Convert, F32ReinterpretI32); }
+      <i> "i32.reinterpret/f32" { RETURN_OPCODE(Convert, I32ReinterpretF32); }
+      <i> "f64.reinterpret/i64" { RETURN_OPCODE(Convert, F64ReinterpretI64); }
+      <i> "i64.reinterpret/f64" { RETURN_OPCODE(Convert, I64ReinterpretF64); }
+      <i> "i32.trunc_s:sat/f32" { RETURN_OPCODE(Convert, I32TruncSatF32S); }
+      <i> "i64.trunc_s:sat/f32" { RETURN_OPCODE(Convert, I64TruncSatF32S); }
+      <i> "i32.trunc_s:sat/f64" { RETURN_OPCODE(Convert, I32TruncSatF64S); }
+      <i> "i64.trunc_s:sat/f64" { RETURN_OPCODE(Convert, I64TruncSatF64S); }
+      <i> "i32.trunc_u:sat/f32" { RETURN_OPCODE(Convert, I32TruncSatF32U); }
+      <i> "i64.trunc_u:sat/f32" { RETURN_OPCODE(Convert, I64TruncSatF32U); }
+      <i> "i32.trunc_u:sat/f64" { RETURN_OPCODE(Convert, I32TruncSatF64U); }
+      <i> "i64.trunc_u:sat/f64" { RETURN_OPCODE(Convert, I64TruncSatF64U); }
 
       <i> "type"                { RETURN(Type); }
       <i> "func"                { RETURN(Func); }
@@ -528,6 +725,7 @@ Token WastLexer::GetToken(WastParser* parser) {
       <i> "import"              { RETURN(Import); }
       <i> "export"              { RETURN(Export); }
       <i> "except"              { RETURN(Except); }
+      <i> "passive"             { RETURN(Passive); }
       <i> "register"            { RETURN(Register); }
       <i> "invoke"              { RETURN(Invoke); }
       <i> "get"                 { RETURN(Get); }
@@ -541,9 +739,9 @@ Token WastLexer::GetToken(WastParser* parser) {
       <i> "assert_exhaustion"   { RETURN(AssertExhaustion); }
       <i> "try"                 { RETURN_OPCODE0(Try); }
       <i> "catch"               { RETURN_OPCODE0(Catch); }
-      <i> "catch_all"           { RETURN_OPCODE0(CatchAll); }
       <i> "throw"               { RETURN_OPCODE0(Throw); }
       <i> "rethrow"             { RETURN_OPCODE0(Rethrow); }
+      <i> "if_except"           { RETURN_OPCODE0(IfExcept); }
       <i> name                  { RETURN_TEXT(Var); }
       <i> "shared"              { RETURN(Shared); }
 
@@ -552,8 +750,9 @@ Token WastLexer::GetToken(WastParser* parser) {
       <LINE_COMMENT> [^\n]+     { continue; }
       <i> "(;" => BLOCK_COMMENT { COMMENT_NESTING = 1; continue; }
       <BLOCK_COMMENT> "(;"      { COMMENT_NESTING++; continue; }
-      <BLOCK_COMMENT> ";)"      { if (--COMMENT_NESTING == 0)
+      <BLOCK_COMMENT> ";)"      { if (--COMMENT_NESTING == 0) {
                                     BEGIN(YYCOND_i);
+                                  }
                                   continue; }
       <BLOCK_COMMENT> "\n"      { NEWLINE; continue; }
       <BLOCK_COMMENT> [^]       { continue; }

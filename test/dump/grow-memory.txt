@@ -1,5 +1,5 @@
 ;;; TOOL: run-objdump
-;;; FLAGS: -v
+;;; ARGS0: -v
 (module
   (memory 1 2)
   (func (param i32)
@@ -41,10 +41,10 @@
 ; function body 0
 000001c: 00                                        ; func body size (guess)
 000001d: 00                                        ; local decl count
-000001e: 20                                        ; get_local
+000001e: 20                                        ; local.get
 000001f: 00                                        ; local index
-0000020: 40                                        ; grow_memory
-0000021: 00                                        ; grow_memory reserved
+0000020: 40                                        ; memory.grow
+0000021: 00                                        ; memory.grow reserved
 0000022: 1a                                        ; drop
 0000023: 0b                                        ; end
 000001c: 07                                        ; FIXUP func body size
@@ -54,9 +54,9 @@ grow-memory.wasm:	file format wasm 0x1
 
 Code Disassembly:
 
-00001c func[0]:
- 00001e: 20 00                      | get_local 0
- 000020: 40 00                      | grow_memory 0
+00001d func[0]:
+ 00001e: 20 00                      | local.get 0
+ 000020: 40 00                      | memory.grow 0
  000022: 1a                         | drop
  000023: 0b                         | end
 ;;; STDOUT ;;)

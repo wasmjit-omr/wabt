@@ -1,6 +1,4 @@
-;;; ERROR: 1
-;;; TOOL: run-gen-wasm
-magic
+;;; TOOL: run-gen-wasm-bad
 version
 section(TYPE) { count[1] function params[0] results[1] i32 }
 section(FUNCTION) { count[1] type[0] }
@@ -12,23 +10,24 @@ section(CODE) {
   }
 }
 section("name") {
-  subsection[1]
-  length[5]
-  func_count[1]
-  index[0]
-  str("F0")
-  subsection[2]
-  length[11]
-  func_count[1]
-  index[0]
-  local_count[2]
-  index[1]
-  str("L1")
-  index[0]
-  str("L0")
+  section(NAME_FUNCTION) {
+    func_count[1]
+    index[0]
+    str("F0")
+  }
+
+  section(NAME_LOCALS) {
+    func_count[1]
+    func_index[0]
+
+    local_count[2]
+    local_index[1]
+    str("L1")
+    local_index[0]
+    str("L0")
+  }
 }
 (;; STDERR ;;;
-Error running "wasm2wat":
-0000035: error: local index out of order: 0
-
+0000004: error: bad magic value
+0000004: error: bad magic value
 ;;; STDERR ;;)

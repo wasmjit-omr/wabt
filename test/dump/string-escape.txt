@@ -1,5 +1,5 @@
 ;;; TOOL: run-objdump
-;;; FLAGS: -v
+;;; ARGS0: -v
 (module (func) (export "tab:\t newline:\n slash:\\ quote:\' double:\"" (func 0)))
 (;; STDOUT ;;;
 0000000: 0061 736d                                 ; WASM_BINARY_MAGIC
@@ -45,6 +45,7 @@ string-escape.wasm:	file format wasm 0x1
 
 Code Disassembly:
 
-000043 func[0]:
+000044 <tab:	 newline:
+ slash:\ quote:' double:">:
  000045: 0b                         | end
 ;;; STDOUT ;;)

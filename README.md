@@ -4,12 +4,17 @@
 
 WABT (we pronounce it "wabbit") is a suite of tools for WebAssembly, including:
 
- - **wat2wasm**: translate from [WebAssembly text format](http://webassembly.github.io/spec/text/index.html) to the [WebAssembly binary format](http://webassembly.github.io/spec/binary/index.html)
- - **wasm2wat**: the inverse of wat2wasm, translate from the binary format back to the text format (also known as a .wat)
- - **wasm-objdump**: print information about a wasm binary. Similiar to objdump.
- - **wasm-interp**: decode and run a WebAssembly binary file using a stack-based interpreter
- - **wat-desugar**: parse .wat text form as supported by the spec interpreter (s-expressions, flat syntax, or mixed) and print "canonical" flat format
- - **wasm-link**: simple linker for merging multiple wasm files.
+ - [**wat2wasm**](https://webassembly.github.io/wabt/doc/wat2wasm.1.html): translate from [WebAssembly text format](https://webassembly.github.io/spec/core/text/index.html) to the [WebAssembly binary format](https://webassembly.github.io/spec/core/binary/index.html)
+ - [**wasm2wat**](https://webassembly.github.io/wabt/doc/wasm2wat.1.html): the inverse of wat2wasm, translate from the binary format back to the text format (also known as a .wat)
+ - [**wasm-objdump**](https://webassembly.github.io/wabt/doc/wasm-objdump.1.html): print information about a wasm binary. Similiar to objdump.
+ - [**wasm-interp**](https://webassembly.github.io/wabt/doc/wasm-interp.1.html): decode and run a WebAssembly binary file using a stack-based interpreter
+ - [**wat-desugar**](https://webassembly.github.io/wabt/doc/wat-desugar.1.html): parse .wat text form as supported by the spec interpreter (s-expressions, flat syntax, or mixed) and print "canonical" flat format
+ - [**wasm2c**](https://webassembly.github.io/wabt/doc/wasm2c.1.html): convert a WebAssembly binary file to a C source and header
+ - [**wasm-strip**](https://webassembly.github.io/wabt/doc/wasm-strip.1.html): remove sections of a WebAssembly binary file
+ - [**wasm-validate**](https://webassembly.github.io/wabt/doc/wasm-validate.1.html): validate a file in the WebAssembly binary format
+ - [**wast2json**](https://webassembly.github.io/wabt/doc/wast2json.1.html): convert a file in the wasm spec test format to a JSON file and associated wasm binary files
+ - [**wasm-opcodecnt**](https://webassembly.github.io/wabt/doc/wasm-opcodecnt.1.html): count opcode usage for instructions
+ - [**spectest-interp**](https://webassembly.github.io/wabt/doc/spectest-interp.1.html): read a Spectest JSON file, and run its tests in the interpreter
 
 These tools are intended for use in (or for development of) toolchains or other
 systems that want to manipulate WebAssembly files. Unlike the WebAssembly spec
@@ -24,9 +29,9 @@ target; instead they aim for full fidelity and compliance with the spec (e.g.
 
 Wabt has been compiled to JavaScript via emscripten. Some of the functionality is available in the following demos:
 
-- [index](https://cdn.rawgit.com/WebAssembly/wabt/fb986fbd/demo/index.html)
-- [wat2wasm](https://cdn.rawgit.com/WebAssembly/wabt/fb986fbd/demo/wat2wasm/)
-- [wasm2wat](https://cdn.rawgit.com/WebAssembly/wabt/fb986fbd/demo/wasm2wat/)
+- [index](https://webassembly.github.io/wabt/demo/)
+- [wat2wasm](https://webassembly.github.io/wabt/demo/wat2wasm/)
+- [wasm2wat](https://webassembly.github.io/wabt/demo/wasm2wat/)
 
 ## Cloning
 
@@ -53,6 +58,10 @@ $ make
 This will build the default version of the tools: a debug build using the Clang
 compiler.
 
+**NOTE**: Under the hood, this uses make to run CMake, which then calls make again.
+On some systems, this doesn't build properly. If you see these errors, you can build
+using CMake directly as described below.
+
 There are many make targets available for other configurations as well. They
 are generated from every combination of a compiler, build type and
 configuration.
@@ -70,6 +79,8 @@ $ make gcc-i686-release
 $ make clang-debug-lsan
 $ make gcc-debug-no-re2c
 ```
+
+### Building using CMake directly
 
 You can also run CMake yourself, the normal way:
 
@@ -149,13 +160,13 @@ $ out/wat2wasm spec-test.wast -v
 $ out/wast2json spec-test.wast -o spec-test.json
 ```
 
-You can use `-h` to get additional help:
+You can use `--help` to get additional help:
 
 ```console
-$ out/wat2wasm -h
+$ out/wat2wasm --help
 ```
 
-Or try the [online demo](https://cdn.rawgit.com/WebAssembly/wabt/fb986fbd/demo/wat2wasm/).
+Or try the [online demo](https://webassembly.github.io/wabt/demo/wat2wasm/).
 
 ## Running wasm2wat
 
@@ -169,13 +180,13 @@ $ out/wasm2wat test.wasm -o test.wat
 $ out/wasm2wat test.wasm -o test.wat
 ```
 
-You can use `-h` to get additional help:
+You can use `--help` to get additional help:
 
 ```console
-$ out/wasm2wat -h
+$ out/wasm2wat --help
 ```
 
-Or try the [online demo](https://cdn.rawgit.com/WebAssembly/wabt/fb986fbd/demo/wasm2wat/).
+Or try the [online demo](https://webassembly.github.io/wabt/demo/wasm2wat/).
 
 ## Running wasm-interp
 
@@ -199,20 +210,15 @@ $ out/wasm-interp test.json --spec
 $ out/wasm-interp test.wasm -V 100 --run-all-exports
 ```
 
-As a convenience, you can use `test/run-interp.py` to convert a .wat file to
-binary first, then run it in the interpreter:
+You can use `--help` to get additional help:
 
 ```console
-$ test/run-interp.py --spec spec-test.wat
-20/20 tests.passed.
+$ out/wasm-interp --help
 ```
 
-You can use `-h` to get additional help:
+## Running wasm2c
 
-```console
-$ out/wasm-interp -h
-$ out/run-interp.py -h
-```
+See [wasm2c.md](wasm2c/README.md)
 
 ## Running the test suite
 

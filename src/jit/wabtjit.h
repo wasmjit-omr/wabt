@@ -18,7 +18,7 @@
 #define WABTJIT_HPP
 
 #include "src/common.h"
-#include "src/interp.h"
+#include "src/interp/interp.h"
 
 namespace wabt {
 namespace jit {

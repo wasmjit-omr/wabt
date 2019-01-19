@@ -17,7 +17,11 @@
 #ifndef WABT_OPCODE_H_
 #define WABT_OPCODE_H_
 
+#include <vector>
+
 #include "src/common.h"
+#include "src/opcode-code-table.h"
+#include "src/leb128.h"
 
 namespace wabt {
 
@@ -37,7 +41,7 @@ struct Opcode {
     Invalid,
   };
 
-  // Static opcode objects.
+// Static opcode objects.
 #define WABT_OPCODE(rtype, type1, type2, type3, mem_size, prefix, code, Name, \
                     text)                                                     \
   static Opcode Name##_Opcode;
@@ -53,13 +57,19 @@ struct Opcode {
   bool HasPrefix() const { return GetInfo().prefix != 0; }
   uint8_t GetPrefix() const { return GetInfo().prefix; }
   uint32_t GetCode() const { return GetInfo().code; }
-  size_t GetLength() const { return HasPrefix() ? 2 : 1; }
+  size_t GetLength() const { return GetBytes().size(); }
   const char* GetName() const { return GetInfo().name; }
   Type GetResultType() const { return GetInfo().result_type; }
   Type GetParamType1() const { return GetInfo().param1_type; }
   Type GetParamType2() const { return GetInfo().param2_type; }
   Type GetParamType3() const { return GetInfo().param3_type; }
   Address GetMemorySize() const { return GetInfo().memory_size; }
+
+  // Get the byte sequence for this opcode, including prefix.
+  std::vector<uint8_t> GetBytes() const;
+
+  // Get the lane count of an extract/replace simd op.
+  uint32_t GetSimdLaneCount() const;
 
   // Return 1 if |alignment| matches the alignment of |opcode|, or if
   // |alignment| is WABT_USE_NATURAL_ALIGNMENT.
@@ -70,7 +80,7 @@ struct Opcode {
   Address GetAlignment(Address alignment) const;
 
   static bool IsPrefixByte(uint8_t byte) {
-    return byte == kMathPrefix || byte == kThreadsPrefix;
+    return byte == kMathPrefix || byte == kThreadsPrefix || byte == kSimdPrefix;
   }
 
   bool IsEnabled(const Features& features) const;
@@ -79,6 +89,7 @@ struct Opcode {
  private:
   static const uint32_t kMathPrefix = 0xfc;
   static const uint32_t kThreadsPrefix = 0xfe;
+  static const uint32_t kSimdPrefix = 0xfd;
 
   struct Info {
     const char* name;
@@ -130,6 +141,28 @@ struct Opcode {
   Enum enum_;
 };
 
-}  // end anonymous namespace
+// static
+inline Opcode Opcode::FromCode(uint32_t code) {
+  return FromCode(0, code);
+}
+
+// static
+inline Opcode Opcode::FromCode(uint8_t prefix, uint32_t code) {
+  uint32_t prefix_code = PrefixCode(prefix, code);
+
+  if (WABT_LIKELY(prefix_code < WABT_ARRAY_SIZE(WabtOpcodeCodeTable))) {
+    uint32_t value = WabtOpcodeCodeTable[prefix_code];
+    // The default value in the table is 0. That's a valid value, but only if
+    // the code is 0 (for nop).
+    if (WABT_LIKELY(value != 0 || code == 0)) {
+      return Opcode(static_cast<Enum>(value));
+    }
+  }
+
+  return Opcode(EncodeInvalidOpcode(prefix_code));
+}
+
+
+}  // namespace wabt
 
 #endif  // WABT_OPCODE_H_

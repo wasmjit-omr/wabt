@@ -28,6 +28,7 @@ LexerSourceLineFinder::LexerSourceLineFinder(
       next_line_start_(0),
       last_cr_(false),
       eof_(false) {
+  source_->Seek(0);
   // Line 0 should not be used; but it makes indexing simpler.
   line_ranges_.emplace_back(0, 0);
 }
@@ -50,15 +51,17 @@ Result LexerSourceLineFinder::GetSourceLine(const Location& loc,
     out_source_line->line += "...";
     clamped.start += 3;
   }
-  if (has_end_ellipsis)
+  if (has_end_ellipsis) {
     clamped.end -= 3;
+  }
 
   std::vector<char> read_line;
   CHECK_RESULT(source_->ReadRange(clamped, &read_line));
   out_source_line->line.append(read_line.begin(), read_line.end());
 
-  if (has_end_ellipsis)
+  if (has_end_ellipsis) {
     out_source_line->line += "...";
+  }
 
   return Result::Ok;
 }
@@ -87,8 +90,9 @@ Result LexerSourceLineFinder::GetLineOffsets(int find_line,
   while (!IsLineCached(find_line) && !eof_) {
     CHECK_RESULT(source_->Tell(&buffer_file_offset));
     size_t read_size = source_->Fill(buffer.data(), buffer.size());
-    if (read_size < buffer.size())
+    if (read_size < buffer.size()) {
       eof_ = true;
+    }
 
     for (auto iter = buffer.begin(), end = iter + read_size; iter < end;
          ++iter) {
@@ -134,8 +138,9 @@ OffsetRange LexerSourceLineFinder::ClampSourceLineOffsets(
       // the entire range fits, display it all in the center.
       center_on = (column_range.start + column_range.end) / 2 - 1;
     }
-    if (center_on > max_line_length / 2)
+    if (center_on > max_line_length / 2) {
       offset_range.start += center_on - max_line_length / 2;
+    }
     offset_range.start =
         std::min(offset_range.start, offset_range.end - max_line_length);
     offset_range.end = offset_range.start + max_line_length;

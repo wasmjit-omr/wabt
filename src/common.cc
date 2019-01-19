@@ -22,11 +22,16 @@
 #include <cstdio>
 #include <cstring>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #if COMPILER_IS_MSVC
 #include <fcntl.h>
 #include <io.h>
 #include <stdlib.h>
 #define PATH_MAX _MAX_PATH
+#define stat _stat
+#define S_IFREG _S_IFREG
 #endif
 
 namespace wabt {
@@ -38,19 +43,34 @@ const char* g_kind_name[] = {"func", "table", "memory", "global", "except"};
 WABT_STATIC_ASSERT(WABT_ARRAY_SIZE(g_kind_name) == kExternalKindCount);
 
 const char* g_reloc_type_name[] = {
-    "R_WEBASSEMBLY_FUNCTION_INDEX_LEB", "R_WEBASSEMBLY_TABLE_INDEX_SLEB",
-    "R_WEBASSEMBLY_TABLE_INDEX_I32",    "R_WEBASSEMBLY_MEMORY_ADDR_LEB",
-    "R_WEBASSEMBLY_MEMORY_ADDR_SLEB",   "R_WEBASSEMBLY_MEMORY_ADDR_I32",
-    "R_WEBASSEMBLY_TYPE_INDEX_LEB",     "R_WEBASSEMBLY_GLOBAL_INDEX_LEB",
+    "R_WEBASSEMBLY_FUNCTION_INDEX_LEB",  "R_WEBASSEMBLY_TABLE_INDEX_SLEB",
+    "R_WEBASSEMBLY_TABLE_INDEX_I32",     "R_WEBASSEMBLY_MEMORY_ADDR_LEB",
+    "R_WEBASSEMBLY_MEMORY_ADDR_SLEB",    "R_WEBASSEMBLY_MEMORY_ADDR_I32",
+    "R_WEBASSEMBLY_TYPE_INDEX_LEB",      "R_WEBASSEMBLY_GLOBAL_INDEX_LEB",
+    "R_WEBASSEMBLY_FUNCTION_OFFSET_I32", "R_WEBASSEMBLY_SECTION_OFFSET_I32",
 };
 WABT_STATIC_ASSERT(WABT_ARRAY_SIZE(g_reloc_type_name) == kRelocTypeCount);
 
-Result ReadFile(const char* filename, std::vector<uint8_t>* out_data) {
-  FILE* infile = fopen(filename, "rb");
+Result ReadFile(string_view filename, std::vector<uint8_t>* out_data) {
+  std::string filename_str = filename.to_string();
+  const char* filename_cstr = filename_str.c_str();
+
+  struct stat statbuf;
+  if (stat(filename_cstr, &statbuf) < 0) {
+    perror("stat failed");
+    return Result::Error;
+  }
+
+  if (!(statbuf.st_mode & S_IFREG)) {
+    fprintf(stderr, "%s is not a regular file.\n", filename_cstr);
+    return Result::Error;
+  }
+
+  FILE* infile = fopen(filename_cstr, "rb");
   if (!infile) {
     const char format[] = "unable to read file %s";
     char msg[PATH_MAX + sizeof(format)];
-    wabt_snprintf(msg, sizeof(msg), format, filename);
+    wabt_snprintf(msg, sizeof(msg), format, filename_cstr);
     perror(msg);
     return Result::Error;
   }
@@ -88,11 +108,13 @@ Result ReadFile(const char* filename, std::vector<uint8_t>* out_data) {
 void InitStdio() {
 #if COMPILER_IS_MSVC
   int result = _setmode(_fileno(stdout), _O_BINARY);
-  if (result == -1)
+  if (result == -1) {
     perror("Cannot set mode binary to stdout");
+  }
   result = _setmode(_fileno(stderr), _O_BINARY);
-  if (result == -1)
+  if (result == -1) {
     perror("Cannot set mode binary to stderr");
+  }
 #endif
 }
 

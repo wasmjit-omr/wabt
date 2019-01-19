@@ -1,5 +1,5 @@
 ;;; TOOL: run-roundtrip
-;;; FLAGS: --stdout --inline-export
+;;; ARGS: --stdout --inline-export
 (module
   (func $f1)
   (func $f2)
@@ -11,5 +11,5 @@
   (func (;0;) (type 0))
   (func (;1;) (type 0))
   (table (;0;) (export "foo") 2 2 anyfunc)
-  (elem (i32.const 0) 0 1))
+  (elem (;0;) (i32.const 0) 0 1))
 ;;; STDOUT ;;)

@@ -1,5 +1,5 @@
 ;;; TOOL: run-objdump
-;;; FLAGS: -v
+;;; ARGS0: -v
 (module (func) (export "foo\de\ad\ca\bb" (func 0)))
 (;; STDOUT ;;;
 0000000: 0061 736d                                 ; WASM_BINARY_MAGIC
@@ -43,6 +43,6 @@ string-hex.wasm:	file format wasm 0x1
 
 Code Disassembly:
 
-000022 func[0]:
+000023 <fooޭʻ>:
  000024: 0b                         | end
 ;;; STDOUT ;;)

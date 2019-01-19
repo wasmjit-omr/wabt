@@ -43,6 +43,7 @@ Offset WriteFixedU32Leb128At(Stream* stream,
                              uint32_t value,
                              const char* desc);
 
+Offset WriteU32Leb128Raw(uint8_t* data, uint8_t* end, uint32_t value);
 Offset WriteFixedU32Leb128Raw(uint8_t* data, uint8_t* end, uint32_t value);
 
 // Convenience functions for writing enums as LEB128s.
@@ -63,4 +64,4 @@ size_t ReadS64Leb128(const uint8_t* p, const uint8_t* end, uint64_t* out_value);
 
 }  // namespace wabt
 
-#endif // WABT_LEB128_H_
+#endif  // WABT_LEB128_H_

@@ -18,20 +18,20 @@
 #define WABT_BINARY_READER_IR_H_
 
 #include "src/common.h"
+#include "src/error.h"
 
 namespace wabt {
 
-class ErrorHandler;
 struct Module;
 struct ReadBinaryOptions;
 
 Result ReadBinaryIr(const char* filename,
                     const void* data,
                     size_t size,
-                    const ReadBinaryOptions* options,
-                    ErrorHandler*,
+                    const ReadBinaryOptions& options,
+                    Errors*,
                     Module* out_module);
 
-} // namespace wabt
+}  // namespace wabt
 
 #endif /* WABT_BINARY_READER_IR_H_ */

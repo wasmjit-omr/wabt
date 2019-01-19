@@ -4,3 +4,5 @@
 /emscripten
 *.pyc
 *.user
+.idea/
+/cmake-build-debug/

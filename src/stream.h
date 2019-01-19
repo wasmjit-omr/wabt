@@ -52,6 +52,7 @@ class Stream {
 
   bool has_log_stream() const { return log_stream_ != nullptr; }
 
+  void ClearOffset() { offset_ = 0; }
   void AddOffset(ssize_t delta);
 
   void WriteData(const void* src,
@@ -63,8 +64,9 @@ class Stream {
   void WriteData(const std::vector<T> src,
                  const char* desc,
                  PrintChars print_chars = PrintChars::No) {
-    if (!src.empty())
+    if (!src.empty()) {
       WriteData(src.data(), src.size() * sizeof(T), desc, print_chars);
+    }
   }
 
   void WriteDataAt(size_t offset,
@@ -95,6 +97,12 @@ class Stream {
                 PrintChars print_chars = PrintChars::No) {
     Write(value, desc, print_chars);
   }
+  void WriteU128(v128 value,
+                 const char* desc = nullptr,
+                 PrintChars print_chars = PrintChars::No) {
+    Write(value, desc, print_chars);
+  }
+
   void WriteChar(char c,
                  const char* desc = nullptr,
                  PrintChars print_chars = PrintChars::No) {
@@ -140,6 +148,7 @@ class Stream {
 struct OutputBuffer {
   Result WriteToFile(string_view filename) const;
 
+  void clear() { data.clear(); }
   size_t size() const { return data.size(); }
 
   std::vector<uint8_t> data;
@@ -154,6 +163,8 @@ class MemoryStream : public Stream {
 
   OutputBuffer& output_buffer() { return *buf_; }
   std::unique_ptr<OutputBuffer> ReleaseOutputBuffer();
+
+  void Clear();
 
   Result WriteToFile(string_view filename) {
     return buf_->WriteToFile(filename);

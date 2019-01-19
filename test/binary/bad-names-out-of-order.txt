@@ -1,6 +1,4 @@
-;;; ERROR: 1
-;;; TOOL: run-gen-wasm
-;; This test file contains two functions, but their names are listed in the
+;;; TOOL: run-gen-wasm-bad
 ;; names section out of order (1 first, then 0) which is an error.
 magic
 version
@@ -12,16 +10,15 @@ section(CODE) {
   func { locals[decl_count[0]] }
 }
 section("name") {
-  subsection[1]
-  length[9]
-  func_count[2]
-  index[1]
-  str("F1")
-  index[0]
-  str("F0")
+  section(NAME_FUNCTION) {
+    func_count[2]
+    index[1]
+    str("F1")
+    index[0]
+    str("F0")
+  }
 }
 (;; STDERR ;;;
-Error running "wasm2wat":
 000002c: error: function index out of order: 0
-
+000002c: error: function index out of order: 0
 ;;; STDERR ;;)

@@ -424,8 +424,7 @@ inline void intrusive_list<T>::emplace_back(Args&&... args) {
 
 template <typename T>
 inline void intrusive_list<T>::push_front(std::unique_ptr<T> node) {
-  assert(node->prev_ == nullptr &&
-         node->next_ == nullptr);
+  assert(node->prev_ == nullptr && node->next_ == nullptr);
 
   T* node_p = node.release();
   if (first_) {
@@ -445,8 +444,7 @@ inline void intrusive_list<T>::push_front(T&& node) {
 
 template <typename T>
 inline void intrusive_list<T>::push_back(std::unique_ptr<T> node) {
-  assert(node->prev_ == nullptr &&
-         node->next_ == nullptr);
+  assert(node->prev_ == nullptr && node->next_ == nullptr);
 
   T* node_p = node.release();
   if (last_) {
@@ -516,8 +514,7 @@ template <typename T>
 inline typename intrusive_list<T>::iterator intrusive_list<T>::insert(
     iterator pos,
     std::unique_ptr<T> node) {
-  assert(node->prev_ == nullptr &&
-         node->next_ == nullptr);
+  assert(node->prev_ == nullptr && node->next_ == nullptr);
 
   T* node_p;
   if (pos == end()) {
@@ -527,10 +524,11 @@ inline typename intrusive_list<T>::iterator intrusive_list<T>::insert(
     node_p = node.release();
     node_p->prev_ = pos->prev_;
     node_p->next_ = &*pos;
-    if (pos->prev_)
+    if (pos->prev_) {
       pos->prev_->next_ = node_p;
-    else
+    } else {
       first_ = node_p;
+    }
     pos->prev_ = node_p;
     size_++;
   }
@@ -552,15 +550,17 @@ inline std::unique_ptr<T> intrusive_list<T>::extract(iterator pos) {
   if (first_ == last_) {
     first_ = last_ = nullptr;
   } else {
-    if (node->prev_)
+    if (node->prev_) {
       node->prev_->next_ = node->next_;
-    else
+    } else {
       first_ = node->next_;
+    }
 
-    if (node->next_)
+    if (node->next_) {
       node->next_->prev_ = node->prev_;
-    else
+    } else {
       last_ = node->prev_;
+    }
   }
   node->next_ = node->prev_ = nullptr;
   size_--;
@@ -630,4 +630,4 @@ inline void intrusive_list<T>::splice(iterator pos,
 
 }  // namespace wabt
 
-#endif // WABT_INTRUSIVE_LIST_H_
+#endif  // WABT_INTRUSIVE_LIST_H_

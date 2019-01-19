@@ -22,8 +22,8 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <vector>
 #include <type_traits>
+#include <vector>
 
 #include "src/binding-hash.h"
 #include "src/common.h"
@@ -43,8 +43,8 @@ struct Var {
   explicit Var(string_view name, const Location& loc = Location());
   Var(Var&&);
   Var(const Var&);
-  Var& operator =(const Var&);
-  Var& operator =(Var&&);
+  Var& operator=(const Var&);
+  Var& operator=(Var&&);
   ~Var();
 
   VarType type() const { return type_; }
@@ -90,6 +90,10 @@ struct Const {
     return Const(F64Tag(), val, loc);
   }
 
+  static Const V128(v128 val, const Location& loc = Location()) {
+    return Const(V128Tag(), val, loc);
+  }
+
   Location loc;
   Type type;
   union {
@@ -97,6 +101,7 @@ struct Const {
     uint64_t u64;
     uint32_t f32_bits;
     uint64_t f64_bits;
+    v128 v128_bits;
   };
 
  private:
@@ -105,19 +110,58 @@ struct Const {
   struct I64Tag {};
   struct F32Tag {};
   struct F64Tag {};
+  struct V128Tag {};
 
   Const(I32Tag, uint32_t val = 0, const Location& loc = Location());
   Const(I64Tag, uint64_t val = 0, const Location& loc = Location());
   Const(F32Tag, uint32_t val = 0, const Location& loc = Location());
   Const(F64Tag, uint64_t val = 0, const Location& loc = Location());
+  Const(V128Tag, v128 val = {{0, 0, 0, 0}}, const Location& loc = Location());
 };
 typedef std::vector<Const> ConstVector;
 
+struct FuncSignature {
+  TypeVector param_types;
+  TypeVector result_types;
+
+  Index GetNumParams() const { return param_types.size(); }
+  Index GetNumResults() const { return result_types.size(); }
+  Type GetParamType(Index index) const { return param_types[index]; }
+  Type GetResultType(Index index) const { return result_types[index]; }
+
+  bool operator==(const FuncSignature&) const;
+};
+
+struct FuncType {
+  explicit FuncType(string_view name) : name(name.to_string()) {}
+
+  Index GetNumParams() const { return sig.GetNumParams(); }
+  Index GetNumResults() const { return sig.GetNumResults(); }
+  Type GetParamType(Index index) const { return sig.GetParamType(index); }
+  Type GetResultType(Index index) const { return sig.GetResultType(index); }
+
+  std::string name;
+  FuncSignature sig;
+};
+
+struct FuncDeclaration {
+  Index GetNumParams() const { return sig.GetNumParams(); }
+  Index GetNumResults() const { return sig.GetNumResults(); }
+  Type GetParamType(Index index) const { return sig.GetParamType(index); }
+  Type GetResultType(Index index) const { return sig.GetResultType(index); }
+
+  bool has_func_type = false;
+  Var type_var;
+  FuncSignature sig;
+};
+
 enum class ExprType {
   AtomicLoad,
-  AtomicStore,
   AtomicRmw,
   AtomicRmwCmpxchg,
+  AtomicStore,
+  AtomicNotify,
+  AtomicWait,
   Binary,
   Block,
   Br,
@@ -128,62 +172,60 @@ enum class ExprType {
   Compare,
   Const,
   Convert,
-  CurrentMemory,
   Drop,
-  GetGlobal,
-  GetLocal,
-  GrowMemory,
+  GlobalGet,
+  GlobalSet,
   If,
+  IfExcept,
   Load,
+  LocalGet,
+  LocalSet,
+  LocalTee,
   Loop,
+  MemoryCopy,
+  MemoryDrop,
+  MemoryFill,
+  MemoryGrow,
+  MemoryInit,
+  MemorySize,
   Nop,
   Rethrow,
   Return,
+  ReturnCall,
+  ReturnCallIndirect,
   Select,
-  SetGlobal,
-  SetLocal,
+  SimdLaneOp,
+  SimdShuffleOp,
   Store,
-  TeeLocal,
+  TableCopy,
+  TableDrop,
+  TableInit,
+  Ternary,
   Throw,
-  TryBlock,
+  Try,
   Unary,
   Unreachable,
-  Wait,
-  Wake,
 
-  First = Binary,
-  Last = Wake
+  First = AtomicLoad,
+  Last = Unreachable
 };
 
 const char* GetExprTypeName(ExprType type);
 
-typedef TypeVector BlockSignature;
-
 class Expr;
 typedef intrusive_list<Expr> ExprList;
+
+typedef FuncDeclaration BlockDeclaration;
 
 struct Block {
   Block() = default;
   explicit Block(ExprList exprs) : exprs(std::move(exprs)) {}
 
   std::string label;
-  BlockSignature sig;
+  BlockDeclaration decl;
   ExprList exprs;
+  Location end_loc;
 };
-
-struct Catch {
-  explicit Catch(const Location& loc = Location()) : loc(loc) {}
-  explicit Catch(const Var& var, const Location& loc = Location())
-      : loc(loc), var(var) {}
-  Location loc;
-  Var var;
-  ExprList exprs;
-  bool IsCatchAll() const {
-    return var.is_index() && var.index() == kInvalidIndex;
-  }
-};
-
-typedef std::vector<Catch> CatchVector;
 
 class Expr : public intrusive_list_base<Expr> {
  public:
@@ -212,10 +254,14 @@ class ExprMixin : public Expr {
   explicit ExprMixin(const Location& loc = Location()) : Expr(TypeEnum, loc) {}
 };
 
-typedef ExprMixin<ExprType::CurrentMemory> CurrentMemoryExpr;
 typedef ExprMixin<ExprType::Drop> DropExpr;
-typedef ExprMixin<ExprType::GrowMemory> GrowMemoryExpr;
+typedef ExprMixin<ExprType::MemoryGrow> MemoryGrowExpr;
+typedef ExprMixin<ExprType::MemorySize> MemorySizeExpr;
+typedef ExprMixin<ExprType::MemoryCopy> MemoryCopyExpr;
+typedef ExprMixin<ExprType::MemoryFill> MemoryFillExpr;
+typedef ExprMixin<ExprType::TableCopy> TableCopyExpr;
 typedef ExprMixin<ExprType::Nop> NopExpr;
+typedef ExprMixin<ExprType::Rethrow> RethrowExpr;
 typedef ExprMixin<ExprType::Return> ReturnExpr;
 typedef ExprMixin<ExprType::Select> SelectExpr;
 typedef ExprMixin<ExprType::Unreachable> UnreachableExpr;
@@ -233,6 +279,25 @@ typedef OpcodeExpr<ExprType::Binary> BinaryExpr;
 typedef OpcodeExpr<ExprType::Compare> CompareExpr;
 typedef OpcodeExpr<ExprType::Convert> ConvertExpr;
 typedef OpcodeExpr<ExprType::Unary> UnaryExpr;
+typedef OpcodeExpr<ExprType::Ternary> TernaryExpr;
+
+class SimdLaneOpExpr : public ExprMixin<ExprType::SimdLaneOp> {
+ public:
+  SimdLaneOpExpr(Opcode opcode, uint64_t val, const Location& loc = Location())
+      : ExprMixin<ExprType::SimdLaneOp>(loc), opcode(opcode), val(val) {}
+
+  Opcode opcode;
+  uint64_t val;
+};
+
+class SimdShuffleOpExpr : public ExprMixin<ExprType::SimdShuffleOp> {
+ public:
+  SimdShuffleOpExpr(Opcode opcode, v128 val, const Location& loc = Location())
+      : ExprMixin<ExprType::SimdShuffleOp>(loc), opcode(opcode), val(val) {}
+
+  Opcode opcode;
+  v128 val;
+};
 
 template <ExprType TypeEnum>
 class VarExpr : public ExprMixin<TypeEnum> {
@@ -246,14 +311,33 @@ class VarExpr : public ExprMixin<TypeEnum> {
 typedef VarExpr<ExprType::Br> BrExpr;
 typedef VarExpr<ExprType::BrIf> BrIfExpr;
 typedef VarExpr<ExprType::Call> CallExpr;
-typedef VarExpr<ExprType::CallIndirect> CallIndirectExpr;
-typedef VarExpr<ExprType::GetGlobal> GetGlobalExpr;
-typedef VarExpr<ExprType::GetLocal> GetLocalExpr;
-typedef VarExpr<ExprType::Rethrow> RethrowExpr;
-typedef VarExpr<ExprType::SetGlobal> SetGlobalExpr;
-typedef VarExpr<ExprType::SetLocal> SetLocalExpr;
-typedef VarExpr<ExprType::TeeLocal> TeeLocalExpr;
+typedef VarExpr<ExprType::GlobalGet> GlobalGetExpr;
+typedef VarExpr<ExprType::GlobalSet> GlobalSetExpr;
+typedef VarExpr<ExprType::LocalGet> LocalGetExpr;
+typedef VarExpr<ExprType::LocalSet> LocalSetExpr;
+typedef VarExpr<ExprType::LocalTee> LocalTeeExpr;
+typedef VarExpr<ExprType::ReturnCall> ReturnCallExpr;
 typedef VarExpr<ExprType::Throw> ThrowExpr;
+
+typedef VarExpr<ExprType::MemoryInit> MemoryInitExpr;
+typedef VarExpr<ExprType::MemoryDrop> MemoryDropExpr;
+typedef VarExpr<ExprType::TableInit> TableInitExpr;
+typedef VarExpr<ExprType::TableDrop> TableDropExpr;
+
+class CallIndirectExpr : public ExprMixin<ExprType::CallIndirect> {
+ public:
+  explicit CallIndirectExpr(const Location& loc = Location())
+      : ExprMixin<ExprType::CallIndirect>(loc) {}
+
+  FuncDeclaration decl;
+};
+
+class ReturnCallIndirectExpr : public ExprMixin<ExprType::ReturnCallIndirect> {
+ public:
+  explicit ReturnCallIndirectExpr(const Location &loc = Location())
+      : ExprMixin<ExprType::ReturnCallIndirect>(loc) {}
+      FuncDeclaration decl;
+};
 
 template <ExprType TypeEnum>
 class BlockExprBase : public ExprMixin<TypeEnum> {
@@ -274,15 +358,27 @@ class IfExpr : public ExprMixin<ExprType::If> {
 
   Block true_;
   ExprList false_;
+  Location false_end_loc;
 };
 
-class TryExpr : public ExprMixin<ExprType::TryBlock> {
+class IfExceptExpr : public ExprMixin<ExprType::IfExcept> {
+ public:
+  explicit IfExceptExpr(const Location& loc = Location())
+      : ExprMixin<ExprType::IfExcept>(loc) {}
+
+  Block true_;
+  ExprList false_;
+  Location false_end_loc;
+  Var except_var;
+};
+
+class TryExpr : public ExprMixin<ExprType::Try> {
  public:
   explicit TryExpr(const Location& loc = Location())
-      : ExprMixin<ExprType::TryBlock>(loc) {}
+      : ExprMixin<ExprType::Try>(loc) {}
 
   Block block;
-  CatchVector catches;
+  ExprList catch_;
 };
 
 class BrTableExpr : public ExprMixin<ExprType::BrTable> {
@@ -326,59 +422,83 @@ typedef LoadStoreExpr<ExprType::AtomicLoad> AtomicLoadExpr;
 typedef LoadStoreExpr<ExprType::AtomicStore> AtomicStoreExpr;
 typedef LoadStoreExpr<ExprType::AtomicRmw> AtomicRmwExpr;
 typedef LoadStoreExpr<ExprType::AtomicRmwCmpxchg> AtomicRmwCmpxchgExpr;
-typedef LoadStoreExpr<ExprType::Wait> WaitExpr;
-typedef LoadStoreExpr<ExprType::Wake> WakeExpr;
+typedef LoadStoreExpr<ExprType::AtomicWait> AtomicWaitExpr;
+typedef LoadStoreExpr<ExprType::AtomicNotify> AtomicNotifyExpr;
 
 struct Exception {
-  Exception() = default;
   explicit Exception(string_view name) : name(name.to_string()) {}
 
   std::string name;
   TypeVector sig;
 };
 
-struct FuncSignature {
-  TypeVector param_types;
-  TypeVector result_types;
+class LocalTypes {
+ public:
+  typedef std::pair<Type, Index> Decl;
+  typedef std::vector<Decl> Decls;
 
-  Index GetNumParams() const { return param_types.size(); }
-  Index GetNumResults() const { return result_types.size(); }
-  Type GetParamType(Index index) const { return param_types[index]; }
-  Type GetResultType(Index index) const { return result_types[index]; }
+  struct const_iterator {
+    const_iterator(Decls::const_iterator decl, Index index)
+        : decl(decl), index(index) {}
+    Type operator*() const { return decl->first; }
+    const_iterator& operator++();
+    const_iterator operator++(int);
 
-  bool operator==(const FuncSignature&) const;
+    Decls::const_iterator decl;
+    Index index;
+  };
+
+  void Set(const TypeVector&);
+
+  const Decls& decls() const { return decls_; }
+
+  void AppendDecl(Type type, Index count) {
+    assert(count > 0);
+    decls_.emplace_back(type, count);
+  }
+
+  Index size() const;
+  Type operator[](Index) const;
+
+  const_iterator begin() const { return {decls_.begin(), 0}; }
+  const_iterator end() const { return {decls_.end(), 0}; }
+
+ private:
+  Decls decls_;
 };
 
-struct FuncType {
-  FuncType() = default;
-  explicit FuncType(string_view name) : name(name.to_string()) {}
+inline LocalTypes::const_iterator& LocalTypes::const_iterator::operator++() {
+  ++index;
+  if (index >= decl->second) {
+    ++decl;
+    index = 0;
+  }
+  return *this;
+}
 
-  Index GetNumParams() const { return sig.GetNumParams(); }
-  Index GetNumResults() const { return sig.GetNumResults(); }
-  Type GetParamType(Index index) const { return sig.GetParamType(index); }
-  Type GetResultType(Index index) const { return sig.GetResultType(index); }
+inline LocalTypes::const_iterator LocalTypes::const_iterator::operator++(int) {
+  const_iterator result = *this;
+  operator++();
+  return result;
+}
 
-  std::string name;
-  FuncSignature sig;
-};
+inline bool operator==(const LocalTypes::const_iterator& lhs,
+                       const LocalTypes::const_iterator& rhs) {
+  return lhs.decl == rhs.decl && lhs.index == rhs.index;
+}
 
-struct FuncDeclaration {
-  Index GetNumParams() const { return sig.GetNumParams(); }
-  Index GetNumResults() const { return sig.GetNumResults(); }
-  Type GetParamType(Index index) const { return sig.GetParamType(index); }
-  Type GetResultType(Index index) const { return sig.GetResultType(index); }
-
-  bool has_func_type = false;
-  Var type_var;
-  FuncSignature sig;
-};
+inline bool operator!=(const LocalTypes::const_iterator& lhs,
+                       const LocalTypes::const_iterator& rhs) {
+  return !operator==(lhs, rhs);
+}
 
 struct Func {
-  Func() = default;
   explicit Func(string_view name) : name(name.to_string()) {}
 
   Type GetParamType(Index index) const { return decl.GetParamType(index); }
   Type GetResultType(Index index) const { return decl.GetResultType(index); }
+  Type GetLocalType(Index index) const;
+  Type GetLocalType(const Var& var) const;
   Index GetNumParams() const { return decl.GetNumParams(); }
   Index GetNumLocals() const { return local_types.size(); }
   Index GetNumParamsAndLocals() const {
@@ -389,14 +509,12 @@ struct Func {
 
   std::string name;
   FuncDeclaration decl;
-  TypeVector local_types;
-  BindingHash param_bindings;
-  BindingHash local_bindings;
+  LocalTypes local_types;
+  BindingHash bindings;
   ExprList exprs;
 };
 
 struct Global {
-  Global() = default;
   explicit Global(string_view name) : name(name.to_string()) {}
 
   std::string name;
@@ -406,7 +524,6 @@ struct Global {
 };
 
 struct Table {
-  Table() = default;
   explicit Table(string_view name) : name(name.to_string()) {}
 
   std::string name;
@@ -414,13 +531,16 @@ struct Table {
 };
 
 struct ElemSegment {
+  explicit ElemSegment(string_view name) : name(name.to_string()) {}
+
+  std::string name;
   Var table_var;
+  bool passive = false;
   ExprList offset;
   VarVector vars;
 };
 
 struct Memory {
-  Memory() = default;
   explicit Memory(string_view name) : name(name.to_string()) {}
 
   std::string name;
@@ -428,7 +548,11 @@ struct Memory {
 };
 
 struct DataSegment {
+  explicit DataSegment(string_view name) : name(name.to_string()) {}
+
+  std::string name;
   Var memory_var;
+  bool passive = false;
   ExprList offset;
   std::vector<uint8_t> data;
 };
@@ -608,8 +732,10 @@ class TableModuleField : public ModuleFieldMixin<ModuleFieldType::Table> {
 class ElemSegmentModuleField
     : public ModuleFieldMixin<ModuleFieldType::ElemSegment> {
  public:
-  explicit ElemSegmentModuleField(const Location& loc = Location())
-      : ModuleFieldMixin<ModuleFieldType::ElemSegment>(loc) {}
+  explicit ElemSegmentModuleField(const Location& loc = Location(),
+                                  string_view name = string_view())
+      : ModuleFieldMixin<ModuleFieldType::ElemSegment>(loc),
+        elem_segment(name) {}
 
   ElemSegment elem_segment;
 };
@@ -626,8 +752,10 @@ class MemoryModuleField : public ModuleFieldMixin<ModuleFieldType::Memory> {
 class DataSegmentModuleField
     : public ModuleFieldMixin<ModuleFieldType::DataSegment> {
  public:
-  explicit DataSegmentModuleField( const Location& loc = Location())
-      : ModuleFieldMixin<ModuleFieldType::DataSegment>(loc) {}
+  explicit DataSegmentModuleField(const Location& loc = Location(),
+                                  string_view name = string_view())
+      : ModuleFieldMixin<ModuleFieldType::DataSegment>(loc),
+        data_segment(name) {}
 
   DataSegment data_segment;
 };
@@ -643,8 +771,7 @@ class ExceptionModuleField : public ModuleFieldMixin<ModuleFieldType::Except> {
 
 class StartModuleField : public ModuleFieldMixin<ModuleFieldType::Start> {
  public:
-  explicit StartModuleField(Var start = Var(),
-                            const Location& loc = Location())
+  explicit StartModuleField(Var start = Var(), const Location& loc = Location())
       : ModuleFieldMixin<ModuleFieldType::Start>(loc), start(start) {}
 
   Var start;
@@ -660,8 +787,10 @@ struct Module {
   const Func* GetFunc(const Var&) const;
   Func* GetFunc(const Var&);
   Index GetTableIndex(const Var&) const;
+  const Table* GetTable(const Var&) const;
   Table* GetTable(const Var&);
   Index GetMemoryIndex(const Var&) const;
+  const Memory* GetMemory(const Var&) const;
   Memory* GetMemory(const Var&);
   Index GetGlobalIndex(const Var&) const;
   const Global* GetGlobal(const Var&) const;
@@ -669,6 +798,17 @@ struct Module {
   const Export* GetExport(string_view) const;
   Exception* GetExcept(const Var&) const;
   Index GetExceptIndex(const Var&) const;
+  const DataSegment* GetDataSegment(const Var&) const;
+  DataSegment* GetDataSegment(const Var&);
+  Index GetDataSegmentIndex(const Var&) const;
+  const ElemSegment* GetElemSegment(const Var&) const;
+  ElemSegment* GetElemSegment(const Var&);
+  Index GetElemSegmentIndex(const Var&) const;
+
+  bool IsImport(ExternalKind kind, const Var&) const;
+  bool IsImport(const Export& export_) const {
+    return IsImport(export_.kind, export_.var);
+  }
 
   // TODO(binji): move this into a builder class?
   void AppendField(std::unique_ptr<DataSegmentModuleField>);
@@ -716,6 +856,8 @@ struct Module {
   BindingHash func_type_bindings;
   BindingHash table_bindings;
   BindingHash memory_bindings;
+  BindingHash data_segment_bindings;
+  BindingHash elem_segment_bindings;
 };
 
 enum class ScriptModuleType {
@@ -934,8 +1076,8 @@ struct Script {
 };
 
 void MakeTypeBindingReverseMapping(
-    const TypeVector& types,
-    const BindingHash&  bindings,
+    size_t num_types,
+    const BindingHash& bindings,
     std::vector<std::string>* out_reverse_mapping);
 
 }  // namespace wabt

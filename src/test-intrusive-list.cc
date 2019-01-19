@@ -50,8 +50,9 @@ struct TestObject : intrusive_list_base<TestObject> {
   TestObject& operator=(const TestObject&) = delete;
 
   ~TestObject() {
-    if (!moved)
+    if (!moved) {
       creation_count--;
+    }
   }
 
   int data;
@@ -72,9 +73,7 @@ class IntrusiveListTest : public ::testing::Test {
     TestObject::creation_count = 0;
   }
 
-  virtual void TearDown() {
-    ASSERT_EQ(0, TestObject::creation_count);
-  }
+  virtual void TearDown() { ASSERT_EQ(0, TestObject::creation_count); }
 
   TestObjectList NewList(const std::vector<int>& data_values) {
     TestObjectList result;
@@ -177,7 +176,6 @@ class IntrusiveListIteratorTest : public IntrusiveListTest {
     }
     ASSERT_EQ(count, expected.size());
   }
-
 
   TestObjectList list_;
   const TestObjectList& clist_ = list_;

@@ -24,6 +24,7 @@
 #include "src/common.h"
 #include "src/lexer-source-line-finder.h"
 #include "src/literal.h"
+#include "src/make-unique.h"
 #include "src/opcode.h"
 #include "src/token.h"
 
@@ -37,12 +38,12 @@ class WastLexer {
  public:
   WABT_DISALLOW_COPY_AND_ASSIGN(WastLexer);
 
-  WastLexer(std::unique_ptr<LexerSource> source, const char* filename);
+  WastLexer(std::unique_ptr<LexerSource> source, string_view filename);
   ~WastLexer();
 
   // Convenience functions.
-  static std::unique_ptr<WastLexer> CreateFileLexer(const char* filename);
-  static std::unique_ptr<WastLexer> CreateBufferLexer(const char* filename,
+  static std::unique_ptr<WastLexer> CreateFileLexer(string_view filename);
+  static std::unique_ptr<WastLexer> CreateBufferLexer(string_view filename,
                                                       const void* data,
                                                       size_t size);
 
@@ -50,7 +51,9 @@ class WastLexer {
   Result Fill(size_t need);
 
   // TODO(binji): Move this out of the lexer.
-  LexerSourceLineFinder& line_finder() { return line_finder_; }
+  std::unique_ptr<LexerSourceLineFinder> MakeLineFinder() {
+    return MakeUnique<LexerSourceLineFinder>(source_->Clone());
+  }
 
  private:
   Location GetLocation();
@@ -58,12 +61,11 @@ class WastLexer {
   std::string GetText(size_t at = 0);
 
   std::unique_ptr<LexerSource> source_;
-  LexerSourceLineFinder line_finder_;
-  const char* filename_;
+  std::string filename_;
   int line_;
   int comment_nesting_;
-  size_t buffer_file_offset_; // File offset of the start of the buffer.
-  size_t line_file_offset_;   // File offset of the start of the current line.
+  size_t buffer_file_offset_;  // File offset of the start of the buffer.
+  size_t line_file_offset_;    // File offset of the start of the current line.
 
   // Lexing data needed by re2c.
   bool eof_;

@@ -100,9 +100,11 @@ argument to the executable (which by default is `out/wat2wasm`).
 The currently supported list of keys:
 
 - `TOOL`: a set of preconfigured keys, see below.
-- `EXE`: the executable to run, defaults to out/wat2wasm
+- `RUN`: the executable to run, defaults to out/wat2wasm
 - `STDIN_FILE`: the file to use for STDIN instead of the contents of this file.
-- `FLAGS`: additional flags to pass to the executable
+- `ARGS`: additional args to pass to the executable
+- `ARGS{N}`: additional args to the Nth `RUN` command (zero-based)
+- `ARGS*`: additional args to all `RUN` commands
 - `ENV`: environment variables to set, separated by spaces
 - `ERROR`: the expected return value from the executable, defaults to 0
 - `SLOW`: if defined, this test's timeout is doubled.
@@ -117,8 +119,12 @@ The currently supported list of tools (see
   format.
 - `run-objdump`: parse a wasm text file, convert it to binary, then run
   `wasm-objdump` on it.
-- `run-wasm-link`: parses a wasm text file which may contain multiple modules,
-  convert them to binary, then link them together via `wasm-link`.
+- `run-objdump-gen-wasm`: parse a "gen-wasm" text file, convert it to binary,
+  then run `wasm-objdump` on it.
+- `run-objdump-spec`: parse a wast spec test file, convert it to JSON and a
+  collection of `.wasm` files, then run `wasm-objdump`. Note that the `.wasm`
+  files are not automatically passed to `wasm-objdump`, so each test must
+  specify them manually: `%(temp_file)s.0.wasm %(temp_file)s.1.wasm`, etc.
 - `run-roundtrip`: parse a wasm text file, convert it to binary, convert it
   back to text, then finally convert it back to binary and compare the two
   binary results. If the `--stdout` flag is passed, the final conversion to
@@ -136,9 +142,13 @@ The currently supported list of tools (see
   interpreter
 - `run-opcodecnt`: parse a wasm text file, convert it to binary, then display
   opcode usage counts.
-- `run-gen-spec-js`:parse wasm spec test text file, convert it to a JSON file
+- `run-gen-spec-js`: parse wasm spec test text file, convert it to a JSON file
   and a collection of `.wasm` and `.wast` files, then take all of these files
   and generate a JavaScript file that will execute the same tests.
+- `run-spec-wasm2c`: similar to `run-gen-spec-js`, but the output instead will
+  be C source files, that are then compiled with the default C compiler (`cc`).
+  Finally, the native executable is run.
+
 
 ## Test subdirectories
 
@@ -159,9 +169,8 @@ subdirectory:
 - `exceptions`: Tests the new experimental exceptions feature.
 - `gen-spec-js`: Tests the gen-spec-js tool, which converts a spec test into a
   JavaScript file.
-- `help`: Tests the output of running with the `-h` flag on each tool.
+- `help`: Tests the output of running with the `--help` flag on each tool.
 - `interp`: Tests the `wasm-interp` tool.
-- `link`: Tests the `wasm-link` tool.
 - `opcodecnt`: Tests the `wasm-opcodecnt` tool.
 - `parse`: Tests parsing via the `wat2wasm` tool.
 - `regress`: Various regression tests that are irregular and don't fit

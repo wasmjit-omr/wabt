@@ -1,5 +1,5 @@
 ;;; TOOL: run-objdump
-;;; FLAGS: -v
+;;; ARGS0: -v
 (module
   (memory
     (data "\00\01\02\03\04\05\06\07\08\09\0a")))
@@ -20,7 +20,7 @@
 000000f: 00                                        ; section size (guess)
 0000010: 01                                        ; num data segments
 ; data segment header 0
-0000011: 00                                        ; memory index
+0000011: 00                                      
 0000012: 41                                        ; i32.const
 0000013: 00                                        ; i32 literal
 0000014: 0b                                        ; end

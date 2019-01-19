@@ -1,5 +1,5 @@
 ;;; TOOL: run-objdump
-;;; FLAGS: -v
+;;; ARGS0: -v
 (module
   (func
     block $foo
@@ -345,7 +345,7 @@ block-257-exprs-br.wasm:	file format wasm 0x1
 
 Code Disassembly:
 
-000016 func[0]:
+000018 func[0]:
  000019: 02 40                      | block
  00001b: 01                         |   nop
  00001c: 01                         |   nop

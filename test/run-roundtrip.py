@@ -117,8 +117,15 @@ def main(args):
   parser.add_argument('--generate-names', action='store_true')
   parser.add_argument('--fold-exprs', action='store_true')
   parser.add_argument('--enable-exceptions', action='store_true')
+  parser.add_argument('--enable-saturating-float-to-int', action='store_true')
   parser.add_argument('--enable-threads', action='store_true')
+  parser.add_argument('--enable-simd', action='store_true')
+  parser.add_argument('--enable-sign-extension', action='store_true')
+  parser.add_argument('--enable-multi-value', action='store_true')
+  parser.add_argument('--enable-bulk-memory', action='store_true')
+  parser.add_argument('--enable-tail-call', action='store_true')
   parser.add_argument('--inline-exports', action='store_true')
+  parser.add_argument('--inline-imports', action='store_true')
   parser.add_argument('file', help='test file.')
   options = parser.parse_args(args)
 
@@ -128,7 +135,14 @@ def main(args):
   wat2wasm.AppendOptionalArgs({
       '--debug-names': options.debug_names,
       '--enable-exceptions': options.enable_exceptions,
+      '--enable-multi-value': options.enable_multi_value,
+      '--enable-saturating-float-to-int':
+          options.enable_saturating_float_to_int,
+      '--enable-sign-extension': options.enable_sign_extension,
+      '--enable-simd': options.enable_simd,
       '--enable-threads': options.enable_threads,
+      '--enable-bulk-memory': options.enable_bulk_memory,
+      '--enable-tail-call': options.enable_tail_call,
       '--no-check': options.no_check,
   })
 
@@ -138,8 +152,16 @@ def main(args):
   wasm2wat.AppendOptionalArgs({
       '--fold-exprs': options.fold_exprs,
       '--enable-exceptions': options.enable_exceptions,
+      '--enable-multi-value': options.enable_multi_value,
+      '--enable-saturating-float-to-int':
+          options.enable_saturating_float_to_int,
+      '--enable-sign-extension': options.enable_sign_extension,
+      '--enable-simd': options.enable_simd,
+      '--enable-bulk-memory': options.enable_bulk_memory,
+      '--enable-tail-call': options.enable_tail_call,
       '--enable-threads': options.enable_threads,
       '--inline-exports': options.inline_exports,
+      '--inline-imports': options.inline_imports,
       '--no-debug-names': not options.debug_names,
       '--generate-names': options.generate_names,
       '--no-check': options.no_check,
