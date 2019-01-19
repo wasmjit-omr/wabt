@@ -30,7 +30,7 @@ option(WERROR "Build with warnings as errors" OFF)
 
 set(OMR_DDR OFF CACHE BOOL "Enable DDR")
 set(OMR_EXAMPLE OFF CACHE BOOL "")
-set(OMR_JIT  ON CACHE BOOL "")
+set(OMR_COMPILER  ON CACHE BOOL "")
 set(OMR_JITBUILDER ON CACHE BOOL "")
 set(OMR_GC OFF CACHE BOOL "")
 set(OMR_PORT ON CACHE BOOL "")
