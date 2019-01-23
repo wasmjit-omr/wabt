@@ -1301,20 +1301,10 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F32Abs:
       EmitUnaryOp<float>(b, pc, &stack, [&](TR::IlValue* value) {
-        auto* return_value = b->Copy(value);
-
-        TR::IlBuilder* zero_path = nullptr;
-        TR::IlBuilder* nonzero_path = nullptr;
-        TR::IlBuilder* neg_path = nullptr;
-
-        // We have to check explicitly for 0.0, since abs(-0.0) is 0.0.
-        b->IfThenElse(&zero_path, &nonzero_path, b->EqualTo(value, b->ConstFloat(0)));
-        zero_path->StoreOver(return_value, zero_path->ConstFloat(0));
-
-        nonzero_path->IfThen(&neg_path, nonzero_path->LessThan(value, nonzero_path->ConstFloat(0)));
-        neg_path->StoreOver(return_value, neg_path->Mul(value, neg_path->ConstFloat(-1)));
-
-        return return_value;
+        return b->ConvertBitsTo(Float,
+        b->                     And(
+        b->                         ConvertBitsTo(Int32, value),
+        b->                         ConstInt32(0x7fffffff)));
       });
       break;
 
@@ -1405,20 +1395,10 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F64Abs:
       EmitUnaryOp<double>(b, pc, &stack, [&](TR::IlValue* value) {
-        auto* return_value = b->Copy(value);
-
-        TR::IlBuilder* zero_path = nullptr;
-        TR::IlBuilder* nonzero_path = nullptr;
-        TR::IlBuilder* neg_path = nullptr;
-
-        // We have to check explicitly for 0.0, since abs(-0.0) is 0.0.
-        b->IfThenElse(&zero_path, &nonzero_path, b->EqualTo(value, b->ConstDouble(0)));
-        zero_path->StoreOver(return_value, zero_path->ConstDouble(0));
-
-        nonzero_path->IfThen(&neg_path, nonzero_path->LessThan(value, nonzero_path->ConstDouble(0)));
-        neg_path->StoreOver(return_value, neg_path->Mul(value, neg_path->ConstDouble(-1)));
-
-        return return_value;
+        return b->ConvertBitsTo(Double,
+        b->                     And(
+        b->                         ConvertBitsTo(Int64, value),
+        b->                         ConstInt64(0x7fffffffffffffffL)));
       });
       break;
 
