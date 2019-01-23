@@ -146,22 +146,10 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  Float,
                  1,
                  Float);
-  DefineFunction("f32_copysign", __FILE__, "0",
-                 reinterpret_cast<void*>(static_cast<float (*)(float, float)>(std::copysign)),
-                 Float,
-                 2,
-                 Float,
-                 Float);
   DefineFunction("f64_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<double (*)(double)>(std::sqrt)),
                  Double,
                  1,
-                 Double);
-  DefineFunction("f64_copysign", __FILE__, "0",
-                 reinterpret_cast<void*>(static_cast<double (*)(double, double)>(std::copysign)),
-                 Double,
-                 2,
-                 Double,
                  Double);
   DefineFunction("CallHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallHelper),
@@ -1368,7 +1356,14 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F32Copysign:
       EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-        return b->Call("f32_copysign", 2, lhs, rhs);
+        return b->ConvertBitsTo(Float,
+        b->                     Or(
+        b->                        And(
+        b->                            ConvertBitsTo(Int32, lhs),
+        b->                            ConstInt32(0x7fffffff)),
+        b->                        And(
+        b->                            ConvertBitsTo(Int32, rhs),
+        b->                            ConstInt32(0x80000000))));
       });
       break;
 
@@ -1465,7 +1460,14 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F64Copysign:
       EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-        return b->Call("f64_copysign", 2, lhs, rhs);
+        return b->ConvertBitsTo(Double,
+        b->                     Or(
+        b->                        And(
+        b->                            ConvertBitsTo(Int64, lhs),
+        b->                            ConstInt64(0x7fffffffffffffffL)),
+        b->                        And(
+        b->                            ConvertBitsTo(Int64, rhs),
+        b->                            ConstInt64(0x8000000000000000L))));
       });
       break;
 
