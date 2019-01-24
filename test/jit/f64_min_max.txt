@@ -1,0 +1,196 @@
+;;; TOOL: run-interp-jit
+(module
+  (func $f64_min (param f64) (param f64) (result f64)
+    get_local 0
+    get_local 1
+    f64.min)
+
+  (func (export "test_f64_min_0") (result f64)
+    f64.const -1.0
+    f64.const 1.0
+    call $f64_min)
+
+  (func (export "test_f64_min_1") (result f64)
+    f64.const 0.0
+    f64.const 1.0
+    call $f64_min)
+
+  (func (export "test_f64_min_2") (result f64)
+    f64.const -0.0
+    f64.const -1.0
+    call $f64_min)
+
+  (func (export "test_f64_min_3") (result f64)
+    f64.const -inf
+    f64.const 1.0
+    call $f64_min)
+
+  (func (export "test_f64_min_4") (result f64)
+    f64.const -1.0
+    f64.const -inf
+    call $f64_min)
+
+  (func (export "test_f64_min_5") (result f64)
+    f64.const inf
+    f64.const 3.14
+    call $f64_min)
+
+  (func (export "test_f64_min_6") (result f64)
+    f64.const -6.28
+    f64.const inf
+    call $f64_min)
+
+  (func (export "test_f64_min_7") (result f64)
+    f64.const -0.0
+    f64.const 0.0
+    call $f64_min)
+
+  (func (export "test_f64_min_8") (result f64)
+    f64.const 0.0
+    f64.const -0.0
+    call $f64_min)
+
+  (func (export "test_f64_min_9") (result f64)
+    f64.const 0.0
+    f64.const 0.0
+    call $f64_min)
+
+  (func (export "test_f64_min_10") (result f64)
+    f64.const -inf
+    f64.const nan
+    call $f64_min)
+
+  (func (export "test_f64_min_11") (result f64)
+    f64.const -nan
+    f64.const -inf
+    call $f64_min)
+
+  (func (export "test_f64_min_12") (result f64)
+    f64.const nan
+    f64.const -nan
+    call $f64_min
+    f64.abs) ;; Sign of nan doesn't matter here
+
+  (func (export "test_f64_min_13") (result f64)
+    f64.const nan
+    f64.const nan
+    call $f64_min)
+
+  (func (export "test_f64_min_14") (result f64)
+    f64.const -nan
+    f64.const -nan
+    call $f64_min)
+
+  (func $f64_max (param f64) (param f64) (result f64)
+    get_local 0
+    get_local 1
+    f64.max)
+
+  (func (export "test_f64_max_0") (result f64)
+    f64.const -1.0
+    f64.const 1.0
+    call $f64_max)
+
+  (func (export "test_f64_max_1") (result f64)
+    f64.const -0.0
+    f64.const -1.0
+    call $f64_max)
+
+  (func (export "test_f64_max_2") (result f64)
+    f64.const 0.0
+    f64.const 1.0
+    call $f64_max)
+
+  (func (export "test_f64_max_3") (result f64)
+    f64.const inf
+    f64.const -1.0
+    call $f64_max)
+
+  (func (export "test_f64_max_4") (result f64)
+    f64.const 1.0
+    f64.const inf
+    call $f64_max)
+
+  (func (export "test_f64_max_5") (result f64)
+    f64.const -inf
+    f64.const 3.14
+    call $f64_max)
+
+  (func (export "test_f64_max_6") (result f64)
+    f64.const -6.28
+    f64.const -inf
+    call $f64_max)
+
+  (func (export "test_f64_max_7") (result f64)
+    f64.const -0.0
+    f64.const 0.0
+    call $f64_max)
+
+  (func (export "test_f64_max_8") (result f64)
+    f64.const 0.0
+    f64.const -0.0
+    call $f64_max)
+
+  (func (export "test_f64_max_9") (result f64)
+    f64.const -0.0
+    f64.const -0.0
+    call $f64_max)
+
+  (func (export "test_f64_max_10") (result f64)
+    f64.const inf
+    f64.const nan
+    call $f64_max)
+
+  (func (export "test_f64_max_11") (result f64)
+    f64.const -nan
+    f64.const inf
+    call $f64_max)
+
+  (func (export "test_f64_max_12") (result f64)
+    f64.const nan
+    f64.const -nan
+    call $f64_max
+    f64.abs) ;; Sign of nan doesn't matter here
+
+  (func (export "test_f64_max_13") (result f64)
+    f64.const nan
+    f64.const nan
+    call $f64_max)
+
+  (func (export "test_f64_max_14") (result f64)
+    f64.const -nan
+    f64.const -nan
+    call $f64_max)
+)
+(;; STDOUT ;;;
+test_f64_min_0() => f64:-1.000000
+test_f64_min_1() => f64:0.000000
+test_f64_min_2() => f64:-1.000000
+test_f64_min_3() => f64:-inf
+test_f64_min_4() => f64:-inf
+test_f64_min_5() => f64:3.140000
+test_f64_min_6() => f64:-6.280000
+test_f64_min_7() => f64:-0.000000
+test_f64_min_8() => f64:-0.000000
+test_f64_min_9() => f64:0.000000
+test_f64_min_10() => f64:nan
+test_f64_min_11() => f64:-nan
+test_f64_min_12() => f64:nan
+test_f64_min_13() => f64:nan
+test_f64_min_14() => f64:-nan
+test_f64_max_0() => f64:1.000000
+test_f64_max_1() => f64:-0.000000
+test_f64_max_2() => f64:1.000000
+test_f64_max_3() => f64:inf
+test_f64_max_4() => f64:inf
+test_f64_max_5() => f64:3.140000
+test_f64_max_6() => f64:-6.280000
+test_f64_max_7() => f64:0.000000
+test_f64_max_8() => f64:0.000000
+test_f64_max_9() => f64:-0.000000
+test_f64_max_10() => f64:nan
+test_f64_max_11() => f64:-nan
+test_f64_max_12() => f64:nan
+test_f64_max_13() => f64:nan
+test_f64_max_14() => f64:-nan
+;;; STDOUT ;;)

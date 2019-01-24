@@ -1,0 +1,196 @@
+;;; TOOL: run-interp-jit
+(module
+  (func $f32_min (param f32) (param f32) (result f32)
+    get_local 0
+    get_local 1
+    f32.min)
+
+  (func (export "test_f32_min_0") (result f32)
+    f32.const -1.0
+    f32.const 1.0
+    call $f32_min)
+
+  (func (export "test_f32_min_1") (result f32)
+    f32.const 0.0
+    f32.const 1.0
+    call $f32_min)
+
+  (func (export "test_f32_min_2") (result f32)
+    f32.const -0.0
+    f32.const -1.0
+    call $f32_min)
+
+  (func (export "test_f32_min_3") (result f32)
+    f32.const -inf
+    f32.const 1.0
+    call $f32_min)
+
+  (func (export "test_f32_min_4") (result f32)
+    f32.const -1.0
+    f32.const -inf
+    call $f32_min)
+
+  (func (export "test_f32_min_5") (result f32)
+    f32.const inf
+    f32.const 3.14
+    call $f32_min)
+
+  (func (export "test_f32_min_6") (result f32)
+    f32.const -6.28
+    f32.const inf
+    call $f32_min)
+
+  (func (export "test_f32_min_7") (result f32)
+    f32.const -0.0
+    f32.const 0.0
+    call $f32_min)
+
+  (func (export "test_f32_min_8") (result f32)
+    f32.const 0.0
+    f32.const -0.0
+    call $f32_min)
+
+  (func (export "test_f32_min_9") (result f32)
+    f32.const 0.0
+    f32.const 0.0
+    call $f32_min)
+
+  (func (export "test_f32_min_10") (result f32)
+    f32.const -inf
+    f32.const nan
+    call $f32_min)
+
+  (func (export "test_f32_min_11") (result f32)
+    f32.const -nan
+    f32.const -inf
+    call $f32_min)
+
+  (func (export "test_f32_min_12") (result f32)
+    f32.const nan
+    f32.const -nan
+    call $f32_min
+    f32.abs) ;; Sign of nan doesn't matter here
+
+  (func (export "test_f32_min_13") (result f32)
+    f32.const nan
+    f32.const nan
+    call $f32_min)
+
+  (func (export "test_f32_min_14") (result f32)
+    f32.const -nan
+    f32.const -nan
+    call $f32_min)
+
+  (func $f32_max (param f32) (param f32) (result f32)
+    get_local 0
+    get_local 1
+    f32.max)
+
+  (func (export "test_f32_max_0") (result f32)
+    f32.const -1.0
+    f32.const 1.0
+    call $f32_max)
+
+  (func (export "test_f32_max_1") (result f32)
+    f32.const -0.0
+    f32.const -1.0
+    call $f32_max)
+
+  (func (export "test_f32_max_2") (result f32)
+    f32.const 0.0
+    f32.const 1.0
+    call $f32_max)
+
+  (func (export "test_f32_max_3") (result f32)
+    f32.const inf
+    f32.const -1.0
+    call $f32_max)
+
+  (func (export "test_f32_max_4") (result f32)
+    f32.const 1.0
+    f32.const inf
+    call $f32_max)
+
+  (func (export "test_f32_max_5") (result f32)
+    f32.const -inf
+    f32.const 3.14
+    call $f32_max)
+
+  (func (export "test_f32_max_6") (result f32)
+    f32.const -6.28
+    f32.const -inf
+    call $f32_max)
+
+  (func (export "test_f32_max_7") (result f32)
+    f32.const -0.0
+    f32.const 0.0
+    call $f32_max)
+
+  (func (export "test_f32_max_8") (result f32)
+    f32.const 0.0
+    f32.const -0.0
+    call $f32_max)
+
+  (func (export "test_f32_max_9") (result f32)
+    f32.const -0.0
+    f32.const -0.0
+    call $f32_max)
+
+  (func (export "test_f32_max_10") (result f32)
+    f32.const inf
+    f32.const nan
+    call $f32_max)
+
+  (func (export "test_f32_max_11") (result f32)
+    f32.const -nan
+    f32.const inf
+    call $f32_max)
+
+  (func (export "test_f32_max_12") (result f32)
+    f32.const nan
+    f32.const -nan
+    call $f32_max
+    f32.abs) ;; Sign of nan doesn't matter here
+
+  (func (export "test_f32_max_13") (result f32)
+    f32.const nan
+    f32.const nan
+    call $f32_max)
+
+  (func (export "test_f32_max_14") (result f32)
+    f32.const -nan
+    f32.const -nan
+    call $f32_max)
+)
+(;; STDOUT ;;;
+test_f32_min_0() => f32:-1.000000
+test_f32_min_1() => f32:0.000000
+test_f32_min_2() => f32:-1.000000
+test_f32_min_3() => f32:-inf
+test_f32_min_4() => f32:-inf
+test_f32_min_5() => f32:3.140000
+test_f32_min_6() => f32:-6.280000
+test_f32_min_7() => f32:-0.000000
+test_f32_min_8() => f32:-0.000000
+test_f32_min_9() => f32:0.000000
+test_f32_min_10() => f32:nan
+test_f32_min_11() => f32:-nan
+test_f32_min_12() => f32:nan
+test_f32_min_13() => f32:nan
+test_f32_min_14() => f32:-nan
+test_f32_max_0() => f32:1.000000
+test_f32_max_1() => f32:-0.000000
+test_f32_max_2() => f32:1.000000
+test_f32_max_3() => f32:inf
+test_f32_max_4() => f32:inf
+test_f32_max_5() => f32:3.140000
+test_f32_max_6() => f32:-6.280000
+test_f32_max_7() => f32:0.000000
+test_f32_max_8() => f32:0.000000
+test_f32_max_9() => f32:-0.000000
+test_f32_max_10() => f32:nan
+test_f32_max_11() => f32:-nan
+test_f32_max_12() => f32:nan
+test_f32_max_13() => f32:nan
+test_f32_max_14() => f32:-nan
+;;; STDOUT ;;)
