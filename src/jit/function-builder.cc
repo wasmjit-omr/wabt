@@ -1411,6 +1411,68 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       });
       break;
 
+    case Opcode::F32Min:
+      EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* result = b->ConstFloat(0.0f);
+
+        TR::IlBuilder* eq_path = nullptr;
+        TR::IlBuilder* ne_path = nullptr;
+        TR::IlBuilder* lt_path = nullptr;
+        TR::IlBuilder* gt_path = nullptr;
+
+        b->IfThenElse(&eq_path, &ne_path, b->EqualTo(lhs, rhs));
+
+        // Using bitwise OR here ensures that min(-0.0, 0.0) = -0.0
+        eq_path->StoreOver(result,
+        eq_path->          ConvertBitsTo(Float,
+        eq_path->                        Or(
+        eq_path->                           ConvertBitsTo(Int32, lhs),
+        eq_path->                           ConvertBitsTo(Int32, rhs))));
+
+        // We need to explicitly check if lhs is nan, since we must return lhs in that case
+        ne_path->IfThenElse(&lt_path,
+                            &gt_path,
+        ne_path->           Or(
+        ne_path->              NotEqualTo(lhs, lhs),
+        ne_path->              LessThan(lhs, rhs)));
+        lt_path->StoreOver(result, lhs);
+        gt_path->StoreOver(result, rhs);
+
+        return result;
+      });
+      break;
+
+    case Opcode::F32Max:
+      EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* result = b->ConstFloat(0.0f);
+
+        TR::IlBuilder* eq_path = nullptr;
+        TR::IlBuilder* ne_path = nullptr;
+        TR::IlBuilder* lt_path = nullptr;
+        TR::IlBuilder* gt_path = nullptr;
+
+        b->IfThenElse(&eq_path, &ne_path, b->EqualTo(lhs, rhs));
+
+        // Using bitwise AND here ensures that max(-0.0, 0.0) = 0.0
+        eq_path->StoreOver(result,
+        eq_path->          ConvertBitsTo(Float,
+        eq_path->                        And(
+        eq_path->                            ConvertBitsTo(Int32, lhs),
+        eq_path->                            ConvertBitsTo(Int32, rhs))));
+
+        // We need to explicitly check if rhs is nan, since we must return rhs in that case
+        ne_path->IfThenElse(&lt_path,
+                            &gt_path,
+        ne_path->           Or(
+        ne_path->              NotEqualTo(rhs, rhs),
+        ne_path->              LessThan(lhs, rhs)));
+        lt_path->StoreOver(result, rhs);
+        gt_path->StoreOver(result, lhs);
+
+        return result;
+      });
+      break;
+
     case Opcode::F64Abs:
       EmitUnaryOp<double>(b, pc, &stack, [&](TR::IlValue* value) {
         auto* return_value = b->Copy(value);
@@ -1505,6 +1567,68 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::F64Ge:
       EmitBinaryOp<double, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
+      });
+      break;
+
+    case Opcode::F64Min:
+      EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* result = b->ConstDouble(0.0f);
+
+        TR::IlBuilder* eq_path = nullptr;
+        TR::IlBuilder* ne_path = nullptr;
+        TR::IlBuilder* lt_path = nullptr;
+        TR::IlBuilder* gt_path = nullptr;
+
+        b->IfThenElse(&eq_path, &ne_path, b->EqualTo(lhs, rhs));
+
+        // Using bitwise OR here ensures that min(-0.0, 0.0) = -0.0
+        eq_path->StoreOver(result,
+        eq_path->          ConvertBitsTo(Double,
+        eq_path->                        Or(
+        eq_path->                           ConvertBitsTo(Int64, lhs),
+        eq_path->                           ConvertBitsTo(Int64, rhs))));
+
+        // We need to explicitly check if lhs is nan, since we must return lhs in that case
+        ne_path->IfThenElse(&lt_path,
+                            &gt_path,
+        ne_path->           Or(
+        ne_path->              NotEqualTo(lhs, lhs),
+        ne_path->              LessThan(lhs, rhs)));
+        lt_path->StoreOver(result, lhs);
+        gt_path->StoreOver(result, rhs);
+
+        return result;
+      });
+      break;
+
+    case Opcode::F64Max:
+      EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* result = b->ConstDouble(0.0);
+
+        TR::IlBuilder* eq_path = nullptr;
+        TR::IlBuilder* ne_path = nullptr;
+        TR::IlBuilder* lt_path = nullptr;
+        TR::IlBuilder* gt_path = nullptr;
+
+        b->IfThenElse(&eq_path, &ne_path, b->EqualTo(lhs, rhs));
+
+        // Using bitwise AND here ensures that max(-0.0, 0.0) = 0.0
+        eq_path->StoreOver(result,
+        eq_path->          ConvertBitsTo(Double,
+        eq_path->                        And(
+        eq_path->                            ConvertBitsTo(Int64, lhs),
+        eq_path->                            ConvertBitsTo(Int64, rhs))));
+
+        // We need to explicitly check if rhs is nan, since we must return rhs in that case
+        ne_path->IfThenElse(&lt_path,
+                            &gt_path,
+        ne_path->           Or(
+        ne_path->              NotEqualTo(rhs, rhs),
+        ne_path->              LessThan(lhs, rhs)));
+        lt_path->StoreOver(result, rhs);
+        gt_path->StoreOver(result, lhs);
+
+        return result;
       });
       break;
 
