@@ -96,6 +96,9 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
 FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc) {
   using namespace wabt::interp;
   auto* env = th->env_;
+
+  th->set_pc(current_pc - th->GetIstream());
+
   Table* table = &env->tables_[table_index];
   TRAP_IF(entry_index >= table->func_indexes.size(), UndefinedTableIndex);
   Index func_index = table->func_indexes[entry_index];
