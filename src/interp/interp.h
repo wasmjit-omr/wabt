@@ -540,6 +540,14 @@ class Environment {
   std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
 };
 
+struct CallFrame {
+  CallFrame() : pc(0), is_jit(false) {}
+  CallFrame(IstreamOffset pc, bool is_jit) : pc(pc), is_jit(is_jit) {}
+
+  IstreamOffset pc;
+  bool is_jit;
+};
+
 class Thread {
  public:
   struct Options {
@@ -603,7 +611,7 @@ class Thread {
 
   void DropKeep(uint32_t drop_count, uint32_t keep_count);
 
-  Result PushCall(const uint8_t* pc) WABT_WARN_UNUSED;
+  Result PushCall(const uint8_t* pc, bool is_jit = false) WABT_WARN_UNUSED;
   IstreamOffset PopCall();
 
   template <typename R, typename T> using UnopFunc      = R(T);
@@ -643,11 +651,12 @@ class Thread {
 
   Environment* env_ = nullptr;
   std::vector<Value> value_stack_;
-  std::vector<IstreamOffset> call_stack_;
+  std::vector<CallFrame> call_stack_;
   uint32_t value_stack_top_ = 0;
   uint32_t call_stack_top_ = 0;
   uint32_t last_jit_frame_ = 0;
   IstreamOffset pc_ = 0;
+  bool in_jit_ = false;
 };
 
 struct ExecResult {
@@ -660,7 +669,7 @@ struct ExecResult {
 
   Result result = Result::Ok;
   TypedValues values;
-  std::vector<IstreamOffset> call_stack;
+  std::vector<CallFrame> call_stack;
 };
 
 class Executor {

@@ -51,6 +51,8 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
 
   auto call_interp = [&]() {
     th->set_pc(offset);
+    th->in_jit_ = false;
+
     auto last_jit_frame = th->last_jit_frame_;
     th->last_jit_frame_ = th->call_stack_top_;
     wabt::interp::Result result = wabt::interp::Result::Ok;
@@ -58,10 +60,14 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
       result = th->Run(1000);
     }
     th->last_jit_frame_ = last_jit_frame;
+
+    if (result == wabt::interp::Result::Returned)
+      th->in_jit_ = true;
+
     return result;
   };
 
-  CHECK_TRAP_IN_HELPER(th->PushCall(current_pc));
+  CHECK_TRAP_IN_HELPER(th->PushCall(current_pc, true));
   if (meta_it != th->env_->jit_meta_.end()) {
     auto meta = &meta_it->second;
     if (!meta->tried_jit) {

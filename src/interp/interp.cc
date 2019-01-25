@@ -802,14 +802,14 @@ void Thread::DropKeep(uint32_t drop_count, uint32_t keep_count) {
   value_stack_top_ -= drop_count;
 }
 
-Result Thread::PushCall(const uint8_t* pc) {
+Result Thread::PushCall(const uint8_t* pc, bool is_jit) {
   TRAP_IF(call_stack_top_ >= call_stack_.size(), CallStackExhausted);
-  call_stack_[call_stack_top_++] = pc - GetIstream();
+  call_stack_[call_stack_top_++] = CallFrame(pc - GetIstream(), is_jit);
   return Result::Ok;
 }
 
 IstreamOffset Thread::PopCall() {
-  return call_stack_[--call_stack_top_];
+  return call_stack_[--call_stack_top_].pc;
 }
 
 template <typename T>
@@ -1666,6 +1666,8 @@ Result Thread::Run(int num_instructions) {
           TRAP_IF(!jit_fn, FailedJITCompilation);
           CHECK_TRAP(PushCall(pc));
 
+          in_jit_ = true;
+
           auto result = jit_fn();
           if (result != Result::Ok) {
             // We don't want to overwrite the pc of the JITted function if it traps
@@ -1673,6 +1675,8 @@ Result Thread::Run(int num_instructions) {
 
             return result;
           }
+
+          in_jit_ = false;
 
           PopCall();
         } else {
@@ -1703,6 +1707,8 @@ Result Thread::Run(int num_instructions) {
             TRAP_IF(!jit_fn, FailedJITCompilation);
             CHECK_TRAP(PushCall(pc));
 
+            in_jit_ = true;
+
             auto result = jit_fn();
             if (result != Result::Ok) {
               // We don't want to overwrite the pc of the JITted function if it traps
@@ -1710,6 +1716,8 @@ Result Thread::Run(int num_instructions) {
 
               return result;
             }
+
+            in_jit_ = false;
 
             PopCall();
           } else {
@@ -3403,8 +3411,17 @@ static void PrintCallFrame(Stream* s, Environment* e, IstreamOffset pc) {
 }
 
 void ExecResult::PrintCallStack(Stream* s, Environment* e) {
+  bool last_was_jit = call_stack[call_stack.size() - 1].is_jit;
   for (auto it = call_stack.rbegin(); it != call_stack.rend(); ++it) {
-    PrintCallFrame(s, e, *it);
+    if (last_was_jit && !it->is_jit) {
+      last_was_jit = false;
+      s->Writef("[Interpreter to JIT transition]\n");
+    } else if (!last_was_jit && it->is_jit) {
+      last_was_jit = true;
+      s->Writef("[JIT to interpreter transition]\n");
+    }
+
+    PrintCallFrame(s, e, it->pc);
   }
 }
 
@@ -3430,7 +3447,7 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
   }
 
   exec_result.call_stack.assign(thread_.call_stack_.begin(), thread_.call_stack_.begin() + thread_.call_stack_top_);
-  exec_result.call_stack.push_back(thread_.pc_);
+  exec_result.call_stack.push_back(CallFrame(thread_.pc_, thread_.in_jit_));
 
   return exec_result;
 }
