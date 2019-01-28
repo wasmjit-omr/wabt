@@ -3387,7 +3387,7 @@ exit_loop:
   return result;
 }
 
-static void PrintCallFrame(Stream* s, Environment* e, IstreamOffset pc) {
+static void PrintCallFrame(Stream* s, Environment* e, const CallFrame* frame) {
   DefinedFunc* best_fn = nullptr;
 
   for (Index i = 0; i < e->GetFuncCount(); i++) {
@@ -3397,17 +3397,22 @@ static void PrintCallFrame(Stream* s, Environment* e, IstreamOffset pc) {
 
     DefinedFunc* dfn = cast<DefinedFunc>(fn);
 
-    if (dfn->offset > pc) continue;
+    if (dfn->offset > frame->pc) continue;
     if (best_fn && best_fn->offset > dfn->offset) continue;
 
     best_fn = dfn;
   }
 
   if (best_fn) {
-    s->Writef("  at %s [@%u]\n", best_fn->dbg_name_.c_str(), pc);
+    s->Writef("  at %s", best_fn->dbg_name_.c_str());
+    if (frame->pc != best_fn->offset) {
+      s->Writef(" + 0x%x", frame->pc - best_fn->offset);
+    }
   } else {
-    s->Writef("  at ??? [@%u]\n", pc);
+    s->Writef("  at @%u", frame->pc);
   }
+
+  s->Writef("\n");
 }
 
 void ExecResult::PrintCallStack(Stream* s, Environment* e) {
@@ -3421,7 +3426,7 @@ void ExecResult::PrintCallStack(Stream* s, Environment* e) {
       s->Writef("[JIT to interpreter transition]\n");
     }
 
-    PrintCallFrame(s, e, it->pc);
+    PrintCallFrame(s, e, &*it);
   }
 }
 
