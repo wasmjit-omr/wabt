@@ -46,54 +46,32 @@ namespace jit {
   } while (0)
 
 FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc) {
-  // no need to check if JIT was enabled since we can only get here it was
-  auto meta_it = th->env_->jit_meta_.find(offset);
+  CHECK_TRAP_IN_HELPER(th->PushCall(current_pc, true));
+  th->set_pc(offset);
 
-  auto call_interp = [&]() {
-    th->set_pc(offset);
+  JITedFunction jit_fn;
+
+  if (th->env_->TryJit(th, offset, &jit_fn)) {
+    TRAP_IF(!jit_fn, FailedJITCompilation);
+    CHECK_TRAP_IN_HELPER(jit_fn());
+  } else {
     th->in_jit_ = false;
 
     auto last_jit_frame = th->last_jit_frame_;
     th->last_jit_frame_ = th->call_stack_top_;
-    wabt::interp::Result result = wabt::interp::Result::Ok;
+
+    interp::Result result = interp::Result::Ok;
     while (result == wabt::interp::Result::Ok) {
       result = th->Run(1000);
     }
     th->last_jit_frame_ = last_jit_frame;
 
-    if (result == wabt::interp::Result::Returned)
-      th->in_jit_ = true;
-
-    return result;
-  };
-
-  CHECK_TRAP_IN_HELPER(th->PushCall(current_pc, true));
-  if (meta_it != th->env_->jit_meta_.end()) {
-    auto meta = &meta_it->second;
-    if (!meta->tried_jit) {
-      meta->num_calls++;
-
-      if (meta->num_calls >= th->env_->jit_threshold) {
-        meta->jit_fn = jit::compile(th, meta->wasm_fn);
-        meta->tried_jit = true;
-
-        if (th->env_->trap_on_failed_comp && meta->jit_fn == nullptr)
-          return static_cast<Result_t>(wabt::interp::Result::TrapFailedJITCompilation);
-      }
-    }
-
-    if (meta->jit_fn) {
-      CHECK_TRAP_IN_HELPER(meta->jit_fn());
-    } else {
-      auto result = call_interp();
-      if (result != wabt::interp::Result::Returned)
-        return static_cast<Result_t>(result);
-    }
-  } else {
-    auto result = call_interp();
-    if (result != wabt::interp::Result::Returned)
+    if (result != interp::Result::Returned)
       return static_cast<Result_t>(result);
+
+    th->in_jit_ = true;
   }
+
   th->PopCall();
 
   return static_cast<Result_t>(wabt::interp::Result::Ok);

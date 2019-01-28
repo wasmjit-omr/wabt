@@ -541,11 +541,13 @@ class Environment {
 };
 
 struct CallFrame {
-  CallFrame() : pc(0), is_jit(false) {}
-  CallFrame(IstreamOffset pc, bool is_jit) : pc(pc), is_jit(is_jit) {}
+  CallFrame() : pc(0), is_jit(false), is_jit_compiling(false) {}
+  CallFrame(IstreamOffset pc, bool is_jit, bool is_jit_compiling = false)
+    : pc(pc), is_jit(is_jit), is_jit_compiling(is_jit_compiling) {}
 
   IstreamOffset pc;
   bool is_jit;
+  bool is_jit_compiling;
 };
 
 class Thread {

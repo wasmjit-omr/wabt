@@ -1662,9 +1662,10 @@ Result Thread::Run(int num_instructions) {
         IstreamOffset offset = ReadU32(&pc);
         Environment::JITedFunction jit_fn;
 
+        CHECK_TRAP(PushCall(pc));
+        GOTO(offset);
         if (env_->TryJit(this, offset, &jit_fn)) {
           TRAP_IF(!jit_fn, FailedJITCompilation);
-          CHECK_TRAP(PushCall(pc));
 
           in_jit_ = true;
 
@@ -1677,11 +1678,7 @@ Result Thread::Run(int num_instructions) {
           }
 
           in_jit_ = false;
-
-          PopCall();
-        } else {
-          CHECK_TRAP(PushCall(pc));
-          GOTO(offset);
+          GOTO(PopCall());
         }
         break;
       }
@@ -1703,9 +1700,11 @@ Result Thread::Run(int num_instructions) {
           auto* dfn = cast<DefinedFunc>(func);
           Environment::JITedFunction jit_fn;
 
+          CHECK_TRAP(PushCall(pc));
+          GOTO(dfn->offset);
+
           if (env_->TryJit(this, dfn->offset, &jit_fn)) {
             TRAP_IF(!jit_fn, FailedJITCompilation);
-            CHECK_TRAP(PushCall(pc));
 
             in_jit_ = true;
 
@@ -1719,10 +1718,7 @@ Result Thread::Run(int num_instructions) {
 
             in_jit_ = false;
 
-            PopCall();
-          } else {
-            CHECK_TRAP(PushCall(pc));
-            GOTO(dfn->offset);
+            GOTO(PopCall());
           }
         }
         break;
@@ -3412,6 +3408,10 @@ static void PrintCallFrame(Stream* s, Environment* e, const CallFrame* frame) {
     s->Writef("  at @%u", frame->pc);
   }
 
+  if (frame->is_jit_compiling) {
+    s->Writef(" (during JIT compilation)");
+  }
+
   s->Writef("\n");
 }
 
@@ -3452,7 +3452,7 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
   }
 
   exec_result.call_stack.assign(thread_.call_stack_.begin(), thread_.call_stack_.begin() + thread_.call_stack_top_);
-  exec_result.call_stack.push_back(CallFrame(thread_.pc_, thread_.in_jit_));
+  exec_result.call_stack.push_back(CallFrame(thread_.pc_, thread_.in_jit_, exec_result.result == Result::TrapFailedJITCompilation));
 
   return exec_result;
 }
