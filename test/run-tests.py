@@ -93,6 +93,11 @@ TOOLS = {
         ('RUN', '%(wasm-interp)s %(temp_file)s.wasm --run-all-exports --trap-on-failed-comp --no-stack-trace'),
         ('VERBOSE-ARGS', ['--print-cmd', '-v']),
     ],
+    'run-interp-minimal': [
+        ('RUN', '%(wat2wasm)s %(in_file)s -o %(temp_file)s.wasm'),
+        ('RUN', '%(wasm-interp)s %(temp_file)s.wasm --run-all-exports'),
+        ('VERBOSE-ARGS', ['--print-cmd', '-v']),
+    ],
     'run-interp-spec': [
         ('RUN', '%(wast2json)s %(in_file)s -o %(temp_file)s.json'),
         ('RUN', '%(spectest-interp)s %(temp_file)s.json'),

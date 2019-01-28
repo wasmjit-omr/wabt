@@ -1,0 +1,150 @@
+;;; TOOL: run-interp-minimal
+;;; ARGS0: --debug-names
+(module
+  ;; TODO: Find a better way to prevent JIT compilation than using memory.size
+  ;; TODO: Find a way to avoid baking in function offsets
+  (memory 0)
+  (table anyfunc (elem $jit_crash $interp_crash $jit_nop $interp_nop))
+
+  (func $jit_crash
+    unreachable)
+  (func $interp_crash
+    memory.size
+    drop
+    unreachable)
+
+  (func $jit_nop)
+  (func $interp_nop
+    memory.size
+    drop)
+
+  (func (export "test_interp2interp_direct")
+    call $interp_crash)
+
+  (func (export "test_interp2jit_direct")
+    call $jit_crash)
+
+  (func $jit2interp_direct
+    call $interp_crash)
+  (func (export "test_jit2interp_direct")
+    call $jit2interp_direct)
+
+  (func $jit2jit_direct
+    call $jit_crash)
+  (func (export "test_jit2jit_direct")
+    call $jit2jit_direct)
+
+  (func (export "test_interp2interp_indirect")
+    i32.const 1
+    call_indirect)
+
+  (func (export "test_interp2jit_indirect")
+    i32.const 0
+    call_indirect)
+
+  (func $jit2interp_indirect
+    i32.const 1
+    call_indirect)
+  (func (export "test_jit2interp_indirect")
+    call $jit2interp_indirect)
+
+  (func $jit2jit_indirect
+    i32.const 0
+    call_indirect)
+  (func (export "test_jit2jit_indirect")
+    call $jit2jit_indirect)
+
+  (func (export "test_interp_indirect_fail")
+    i32.const -1
+    call_indirect)
+
+  (func $jit_indirect_fail
+    i32.const -1
+    call_indirect)
+  (func (export "test_jit_indirect_fail")
+    call $jit_indirect_fail)
+
+  (func (export "test_interp2interp_after_interp2jit_direct")
+    call $jit_nop
+    call $interp_crash)
+
+  (func $jit2jit_after_jit2interp_direct
+    call $interp_nop
+    call $jit_crash)
+  (func (export "test_jit2jit_after_jit2interp_direct")
+    call $jit2jit_after_jit2interp_direct)
+
+  (func (export "test_interp2interp_after_interp2jit_indirect")
+    i32.const 2
+    call_indirect
+    i32.const 1
+    call_indirect)
+
+  (func $jit2jit_after_jit2interp_indirect
+    i32.const 3
+    call_indirect
+    i32.const 0
+    call_indirect)
+  (func (export "test_jit2jit_after_jit2interp_indirect")
+    call $jit2jit_after_jit2interp_indirect)
+)
+(;; STDOUT ;;;
+test_interp2interp_direct() => error: unreachable executed
+  at $interp_crash + 0x10
+  at test_interp2interp_direct + 0x8
+test_interp2jit_direct() => error: unreachable executed
+  at $jit_crash + 0x4
+[Interpreter to JIT transition]
+  at test_interp2jit_direct + 0x8
+test_jit2interp_direct() => error: unreachable executed
+  at $interp_crash + 0x10
+[JIT to interpreter transition]
+  at $jit2interp_direct + 0x8
+[Interpreter to JIT transition]
+  at test_jit2interp_direct + 0x8
+test_jit2jit_direct() => error: unreachable executed
+  at $jit_crash + 0x4
+  at $jit2jit_direct + 0x8
+[Interpreter to JIT transition]
+  at test_jit2jit_direct + 0x8
+test_interp2interp_indirect() => error: unreachable executed
+  at $interp_crash + 0x10
+  at test_interp2interp_indirect + 0x14
+test_interp2jit_indirect() => error: unreachable executed
+  at $jit_crash + 0x4
+[Interpreter to JIT transition]
+  at test_interp2jit_indirect + 0x14
+test_jit2interp_indirect() => error: unreachable executed
+  at $interp_crash + 0x10
+[JIT to interpreter transition]
+  at $jit2interp_indirect + 0x14
+[Interpreter to JIT transition]
+  at test_jit2interp_indirect + 0x8
+test_jit2jit_indirect() => error: unreachable executed
+  at $jit_crash + 0x4
+  at $jit2jit_indirect + 0x14
+[Interpreter to JIT transition]
+  at test_jit2jit_indirect + 0x8
+test_interp_indirect_fail() => error: undefined table index
+  at test_interp_indirect_fail + 0x14
+test_jit_indirect_fail() => error: undefined table index
+  at $jit_indirect_fail + 0x14
+[Interpreter to JIT transition]
+  at test_jit_indirect_fail + 0x8
+test_interp2interp_after_interp2jit_direct() => error: unreachable executed
+  at $interp_crash + 0x10
+  at test_interp2interp_after_interp2jit_direct + 0x10
+test_jit2jit_after_jit2interp_direct() => error: unreachable executed
+  at $jit_crash + 0x4
+  at $jit2jit_after_jit2interp_direct + 0x10
+[Interpreter to JIT transition]
+  at test_jit2jit_after_jit2interp_direct + 0x8
+test_interp2interp_after_interp2jit_indirect() => error: unreachable executed
+  at $interp_crash + 0x10
+  at test_interp2interp_after_interp2jit_indirect + 0x28
+test_jit2jit_after_jit2interp_indirect() => error: unreachable executed
+  at $jit_crash + 0x4
+  at $jit2jit_after_jit2interp_indirect + 0x28
+[Interpreter to JIT transition]
+  at test_jit2jit_after_jit2interp_indirect + 0x8
+;;; STDOUT ;;)
