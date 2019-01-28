@@ -99,6 +99,11 @@ class FunctionBuilder : public TR::MethodBuilder {
   template <typename ToType, typename FromType>
   void EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack);
 
+  template <typename ToType, typename FromType>
+  void EmitSaturatingTruncation(TR::IlBuilder* b, VirtualStack* stack);
+  template <typename ToType, typename FromType>
+  void EmitUnsignedSaturatingTruncation(TR::IlBuilder* b, VirtualStack* stack);
+
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 
