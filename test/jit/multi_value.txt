@@ -1,0 +1,130 @@
+;;; TOOL: run-interp-jit
+;;; ARGS*: --enable-multi-value
+(module
+  (func $test_multi_return_callee (result i32 i32)
+    i32.const 1
+    i32.const 5)
+  (func $test_multi_return_caller (result i32)
+    call $test_multi_return_callee
+    i32.add)
+
+  (func (export "test_multi_return_interp2jit") (result i32 i32)
+    call $test_multi_return_callee)
+  (func (export "test_multi_return_jit2jit") (result i32)
+    call $test_multi_return_caller)
+
+  (func $multi_block_result (result i32 i32)
+    i32.const 10
+    block (param i32) (result i32 i32)
+      i32.const 5
+      i32.add
+      i32.const 10
+    end)
+  (func (export "test_multi_block_result") (result i32 i32)
+    call $multi_block_result)
+
+  (func $multi_block_result_br (result i32 i32)
+    block (result i32 i32)
+      i32.const 2
+      i32.const 3
+      br 0
+    end)
+  (func (export "test_multi_block_result_br") (result i32 i32)
+    call $multi_block_result_br)
+
+  (func $multi_block_result_br_if (param i32) (result i32 i32)
+    block (result i32 i32)
+      i32.const 0
+      i32.const 1
+      get_local 0
+      br_if 0
+      drop
+      drop
+      i32.const 2
+      i32.const 3
+    end)
+  (func (export "test_multi_block_result_br_if_0") (result i32 i32)
+    i32.const 0
+    call $multi_block_result_br_if)
+  (func (export "test_multi_block_result_br_if_1") (result i32 i32)
+    i32.const 1
+    call $multi_block_result_br_if)
+
+  (func $multi_block_param (result i32)
+    i32.const 10
+    i32.const 5
+    block (param i32 i32) (result i32)
+      i32.add
+    end)
+  (func (export "test_multi_block_param") (result i32)
+    call $multi_block_param)
+
+  (func $multi_if_param (param i32) (result i32)
+    i32.const 10
+    i32.const 5
+    get_local 0
+    if (param i32 i32) (result i32)
+      i32.add
+    else
+      i32.mul
+    end)
+  (func (export "test_multi_if_param_0") (result i32)
+    i32.const 0
+    call $multi_if_param)
+  (func (export "test_multi_if_param_1") (result i32)
+    i32.const 1
+    call $multi_if_param)
+
+  (func $multi_if_result (param i32) (result i32 i32)
+    get_local 0
+    if (result i32 i32)
+      i32.const 0
+      i32.const 1
+    else
+      i32.const 2
+      i32.const 3
+    end)
+  (func (export "test_multi_if_result_0") (result i32 i32)
+    i32.const 0
+    call $multi_if_result)
+  (func (export "test_multi_if_result_1") (result i32 i32)
+    i32.const 1
+    call $multi_if_result)
+
+  (func $multi_loop_result (param i32) (result i32 i32) (local i32)
+    i32.const 0
+    get_local 0
+    loop (param i32 i32) (result i32 i32)
+      i32.const -1
+      i32.add
+      set_local 1
+      i32.const 2
+      i32.add
+      get_local 1
+      get_local 1
+      i32.const 0
+      i32.ne
+      br_if 0
+    end)
+  (func (export "test_multi_loop_result_0") (result i32 i32)
+    i32.const 3
+    call $multi_loop_result)
+  (func (export "test_multi_loop_result_1") (result i32 i32)
+    i32.const 5
+    call $multi_loop_result)
+)
+(;; STDOUT ;;;
+test_multi_return_interp2jit() => i32:1, i32:5
+test_multi_return_jit2jit() => i32:6
+test_multi_block_result() => i32:15, i32:10
+test_multi_block_result_br() => i32:2, i32:3
+test_multi_block_result_br_if_0() => i32:2, i32:3
+test_multi_block_result_br_if_1() => i32:0, i32:1
+test_multi_block_param() => i32:15
+test_multi_if_param_0() => i32:50
+test_multi_if_param_1() => i32:15
+test_multi_if_result_0() => i32:2, i32:3
+test_multi_if_result_1() => i32:0, i32:1
+test_multi_loop_result_0() => i32:6, i32:0
+test_multi_loop_result_1() => i32:10, i32:0
+;;; STDOUT ;;)
