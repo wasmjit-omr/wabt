@@ -30,9 +30,14 @@
 namespace wabt {
 namespace jit {
 
+// Workaround for broken JitBuilder callbacks. See vms_hack.cc for more details.
+void initializeVmsHack(TR::VirtualMachineState* vms);
+
 class WabtState : public TR::VirtualMachineState {
 public:
   VirtualStack stack;
+
+  WabtState() { initializeVmsHack(this); }
 
   VirtualMachineState* MakeCopy() override {
     return new WabtState(*this);
