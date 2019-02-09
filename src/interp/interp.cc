@@ -1556,6 +1556,8 @@ class TempPc {
 Result Thread::Run(int num_instructions) {
   Result result = Result::Ok;
 
+  this->in_jit_ = false;
+
   TempPc tpc(this);
   const uint8_t*& istream = tpc.istream;
   const uint8_t*& pc = tpc.pc;
