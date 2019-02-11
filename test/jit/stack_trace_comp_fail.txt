@@ -1,0 +1,56 @@
+;;; TOOL: run-interp-minimal
+;;; ARGS0: --debug-names
+;;; ARGS1: --trap-on-failed-comp
+(module
+  ;; These tests must be in a different test file than those from stack_trace.txt since they rely on
+  ;; the --trap-on-failed-comp command line option in order to cause a JIT compilation failure trap.
+  ;; stack_trace.txt cannot have this option set since it tests functionality which requires JITted
+  ;; functions to call interpreted functions.
+
+  ;; TODO: Find a better way to prevent JIT compilation than using memory.size
+  ;; TODO: Find a way to avoid baking in function offsets
+  (memory 0)
+  (table anyfunc (elem $jit_fail))
+
+  (func $jit_fail
+    memory.size
+    drop)
+
+  (func (export "test_interp_direct_comp_fail")
+    call $jit_fail)
+
+  (func (export "test_interp_indirect_comp_fail")
+    i32.const 0
+    call_indirect)
+
+  (func $jit_direct_comp_fail
+    call $jit_fail
+    unreachable)
+  (func (export "test_jit_direct_comp_fail")
+    call $jit_direct_comp_fail)
+
+  (func $jit_indirect_comp_fail
+    i32.const 0
+    call_indirect
+    unreachable)
+  (func (export "test_jit_indirect_comp_fail")
+    call $jit_indirect_comp_fail)
+)
+(;; STDOUT ;;;
+test_interp_direct_comp_fail() => error: failed JIT compilation
+  at $jit_fail (during JIT compilation)
+  at test_interp_direct_comp_fail + 0x8
+test_interp_indirect_comp_fail() => error: failed JIT compilation
+  at $jit_fail (during JIT compilation)
+  at test_interp_indirect_comp_fail + 0x14
+test_jit_direct_comp_fail() => error: failed JIT compilation
+  at $jit_fail (during JIT compilation)
+  at $jit_direct_comp_fail + 0x8
+[Interpreter to JIT transition]
+  at test_jit_direct_comp_fail + 0x8
+test_jit_indirect_comp_fail() => error: failed JIT compilation
+  at $jit_fail (during JIT compilation)
+  at $jit_indirect_comp_fail + 0x14
+[Interpreter to JIT transition]
+  at test_jit_indirect_comp_fail + 0x8
+;;; STDOUT ;;)

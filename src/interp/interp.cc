@@ -1556,6 +1556,8 @@ class TempPc {
 Result Thread::Run(int num_instructions) {
   Result result = Result::Ok;
 
+  this->in_jit_ = false;
+
   TempPc tpc(this);
   const uint8_t*& istream = tpc.istream;
   const uint8_t*& pc = tpc.pc;
@@ -1662,9 +1664,10 @@ Result Thread::Run(int num_instructions) {
         IstreamOffset offset = ReadU32(&pc);
         Environment::JITedFunction jit_fn;
 
+        CHECK_TRAP(PushCall(pc));
+        GOTO(offset);
         if (env_->TryJit(this, offset, &jit_fn)) {
           TRAP_IF(!jit_fn, FailedJITCompilation);
-          CHECK_TRAP(PushCall(pc));
 
           in_jit_ = true;
 
@@ -1677,11 +1680,7 @@ Result Thread::Run(int num_instructions) {
           }
 
           in_jit_ = false;
-
-          PopCall();
-        } else {
-          CHECK_TRAP(PushCall(pc));
-          GOTO(offset);
+          GOTO(PopCall());
         }
         break;
       }
@@ -1703,9 +1702,11 @@ Result Thread::Run(int num_instructions) {
           auto* dfn = cast<DefinedFunc>(func);
           Environment::JITedFunction jit_fn;
 
+          CHECK_TRAP(PushCall(pc));
+          GOTO(dfn->offset);
+
           if (env_->TryJit(this, dfn->offset, &jit_fn)) {
             TRAP_IF(!jit_fn, FailedJITCompilation);
-            CHECK_TRAP(PushCall(pc));
 
             in_jit_ = true;
 
@@ -1719,10 +1720,7 @@ Result Thread::Run(int num_instructions) {
 
             in_jit_ = false;
 
-            PopCall();
-          } else {
-            CHECK_TRAP(PushCall(pc));
-            GOTO(dfn->offset);
+            GOTO(PopCall());
           }
         }
         break;
@@ -3387,7 +3385,7 @@ exit_loop:
   return result;
 }
 
-static void PrintCallFrame(Stream* s, Environment* e, IstreamOffset pc) {
+static void PrintCallFrame(Stream* s, Environment* e, const CallFrame* frame) {
   DefinedFunc* best_fn = nullptr;
 
   for (Index i = 0; i < e->GetFuncCount(); i++) {
@@ -3397,17 +3395,26 @@ static void PrintCallFrame(Stream* s, Environment* e, IstreamOffset pc) {
 
     DefinedFunc* dfn = cast<DefinedFunc>(fn);
 
-    if (dfn->offset > pc) continue;
+    if (dfn->offset > frame->pc) continue;
     if (best_fn && best_fn->offset > dfn->offset) continue;
 
     best_fn = dfn;
   }
 
   if (best_fn) {
-    s->Writef("  at %s [@%u]\n", best_fn->dbg_name_.c_str(), pc);
+    s->Writef("  at %s", best_fn->dbg_name_.c_str());
+    if (frame->pc != best_fn->offset) {
+      s->Writef(" + 0x%x", frame->pc - best_fn->offset);
+    }
   } else {
-    s->Writef("  at ??? [@%u]\n", pc);
+    s->Writef("  at @%u", frame->pc);
   }
+
+  if (frame->is_jit_compiling) {
+    s->Writef(" (during JIT compilation)");
+  }
+
+  s->Writef("\n");
 }
 
 void ExecResult::PrintCallStack(Stream* s, Environment* e) {
@@ -3421,7 +3428,7 @@ void ExecResult::PrintCallStack(Stream* s, Environment* e) {
       s->Writef("[JIT to interpreter transition]\n");
     }
 
-    PrintCallFrame(s, e, it->pc);
+    PrintCallFrame(s, e, &*it);
   }
 }
 
@@ -3447,7 +3454,7 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
   }
 
   exec_result.call_stack.assign(thread_.call_stack_.begin(), thread_.call_stack_.begin() + thread_.call_stack_top_);
-  exec_result.call_stack.push_back(CallFrame(thread_.pc_, thread_.in_jit_));
+  exec_result.call_stack.push_back(CallFrame(thread_.pc_, thread_.in_jit_, exec_result.result == Result::TrapFailedJITCompilation));
 
   return exec_result;
 }
