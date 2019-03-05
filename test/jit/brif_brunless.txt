@@ -78,6 +78,22 @@
   (func (export "test_if_with_arg_1") (result i32)
     i32.const 1
     call $if_with_arg)
+
+  (func $if_with_result (param i32) (result i32)
+    get_local 0
+    if (result i32)
+      i32.const 1
+    else
+      i32.const 0
+    end)
+
+  (func (export "test_if_with_result_0") (result i32)
+    i32.const 0
+    call $if_with_result)
+
+  (func (export "test_if_with_result_1") (result i32)
+    i32.const 1
+    call $if_with_result)
 )
 (;; STDOUT ;;;
 test_brif_always_true() => i32:1
@@ -88,5 +104,7 @@ test_if_always_true() => i32:1
 test_if_always_false() => i32:0
 test_if_with_arg_0() => i32:0
 test_if_with_arg_1() => i32:1
+test_if_with_result_0() => i32:0
+test_if_with_result_1() => i32:1
 ;;; STDOUT ;;)
 
