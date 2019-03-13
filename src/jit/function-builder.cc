@@ -25,6 +25,7 @@
 #include <cmath>
 #include <limits>
 #include <type_traits>
+#include <unordered_set>
 
 namespace wabt {
 
@@ -175,7 +176,9 @@ bool FunctionBuilder::buildIL() {
   const uint8_t* pc = &istream[fn_->offset];
   auto* state = new WabtState();
 
-  SetUpLocals(this, &pc, &state->stack);
+  if (!SetUpLocals(this, &pc, &state->stack))
+      return false;
+
   setVMState(state);
 
   workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(interp::ReadOpcodeAt(pc).GetName())),
@@ -195,14 +198,43 @@ bool FunctionBuilder::buildIL() {
   return true;
 }
 
-void FunctionBuilder::SetUpLocals(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack) {
+bool FunctionBuilder::SetUpLocals(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack) {
   // Add placeholders onto the virtual stack. These values should never be actually read, but will
   // eventually be dropped using drop or drop_keep in the function epilogue.
+  static const auto supported_types = std::unordered_set<Type>({Type::I32, Type::I64, Type::F32, Type::F64});
   for (size_t i = 0; i < fn_->param_and_local_types.size(); i++) {
-    stack->Push(nullptr);
+    auto t = fn_->param_and_local_types.at(i);
+    if (supported_types.end() == supported_types.find(t))
+        return false;
+
+    auto locals_offset = fn_->param_and_local_types.size() - fn_->local_count;
+    if (i < locals_offset) {
+      // local is parameter, so we load it from the physical stack
+      auto param_addr = PickPhys(b, locals_offset - i);
+      auto param = b->LoadIndirect("Value", TypeFieldName(t), param_addr);
+      stack->Push(param);
+    } else {
+      switch (t) {
+          case Type::I32:
+            stack->Push(b->ConstInt32(0));
+            break;
+          case Type::I64:
+            stack->Push(b->ConstInt64(0));
+            break;
+          case Type::F32:
+            stack->Push(b->ConstFloat(0.0));
+            break;
+          case Type::F64:
+            stack->Push(b->ConstDouble(0.0));
+            break;
+          default:
+            TR_ASSERT_FATAL(false, "Local %d is of unexpected type %d\n", i, t);
+      }
+    }
   }
 
-  if (fn_->local_count == 0) return;
+  if (fn_->local_count == 0)
+      return true;
 
   Opcode opcode = interp::ReadOpcode(pc);
   TR_ASSERT_FATAL(opcode == Opcode::InterpAlloca, "Function with locals is missing alloca");
@@ -236,6 +268,8 @@ void FunctionBuilder::SetUpLocals(TR::IlBuilder* b, const uint8_t** pc, VirtualS
   set_zero->              IndexAt(pValueType_, stack_base_addr,
   set_zero->                      Load("i")),
   set_zero->              ConstInt64(0));
+
+  return true;
 }
 
 void FunctionBuilder::TearDownLocals(TR::IlBuilder* b) {
@@ -248,17 +282,6 @@ void FunctionBuilder::TearDownLocals(TR::IlBuilder* b) {
   auto* count = b->ConstInt32(fn_->param_and_local_types.size());
 
   b->StoreAt(stack_top_addr, b->Sub(old_stack_top, count));
-}
-
-uint32_t FunctionBuilder::GetLocalOffset(VirtualStack* stack, Type* type, uint32_t depth) {
-  uint32_t i = stack->Depth() - depth;
-  TR_ASSERT_FATAL(i < fn_->param_and_local_types.size(), "Attempt to access invalid local 0x%x", i);
-
-  if (type != nullptr) {
-    *type = fn_->param_and_local_types[i];
-  }
-
-  return fn_->param_and_local_types.size() - i;
 }
 
 void FunctionBuilder::MoveToPhysStack(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack, uint32_t depth) {
@@ -726,29 +749,22 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::LocalGet: {
-      Type t;
-      uint32_t off = GetLocalOffset(&stack, &t, interp::ReadU32(&pc));
-
-      if (t == Type::V128)
-        return false;
-
-      stack.Push(b->LoadIndirect("Value", TypeFieldName(t), PickPhys(b, off)));
+      uint32_t local_depth = interp::ReadU32(&pc);
+      stack.Push(stack.Pick(local_depth - 1));
       break;
     }
 
     case Opcode::LocalSet: {
       auto* value = stack.Pop();
-      uint32_t off = GetLocalOffset(&stack, nullptr, interp::ReadU32(&pc));
-
-      b->StoreIndirect("Value", TypeFieldName(value->getDataType()), PickPhys(b, off), value);
+      uint32_t local_depth = interp::ReadU32(&pc);
+      b->StoreOver(stack.Pick(local_depth - 1), value);
       break;
     }
 
     case Opcode::LocalTee: {
       auto* value = stack.Top();
-      uint32_t off = GetLocalOffset(&stack, nullptr, interp::ReadU32(&pc));
-
-      b->StoreIndirect("Value", TypeFieldName(value->getDataType()), PickPhys(b, off), value);
+      uint32_t local_depth = interp::ReadU32(&pc);
+      b->StoreOver(stack.Pick(local_depth - 1), value);
       break;
     }
 
