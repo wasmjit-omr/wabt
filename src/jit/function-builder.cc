@@ -546,6 +546,8 @@ TR::IlValue* FunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue* v
 template <typename ToType, typename FromType>
 void FunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack) {
   static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+  static_assert(std::is_integral<ToType>::value, "ToType in EmitTruncation call must be an integer type");
+  static_assert(std::is_signed<ToType>::value, "ToType in EmitTruncation call must be signed");
 
   auto* value = stack->Pop();
 
@@ -585,7 +587,7 @@ void FunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc, Virtua
  */
 template <typename ToType, typename FromType>
 void FunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack) {
-  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitUnsignedTruncation call must be a floating point type");
   static_assert(std::is_integral<ToType>::value, "ToType in EmitUnsignedTruncation call must be an integer type");
   static_assert(std::is_unsigned<ToType>::value, "ToType in EmitUnsignedTruncation call must be unsigned");
 
@@ -611,6 +613,85 @@ void FunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc
   auto* new_value = b->UnsignedConvertTo(target_type, b->ConvertTo(Int64, value));
 
   stack->Push(new_value);
+}
+
+template <typename ToType, typename FromType>
+void FunctionBuilder::EmitSaturatingTruncation(TR::IlBuilder* b, VirtualStack* stack) {
+  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+  static_assert(std::is_integral<ToType>::value, "ToType in EmitTruncation call must be an integer type");
+  static_assert(std::is_signed<ToType>::value, "ToType in EmitTruncation call must be signed");
+
+  auto* value = stack->Pop();
+  auto* result = b->Const(static_cast<ToType>(0));
+
+  TR::IlBuilder* non_nan_path = nullptr;
+
+  b->IfThen(&non_nan_path, b->EqualTo(EmitIsNan<FromType>(b, value), b->ConstInt32(0)));
+
+  TR::IlBuilder* too_high_path = nullptr;
+  TR::IlBuilder* not_too_high_path = nullptr;
+
+  non_nan_path->IfThenElse(&too_high_path, &not_too_high_path,
+  non_nan_path->           GreaterThan(value,
+  non_nan_path->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max()))));
+  too_high_path->StoreOver(result, too_high_path->Const(std::numeric_limits<ToType>::max()));
+
+  TR::IlBuilder* too_low_path = nullptr;
+  TR::IlBuilder* not_too_low_path = nullptr;
+
+  not_too_high_path->IfThenElse(&too_low_path, &not_too_low_path,
+  not_too_high_path->           LessThan(value,
+  not_too_high_path->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))));
+  too_low_path->StoreOver(result, too_low_path->Const(std::numeric_limits<ToType>::lowest()));
+
+  auto* target_type = toIlType<ToType>(b->typeDictionary());
+
+  // this could be optimized using templates or constant expressions,
+  // but the compiler should be able to simplify this anyways
+  auto* new_value = std::is_unsigned<ToType>::value ? not_too_low_path->UnsignedConvertTo(target_type, value)
+                                                    : not_too_low_path->ConvertTo(target_type, value);
+  not_too_low_path->StoreOver(result, new_value);
+
+  stack->Push(result);
+}
+
+template <typename ToType, typename FromType>
+void FunctionBuilder::EmitUnsignedSaturatingTruncation(TR::IlBuilder* b, VirtualStack* stack) {
+  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+  static_assert(std::is_integral<ToType>::value, "ToType in EmitUnsignedTruncation call must be an integer type");
+  static_assert(std::is_unsigned<ToType>::value, "ToType in EmitUnsignedTruncation call must be unsigned");
+
+  using ToTypeSigned = typename std::make_signed<ToType>::type;
+
+  auto* value = stack->Pop();
+  auto* result = b->Const(static_cast<ToTypeSigned>(0));
+
+  TR::IlBuilder* non_nan_path = nullptr;
+
+  b->IfThen(&non_nan_path, b->EqualTo(EmitIsNan<FromType>(b, value), b->ConstInt32(0)));
+
+  TR::IlBuilder* too_high_path = nullptr;
+  TR::IlBuilder* not_too_high_path = nullptr;
+
+  non_nan_path->IfThenElse(&too_high_path, &not_too_high_path,
+  non_nan_path->           GreaterThan(value,
+  non_nan_path->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max()))));
+  too_high_path->StoreOver(result, too_high_path->Const(static_cast<ToTypeSigned>(std::numeric_limits<ToType>::max())));
+
+  TR::IlBuilder* too_low_path = nullptr;
+  TR::IlBuilder* not_too_low_path = nullptr;
+
+  not_too_high_path->IfThenElse(&too_low_path, &not_too_low_path,
+  not_too_high_path->           LessThan(value,
+  not_too_high_path->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))));
+  too_low_path->StoreOver(result, too_low_path->Const(static_cast<ToTypeSigned>(std::numeric_limits<ToType>::lowest())));
+
+  auto* target_type = toIlType<ToType>(b->typeDictionary());
+
+  auto* new_value = not_too_low_path->UnsignedConvertTo(target_type, not_too_low_path->ConvertTo(Int64, value));
+  not_too_low_path->StoreOver(result, new_value);
+
+  stack->Push(result);
 }
 
 template <typename T>
@@ -1740,6 +1821,41 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //    UNSIGNED TYPE NOT HANDLED
 //    case Opcode::I64TruncF64U:
 //      EmitTruncation<uint64_t, double>(b, pc, &stack);
+//      break;
+
+    case Opcode::I32TruncSatF32S:
+      EmitSaturatingTruncation<int32_t, float>(b, &stack);
+      break;
+
+    case Opcode::I32TruncSatF32U:
+      EmitUnsignedSaturatingTruncation<uint32_t, float>(b, &stack);
+      break;
+
+    case Opcode::I32TruncSatF64S:
+      EmitSaturatingTruncation<int32_t, double>(b, &stack);
+      break;
+
+
+    case Opcode::I32TruncSatF64U:
+      EmitUnsignedSaturatingTruncation<uint32_t, double>(b, &stack);
+      break;
+
+    case Opcode::I64TruncSatF32S:
+      EmitSaturatingTruncation<int64_t, float>(b, &stack);
+      break;
+
+//    UNSIGNED TYPE NOT HANDLED
+//    case Opcode::I64TruncSatF32U:
+//      EmitSaturatingTruncation<uint64_t, float>(b, &stack);
+//      break;
+
+    case Opcode::I64TruncSatF64S:
+      EmitSaturatingTruncation<int64_t, double>(b, &stack);
+      break;
+
+//    UNSIGNED TYPE NOT HANDLED
+//    case Opcode::I64TruncSatF64U:
+//      EmitSaturatingTruncation<uint64_t, double>(b, &stack);
 //      break;
 
     case Opcode::InterpBrUnless: {
