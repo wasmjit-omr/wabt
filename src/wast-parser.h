@@ -120,9 +120,11 @@ class WastParser {
   Result ParseTextList(std::vector<uint8_t>* out_data);
   bool ParseTextListOpt(std::vector<uint8_t>* out_data);
   Result ParseVarList(VarVector* out_var_list);
-  bool ParseVarListOpt(VarVector* out_var_list);
+  Result ParseElemExprVarList(ElemExprVector* out_list);
+  bool ParseElemExprVarListOpt(ElemExprVector* out_list);
   Result ParseValueType(Type* out_type);
   Result ParseValueTypeList(TypeVector* out_type_list);
+  Result ParseRefType(Type* out_type);
   Result ParseQuotedText(std::string* text);
   bool ParseOffsetOpt(uint32_t* offset);
   bool ParseAlignOpt(uint32_t* align);
@@ -133,7 +135,7 @@ class WastParser {
   Result ParseModuleField(Module*);
   Result ParseDataModuleField(Module*);
   Result ParseElemModuleField(Module*);
-  Result ParseExceptModuleField(Module*);
+  Result ParseEventModuleField(Module*);
   Result ParseExportModuleField(Module*);
   Result ParseFuncModuleField(Module*);
   Result ParseTypeModuleField(Module*);
@@ -166,7 +168,6 @@ class WastParser {
   Result ParseEndLabelOpt(const std::string&);
   Result ParseBlockDeclaration(BlockDeclaration*);
   Result ParseBlock(Block*);
-  Result ParseIfExceptHeader(IfExceptExpr*);
   Result ParseExprList(ExprList*);
   Result ParseExpr(ExprList*);
   Result ParseGlobalType(Global*);
@@ -202,7 +203,7 @@ class WastParser {
   template <typename T>
   Result ParseAssertScriptModuleCommand(TokenType, CommandPtr*);
 
-  Result ParseSimdConst(Const*, Type, int32_t);
+  Result ParseSimdV128Const(Const*, TokenType);
 
   void CheckImportOrdering(Module*);
 

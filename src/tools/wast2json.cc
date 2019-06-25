@@ -95,16 +95,18 @@ int ProgramMain(int argc, char** argv) {
 
   ParseOptions(argc, argv);
 
-  std::unique_ptr<WastLexer> lexer = WastLexer::CreateFileLexer(s_infile);
-  if (!lexer) {
+  std::vector<uint8_t> file_data;
+  Result result = ReadFile(s_infile, &file_data);
+  std::unique_ptr<WastLexer> lexer = WastLexer::CreateBufferLexer(
+      s_infile, file_data.data(), file_data.size());
+  if (Failed(result)) {
     WABT_FATAL("unable to read file: %s\n", s_infile);
   }
 
   Errors errors;
   std::unique_ptr<Script> script;
   WastParseOptions parse_wast_options(s_features);
-  Result result =
-      ParseWastScript(lexer.get(), &script, &errors, &parse_wast_options);
+  result = ParseWastScript(lexer.get(), &script, &errors, &parse_wast_options);
 
   if (Succeeded(result)) {
     result = ResolveNamesScript(script.get(), &errors);
@@ -120,6 +122,7 @@ int ProgramMain(int argc, char** argv) {
 
       std::string module_filename_noext =
           StripExtension(s_outfile ? s_outfile : s_infile).to_string();
+      s_write_binary_options.features = s_features;
       result = WriteBinarySpecScript(
           &json_stream, script.get(), s_infile, module_filename_noext,
           s_write_binary_options, &module_streams, s_log_stream.get());

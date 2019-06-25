@@ -10,7 +10,7 @@
     i32.const 0
     memory.init 0
 
-    memory.drop 0
+    data.drop 0
 
     i32.const 0
     i32.const 0
@@ -27,7 +27,7 @@
     i32.const 0
     table.init 0
 
-    table.drop 0
+    elem.drop 0
 
     i32.const 0
     i32.const 0
@@ -39,8 +39,10 @@
   (func)
 
   (data passive "hi")
-  (elem passive 1)
-  )
+  (elem passive funcref (ref.func 0) (ref.null))
+  (elem passive funcref 1)
+
+)
 (;; STDOUT ;;;
 (module
   (type (;0;) (func))
@@ -49,7 +51,7 @@
     i32.const 0
     i32.const 0
     memory.init 0
-    memory.drop 0
+    data.drop 0
     i32.const 0
     i32.const 0
     i32.const 0
@@ -62,14 +64,15 @@
     i32.const 0
     i32.const 0
     table.init 0
-    table.drop 0
+    elem.drop 0
     i32.const 0
     i32.const 0
     i32.const 0
     table.copy)
   (func (;1;) (type 0))
-  (table (;0;) 0 anyfunc)
+  (table (;0;) 0 funcref)
   (memory (;0;) 0)
-  (elem (;0;) passive 1)
+  (elem (;0;) passive funcref (ref.func 0) (ref.null))
+  (elem (;1;) passive funcref (ref.func 1))
   (data (;0;) passive "hi"))
 ;;; STDOUT ;;)

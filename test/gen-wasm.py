@@ -62,6 +62,8 @@ NAMED_VALUES = {
     'ELEM': 9,
     'CODE': 10,
     'DATA': 11,
+    'DATACOUNT': 12,
+    'EVENT': 13,
 
     # name subsection codes
     'NAME_MODULE': 0,
@@ -71,6 +73,7 @@ NAMED_VALUES = {
     # linking subsection codes
     'LINKING_SEGMENT_INFO': 5,
     'LINKING_INIT_FUNCTIONS': 6,
+    'LINKING_COMDAT_INFO': 7,
     'LINKING_SYMBOL_TABLE': 8,
 
     # external kinds

@@ -473,7 +473,7 @@ void Thread::Trace(Stream* stream) {
       break;
 
     case Opcode::V128Const: {
-      stream->Writef("%s 0x%08x 0x%08x 0x%08x 0x%08x\n", opcode.GetName(),
+      stream->Writef("%s i32x4 0x%08x 0x%08x 0x%08x 0x%08x\n", opcode.GetName(),
                      ReadU32At(pc), ReadU32At(pc + 4), ReadU32At(pc + 8),
                      ReadU32At(pc + 12));
       break;
@@ -690,42 +690,41 @@ void Thread::Trace(Stream* stream) {
       break;
     }
 
+    case Opcode::TableGet:
+    case Opcode::TableSet:
+    case Opcode::TableGrow:
+    case Opcode::TableSize:
+    case Opcode::RefNull:
+    case Opcode::RefIsNull:
+    case Opcode::RefFunc:
+      WABT_UNREACHABLE;
+      break;
+
     case Opcode::MemoryInit:
-      WABT_UNREACHABLE;
+    case Opcode::TableInit: {
+      Index index = ReadU32At(pc);
+      Index segment_index = ReadU32At(pc + 4);
+      stream->Writef("%s $%" PRIindex ", $%" PRIindex "\n", opcode.GetName(),
+                     index, segment_index);
       break;
+    }
 
-    case Opcode::MemoryDrop:
-      WABT_UNREACHABLE;
-      break;
-
+    case Opcode::DataDrop:
+    case Opcode::ElemDrop:
     case Opcode::MemoryCopy:
-      WABT_UNREACHABLE;
-      break;
-
-    case Opcode::MemoryFill:
-      WABT_UNREACHABLE;
-      break;
-
-    case Opcode::TableInit:
-      WABT_UNREACHABLE;
-      break;
-
-    case Opcode::TableDrop:
-      WABT_UNREACHABLE;
-      break;
-
     case Opcode::TableCopy:
-      WABT_UNREACHABLE;
+    case Opcode::MemoryFill:
+      stream->Writef("%s $%u\n", opcode.GetName(), ReadU32At(pc));
       break;
 
     // The following opcodes are either never generated or should never be
     // executed.
     case Opcode::Block:
+    case Opcode::BrOnExn:
     case Opcode::Catch:
     case Opcode::Else:
     case Opcode::End:
     case Opcode::If:
-    case Opcode::IfExcept:
     case Opcode::InterpData:
     case Opcode::Invalid:
     case Opcode::Loop:

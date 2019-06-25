@@ -1142,8 +1142,11 @@ void CWriter::WriteElemInitializers() {
     Write(";", Newline());
 
     size_t i = 0;
-    for (const Var& var : elem_segment->vars) {
-      const Func* func = module_->GetFunc(var);
+    for (const ElemExpr& elem_expr : elem_segment->elem_exprs) {
+      // We don't support the bulk-memory proposal here, so we know that we
+      // don't have any passive segments (where ref.null can be used).
+      assert(elem_expr.kind == ElemExprKind::RefFunc);
+      const Func* func = module_->GetFunc(elem_expr.var);
       Index func_type_index = module_->GetFuncTypeIndex(func->decl.type_var);
 
       Write(ExternalRef(table->name), ".data[offset + ", i,
@@ -1578,12 +1581,18 @@ void CWriter::Write(const ExprList& exprs) {
       }
 
       case ExprType::MemoryCopy:
-      case ExprType::MemoryDrop:
+      case ExprType::DataDrop:
       case ExprType::MemoryInit:
       case ExprType::MemoryFill:
       case ExprType::TableCopy:
-      case ExprType::TableDrop:
+      case ExprType::ElemDrop:
       case ExprType::TableInit:
+      case ExprType::TableGet:
+      case ExprType::TableSet:
+      case ExprType::TableGrow:
+      case ExprType::TableSize:
+      case ExprType::RefNull:
+      case ExprType::RefIsNull:
         UNIMPLEMENTED("...");
         break;
 
@@ -1657,7 +1666,7 @@ void CWriter::Write(const ExprList& exprs) {
       case ExprType::AtomicStore:
       case ExprType::AtomicWait:
       case ExprType::AtomicNotify:
-      case ExprType::IfExcept:
+      case ExprType::BrOnExn:
       case ExprType::Rethrow:
       case ExprType::ReturnCall:
       case ExprType::ReturnCallIndirect:
