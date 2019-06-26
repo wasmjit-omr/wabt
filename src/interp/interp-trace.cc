@@ -103,7 +103,7 @@ void Thread::Trace(Stream* stream) {
 
     case Opcode::Call:
     case Opcode::ReturnCall:
-      stream->Writef("%s @%u\n", opcode.GetName(), ReadU32At(pc));
+      stream->Writef("%s $%u\n", opcode.GetName(), ReadU32At(pc));
       break;
 
     case Opcode::CallIndirect:

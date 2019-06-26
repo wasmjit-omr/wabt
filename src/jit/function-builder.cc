@@ -835,7 +835,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::Call: {
       auto th_addr = b->ConstAddress(thread_);
-      auto offset = interp::ReadU32(&pc);
+      auto offset = cast<interp::DefinedFunc>(thread_->env_->GetFunc(interp::ReadU32(&pc)))->offset;
       auto current_pc = b->Const(pc);
 
       auto meta_it = thread_->env()->jit_meta_.find(offset);

@@ -1829,7 +1829,7 @@ Result Thread::Run(int num_instructions) {
         break;
 
       case Opcode::Call: {
-        IstreamOffset offset = ReadU32(&pc);
+        IstreamOffset offset = cast<DefinedFunc>(env_->GetFunc(ReadU32(&pc)))->offset;
         Environment::JITedFunction jit_fn;
 
         CHECK_TRAP(PushCall(pc));
@@ -1900,7 +1900,7 @@ Result Thread::Run(int num_instructions) {
       }
 
       case Opcode::ReturnCall: {
-        IstreamOffset offset = ReadU32(&pc);
+        IstreamOffset offset = cast<DefinedFunc>(env_->GetFunc(ReadU32(&pc)))->offset;
         GOTO(offset);
 
         break;

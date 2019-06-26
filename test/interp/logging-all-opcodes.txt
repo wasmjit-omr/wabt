@@ -10842,12 +10842,12 @@ EndModule
   64| return
   68| return
   72| return
-  76| call @0
+  76| call $1
   84| return
   88| i32.const 1
   96| call_indirect $0:0, %[-1]
  108| return
- 112| return_call @0
+ 112| return_call $1
  120| return
  124| i32.const 1
  132| return_call_indirect $0:0, %[-1]

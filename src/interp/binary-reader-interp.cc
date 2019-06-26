@@ -1489,11 +1489,10 @@ wabt::Result BinaryReaderInterp::OnCallExpr(Index func_index) {
 
   if (func->is_host) {
     CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
-    CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
   } else {
     CHECK_RESULT(EmitOpcode(Opcode::Call));
-    CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
   }
+  CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
 
   return wabt::Result::Ok;
 }
@@ -1531,7 +1530,7 @@ wabt::Result BinaryReaderInterp::OnReturnCallExpr(Index func_index) {
     CHECK_RESULT(EmitOpcode(Opcode::Return));
   } else {
     CHECK_RESULT(EmitOpcode(Opcode::ReturnCall));
-    CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
+    CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
   }
 
   return wabt::Result::Ok;
