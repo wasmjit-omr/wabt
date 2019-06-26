@@ -25,7 +25,7 @@ add_library(wabtjit STATIC
 
 # Mark JitBuilder include directories as "system" include directories. For most compilers, this
 # suppresses any warnings they would otherwise generate.
-set(JITBUILDER_EXTRA_INCLUDE ${CMAKE_SOURCE_DIR}/third_party/omr/compiler ${CMAKE_SOURCE_DIR}/third_party/omr)
+set(JITBUILDER_EXTRA_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr/compiler ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr)
 get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(wabtjit SYSTEM PUBLIC "${JITBUILDER_INCLUDE}")
 target_include_directories(wabtjit SYSTEM PUBLIC "${JITBUILDER_EXTRA_INCLUDE}")
