@@ -19,11 +19,10 @@
 
 #include "src/common.h"
 #include "src/interp/interp.h"
+#include "src/jit/environment.h"
 
 namespace wabt {
 namespace jit {
-
-using JITedFunction = interp::Result (*)();
 
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn);
 

@@ -112,13 +112,9 @@ class FunctionBuilder : public TR::MethodBuilder {
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 
-  using Result_t = std::underlying_type<wabt::interp::Result>::type;
-
-  static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
-
+  static Result_t CallHelper(interp::Thread* th, interp::DefinedFunc* fn, uint8_t* current_pc);
   static Result_t CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc);
-
-  static Result_t CallHostHelper(wabt::interp::Thread* th, Index func_index);
+  static Result_t CallHostHelper(wabt::interp::Thread* th, interp::HostFunc* fn);
 
   static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
 

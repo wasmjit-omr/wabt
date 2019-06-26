@@ -17,8 +17,13 @@
 #ifndef JIT_ENVIRONMENT_HPP
 #define JIT_ENVIRONMENT_HPP
 
+#include <cstdint>
+
 namespace wabt {
 namespace jit {
+
+using Result_t = int32_t;
+using JITedFunction = Result_t (*)();
 
 class JitEnvironment {
 public:

@@ -1203,9 +1203,6 @@ wabt::Result BinaryReaderInterp::BeginFunctionBody(Index index, Offset size) {
   func->local_decl_count = 0;
   func->local_count = 0;
 
-  /* wasmjit-omr: emit JIT metadata now that func->offset is known */
-  env_->AddJitMetadata(func);
-
   current_func_ = func;
   depth_fixups_.clear();
   label_stack_.clear();

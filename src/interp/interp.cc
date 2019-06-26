@@ -1631,34 +1631,22 @@ ValueTypeRep<R> SimdReplaceLane(V value, uint32_t lane_idx, T lane_val) {
   return ToRep(Bitcast<R>(simd_data_0));
 }
 
-bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn) {
+Result Environment::TryJit(Thread* t, DefinedFunc* fn) {
   if (!enable_jit) {
-    *fn = nullptr;
-    return false;
+    return Result::Ok;
   }
 
-  auto meta_it = jit_meta_.find(offset);
+  if (!fn->tried_jit_) {
+    fn->num_calls_++;
 
-  if (meta_it != jit_meta_.end()) {
-    auto* meta = &meta_it->second;
-    if (!meta->tried_jit) {
-      meta->num_calls++;
-
-      if (meta->num_calls >= jit_threshold) {
-        meta->jit_fn = jit::compile(t, meta->wasm_fn);
-        meta->tried_jit = true;
-      } else {
-        *fn = nullptr;
-        return false;
-      }
+    if (fn->num_calls_ >= jit_threshold) {
+      fn->jit_fn_ = jit::compile(t, fn);
+      fn->tried_jit_ = true;
     }
-
-    *fn = meta->jit_fn;
-    return trap_on_failed_comp || *fn;
-  } else {
-    *fn = nullptr;
-    return trap_on_failed_comp;
   }
+
+  TRAP_IF(fn->tried_jit_ && !fn->jit_fn_ && trap_on_failed_comp, FailedJITCompilation);
+  return Result::Ok;
 }
 
 bool Environment::FuncSignaturesAreEqual(Index sig_index_0,
@@ -1829,21 +1817,19 @@ Result Thread::Run(int num_instructions) {
         break;
 
       case Opcode::Call: {
-        IstreamOffset offset = cast<DefinedFunc>(env_->GetFunc(ReadU32(&pc)))->offset;
-        Environment::JITedFunction jit_fn;
+        DefinedFunc* fn = cast<DefinedFunc>(env_->GetFunc(ReadU32(&pc)));
 
         CHECK_TRAP(PushCall(pc));
-        GOTO(offset);
-        if (env_->TryJit(this, offset, &jit_fn)) {
-          TRAP_IF(!jit_fn, FailedJITCompilation);
+        GOTO(fn->offset);
+        CHECK_TRAP(env_->TryJit(this, fn));
 
+        if (fn->jit_fn_) {
           in_jit_ = true;
 
-          auto result = jit_fn();
+          auto result = static_cast<Result>(fn->jit_fn_());
           if (result != Result::Ok) {
             // We don't want to overwrite the pc of the JITted function if it traps
             tpc.Reload();
-
             return result;
           }
 
@@ -1866,27 +1852,23 @@ Result Thread::Run(int num_instructions) {
         if (func->is_host) {
           CHECK_TRAP(CallHost(cast<HostFunc>(func)));
         } else {
-          auto* dfn = cast<DefinedFunc>(func);
-          Environment::JITedFunction jit_fn;
+          auto* fn = cast<DefinedFunc>(func);
 
           CHECK_TRAP(PushCall(pc));
-          GOTO(dfn->offset);
+          GOTO(fn->offset);
+          CHECK_TRAP(env_->TryJit(this, fn));
 
-          if (env_->TryJit(this, dfn->offset, &jit_fn)) {
-            TRAP_IF(!jit_fn, FailedJITCompilation);
-
+          if (fn->jit_fn_) {
             in_jit_ = true;
 
-            auto result = jit_fn();
+            auto result = static_cast<Result>(fn->jit_fn_());
             if (result != Result::Ok) {
               // We don't want to overwrite the pc of the JITted function if it traps
               tpc.Reload();
-
               return result;
             }
 
             in_jit_ = false;
-
             GOTO(PopCall());
           }
         }

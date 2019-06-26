@@ -281,6 +281,10 @@ struct DefinedFunc : Func {
   std::string dbg_name_ = "???";
   bool has_dbg_name_ = false;
 
+  uint32_t num_calls_ = 0;
+  bool tried_jit_ = false;
+  jit::JITedFunction jit_fn_ = nullptr;
+
   IstreamOffset offset;
   Index local_decl_count;
   Index local_count;
@@ -497,11 +501,6 @@ class Environment {
     return funcs_.back().get();
   }
 
-  void AddJitMetadata(DefinedFunc* fn) {
-    assert(fn->offset != kInvalidIstreamOffset);
-    this->jit_meta_.insert({ fn->offset, JitMeta(fn) });
-  }
-
   template <typename... Args>
   Global* EmplaceBackGlobal(Args&&... args) {
     globals_.emplace_back(std::forward<Args>(args)...);
@@ -561,19 +560,8 @@ class Environment {
  private:
   friend class Thread;
   friend class wabt::jit::FunctionBuilder;
-  using JITedFunction = wabt::interp::Result (*)();
 
-  struct JitMeta {
-    DefinedFunc* wasm_fn;
-    uint32_t num_calls = 0;
-
-    bool tried_jit = false;
-    JITedFunction jit_fn = nullptr;
-
-    JitMeta(DefinedFunc* wasm_fn) : wasm_fn(wasm_fn) {}
-  };
-
-  bool TryJit(Thread* t, IstreamOffset offset, JITedFunction* fn);
+  Result TryJit(Thread* t, DefinedFunc* fn);
 
   std::vector<std::unique_ptr<Module>> modules_;
   std::vector<FuncSignature> sigs_;
@@ -588,7 +576,6 @@ class Environment {
   BindingHash registered_module_bindings_;
 
   jit::JitEnvironment jit_env_;
-  std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
 };
 
 struct CallFrame {
