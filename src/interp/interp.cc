@@ -29,6 +29,7 @@
 #include "src/cast.h"
 #include "src/stream.h"
 
+#include "src/jit/thread.h"
 #include "src/jit/wabtjit.h"
 
 namespace wabt {
@@ -159,7 +160,12 @@ Thread::Options::Options(uint32_t value_stack_size, uint32_t call_stack_size)
 Thread::Thread(Environment* env, const Options& options)
     : env_(env),
       value_stack_(options.value_stack_size),
-      call_stack_(options.call_stack_size) {}
+      call_stack_(options.call_stack_size),
+      jit_th_(new jit::ThreadInfo()) {
+  jit_th_->call_stack_max = call_stack_.data() + call_stack_.size();
+  jit_th_->jit_fn_table = nullptr;
+  jit_th_->thread = this;
+}
 
 FuncSignature::FuncSignature(std::vector<Type> param_types,
                              std::vector<Type> result_types)
@@ -376,6 +382,8 @@ void Environment::ResetToMarkPoint(const MarkPoint& mark) {
   elem_segments_.erase(elem_segments_.begin() + mark.elem_segments_size,
                        elem_segments_.end());
   istream_->data.resize(mark.istream_size);
+
+  jit_funcs_.erase(jit_funcs_.begin() + mark.funcs_size, jit_funcs_.end());
 }
 
 HostModule* Environment::AppendHostModule(string_view name) {
@@ -1631,7 +1639,7 @@ ValueTypeRep<R> SimdReplaceLane(V value, uint32_t lane_idx, T lane_val) {
   return ToRep(Bitcast<R>(simd_data_0));
 }
 
-Result Environment::TryJit(Thread* t, DefinedFunc* fn) {
+Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
   if (!enable_jit) {
     return Result::Ok;
   }
@@ -1642,6 +1650,9 @@ Result Environment::TryJit(Thread* t, DefinedFunc* fn) {
     if (fn->num_calls_ >= jit_threshold) {
       fn->jit_fn_ = jit::compile(t, fn);
       fn->tried_jit_ = true;
+
+      if (fn->jit_fn_)
+        jit_funcs_[ind] = fn->jit_fn_;
     }
   }
 
@@ -1817,17 +1828,28 @@ Result Thread::Run(int num_instructions) {
         break;
 
       case Opcode::Call: {
-        DefinedFunc* fn = cast<DefinedFunc>(env_->GetFunc(ReadU32(&pc)));
+        Index func_index = ReadU32(&pc);
+        DefinedFunc* fn = cast<DefinedFunc>(env_->GetFunc(func_index));
 
         CHECK_TRAP(PushCall(pc));
         GOTO(fn->offset);
-        CHECK_TRAP(env_->TryJit(this, fn));
+        CHECK_TRAP(env_->TryJit(this, fn, func_index));
 
         if (fn->jit_fn_) {
           in_jit_ = true;
 
-          auto result = static_cast<Result>(fn->jit_fn_());
+          jit_th_->pc = fn->offset;
+          jit_th_->in_jit = true;
+          jit_th_->call_stack = call_stack_.data() + call_stack_top_;
+          jit_th_->jit_fn_table = env_->jit_funcs_.data();
+
+          auto result = static_cast<Result>(fn->jit_fn_(jit_th_.get(), func_index));
+          call_stack_top_ = jit_th_->call_stack - call_stack_.data();
+
           if (result != Result::Ok) {
+            pc_ = jit_th_->pc;
+            in_jit_ = jit_th_->in_jit;
+
             // We don't want to overwrite the pc of the JITted function if it traps
             tpc.Reload();
             return result;
@@ -1856,13 +1878,23 @@ Result Thread::Run(int num_instructions) {
 
           CHECK_TRAP(PushCall(pc));
           GOTO(fn->offset);
-          CHECK_TRAP(env_->TryJit(this, fn));
+          CHECK_TRAP(env_->TryJit(this, fn, func_index));
 
           if (fn->jit_fn_) {
             in_jit_ = true;
 
-            auto result = static_cast<Result>(fn->jit_fn_());
+            jit_th_->pc = fn->offset;
+            jit_th_->in_jit = true;
+            jit_th_->call_stack = call_stack_.data() + call_stack_top_;
+            jit_th_->jit_fn_table = env_->jit_funcs_.data();
+
+            auto result = static_cast<Result>(fn->jit_fn_(jit_th_.get(), func_index));
+            call_stack_top_ = jit_th_->call_stack - call_stack_.data();
+
             if (result != Result::Ok) {
+              pc_ = jit_th_->pc;
+              in_jit_ = jit_th_->in_jit;
+
               // We don't want to overwrite the pc of the JITted function if it traps
               tpc.Reload();
               return result;

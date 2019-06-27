@@ -17,13 +17,17 @@
 #ifndef JIT_ENVIRONMENT_HPP
 #define JIT_ENVIRONMENT_HPP
 
+#include "src/common.h"
+
 #include <cstdint>
 
 namespace wabt {
 namespace jit {
 
+struct ThreadInfo;
+
 using Result_t = int32_t;
-using JITedFunction = Result_t (*)();
+using JITedFunction = Result_t (*)(ThreadInfo*, Index);
 
 class JitEnvironment {
 public:

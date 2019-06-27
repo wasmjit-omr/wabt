@@ -21,6 +21,7 @@ add_library(wabtjit STATIC
   wabtjit.cc
   stack.cc
   vms_hack.cc
+  thunk.cc
 )
 
 # Mark JitBuilder include directories as "system" include directories. For most compilers, this

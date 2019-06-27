@@ -35,4 +35,21 @@ wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     UnionField("Value", "f64", toIlType<double>(this));
     UnionField("Value", "__size_pad", LookupStruct("ValueSizePad"));
     CloseUnion("Value");
+
+    DefineStruct("CallFrame");
+    DefineField("CallFrame", "pc", toIlType<IstreamOffset>(this));
+    DefineField("CallFrame", "is_jit", Int8);
+    DefineField("CallFrame", "is_jit_compiling", Int8);
+    CloseStruct("CallFrame");
+
+    auto pCallFrame = PointerTo(LookupStruct("CallFrame"));
+
+    DefineStruct("ThreadInfo");
+    DefineField("ThreadInfo", "pc", Int32);
+    DefineField("ThreadInfo", "in_jit", Int32);
+    DefineField("ThreadInfo", "call_stack_max", pCallFrame);
+    DefineField("ThreadInfo", "call_stack", pCallFrame);
+    DefineField("ThreadInfo", "jit_fn_table", toIlType<void**>(this));
+    DefineField("ThreadInfo", "thread", toIlType<void*>(this));
+    CloseStruct("ThreadInfo");
 }

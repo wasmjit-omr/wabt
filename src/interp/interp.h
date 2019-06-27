@@ -27,6 +27,8 @@
 #include <unordered_map>
 
 #include "src/jit/environment.h"
+#include "src/jit/thread.h"
+#include "src/jit/thunk.h"
 #include "src/binding-hash.h"
 #include "src/common.h"
 #include "src/opcode.h"
@@ -498,7 +500,11 @@ class Environment {
   template <typename... Args>
   Func* EmplaceBackFunc(Args&&... args) {
     funcs_.emplace_back(std::forward<Args>(args)...);
-    return funcs_.back().get();
+    jit_funcs_.emplace_back(funcs_.back()->is_host ? jit::HostCallThunk : jit::InterpThunk);
+
+    Func* f = funcs_.back().get();
+
+    return f;
   }
 
   template <typename... Args>
@@ -560,8 +566,10 @@ class Environment {
  private:
   friend class Thread;
   friend class wabt::jit::FunctionBuilder;
+  friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);
+  friend jit::Result_t jit::HostCallThunk(jit::ThreadInfo*, Index);
 
-  Result TryJit(Thread* t, DefinedFunc* fn);
+  Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
 
   std::vector<std::unique_ptr<Module>> modules_;
   std::vector<FuncSignature> sigs_;
@@ -575,6 +583,7 @@ class Environment {
   BindingHash module_bindings_;
   BindingHash registered_module_bindings_;
 
+  std::vector<jit::JITedFunction> jit_funcs_;
   jit::JitEnvironment jit_env_;
 };
 
@@ -584,8 +593,8 @@ struct CallFrame {
     : pc(pc), is_jit(is_jit), is_jit_compiling(is_jit_compiling) {}
 
   IstreamOffset pc;
-  bool is_jit;
-  bool is_jit_compiling;
+  int8_t is_jit;
+  int8_t is_jit_compiling;
 };
 
 class Thread {
@@ -620,7 +629,8 @@ class Thread {
   Result CallHost(HostFunc*);
 
  private:
-  friend class wabt::jit::FunctionBuilder;
+  friend class jit::FunctionBuilder;
+  friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);
   friend class Executor;
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
 
@@ -713,6 +723,8 @@ class Thread {
   uint32_t last_jit_frame_ = 0;
   IstreamOffset pc_ = 0;
   bool in_jit_ = false;
+
+  std::unique_ptr<jit::ThreadInfo> jit_th_;
 };
 
 struct ExecResult {
