@@ -1,0 +1,300 @@
+;;; TOOL: run-interp-minimal
+(module
+  ;; TODO: Find a better way to prevent JIT compilation than using memory.size
+  (memory 0)
+  (table anyfunc (elem $i_id $j_id $i2j_direct $i2j_indirect $j2i_direct $j2i_indirect))
+
+  (type $id (func (param i32) (result i32)))
+  (type $bin (func (param i32 i32) (result i32)))
+
+  (func $i_id (param i32) (result i32)
+    memory.size
+    drop
+    local.get 0)
+
+  (func $j_id (param i32) (result i32)
+    local.get 0)
+
+  (func $i2j_direct (param i32 i32) (result i32) (local i32)
+    memory.size
+    drop
+    local.get 0
+    local.get 1
+    i32.mul
+    local.set 2
+    local.get 0
+    call $j_id
+    local.get 2
+    i32.add)
+
+  (func $j2i_direct (param i32 i32) (result i32) (local i32)
+    local.get 0
+    local.get 1
+    i32.mul
+    local.set 2
+    local.get 0
+    call $i_id
+    local.get 2
+    i32.add)
+
+  (func $j2j_direct (param i32 i32) (result i32) (local i32)
+    local.get 0
+    local.get 1
+    i32.mul
+    local.set 2
+    local.get 0
+    call $j_id
+    local.get 2
+    i32.add)
+
+  (func $i2j_indirect (param i32 i32) (result i32) (local i32)
+    memory.size
+    drop
+    local.get 0
+    local.get 1
+    i32.mul
+    local.set 2
+    local.get 0
+    i32.const 1 ;; $j_id
+    call_indirect (type $id)
+    local.get 2
+    i32.add)
+
+  (func $j2i_indirect (param i32 i32) (result i32) (local i32)
+    local.get 0
+    local.get 1
+    i32.mul
+    local.set 2
+    local.get 0
+    i32.const 0 ;; $i_id
+    call_indirect (type $id)
+    local.get 2
+    i32.add)
+
+  (func $j2j_indirect (param i32 i32) (result i32) (local i32)
+    local.get 0
+    local.get 1
+    i32.mul
+    local.set 2
+    local.get 0
+    i32.const 1 ;; $j_id
+    call_indirect (type $id)
+    local.get 2
+    i32.add)
+
+  (func $call_complex_0 (result i32)
+    i32.const 2
+    i32.const 3
+    call $i2j_direct
+    i32.const 5
+    i32.const 1
+    call $i2j_direct
+    i32.add)
+
+  (func (export "test_call_complex_0") (result i32)
+    call $call_complex_0
+    call $call_complex_0
+    i32.add)
+
+  (func $call_complex_1 (result i32)
+    i32.const 2
+    i32.const 3
+    call $j2i_direct
+    i32.const 5
+    i32.const 1
+    call $j2i_direct
+    i32.add)
+
+  (func (export "test_call_complex_1") (result i32)
+    call $call_complex_1
+    call $call_complex_1
+    i32.add)
+
+  (func $call_complex_2 (result i32)
+    i32.const 2
+    i32.const 3
+    call $j2i_direct
+    i32.const 5
+    i32.const 1
+    call $i2j_direct
+    i32.add)
+
+  (func (export "test_call_complex_2") (result i32)
+    call $call_complex_2
+    call $call_complex_2
+    i32.add)
+
+  (func $call_complex_3 (result i32)
+    i32.const 2
+    i32.const 3
+    call $i2j_direct
+    i32.const 5
+    i32.const 1
+    call $j2i_direct
+    i32.add)
+
+  (func (export "test_call_complex_3") (result i32)
+    call $call_complex_3
+    call $call_complex_3
+    i32.add)
+
+  (func $call_complex_4 (result i32)
+    i32.const 2
+    i32.const 3
+    call $i2j_indirect
+    i32.const 5
+    i32.const 1
+    call $j2i_direct
+    i32.add)
+
+  (func (export "test_call_complex_4") (result i32)
+    call $call_complex_4
+    call $call_complex_4
+    i32.add)
+
+  (func $call_complex_5 (result i32)
+    i32.const 2
+    i32.const 3
+    call $j2i_indirect
+    i32.const 5
+    i32.const 1
+    call $j2j_direct
+    i32.add)
+
+  (func (export "test_call_complex_5") (result i32)
+    call $call_complex_5
+    call $call_complex_5
+    i32.add)
+
+  (func $call_complex_6 (result i32)
+    i32.const 2
+    i32.const 3
+    call $j2j_indirect
+    i32.const 5
+    i32.const 1
+    call $j2i_direct
+    i32.add)
+
+  (func (export "test_call_complex_6") (result i32)
+    call $call_complex_6
+    call $call_complex_6
+    i32.add)
+
+  (func $call_complex_7 (result i32)
+    i32.const 2
+    i32.const 3
+    call $j2j_direct
+    i32.const 5
+    i32.const 1
+    call $j2i_indirect
+    i32.add)
+
+  (func (export "test_call_complex_7") (result i32)
+    call $call_complex_7
+    call $call_complex_7
+    i32.add)
+
+  (func $call_complex_8 (result i32)
+    i32.const 2
+    i32.const 3
+    call $j2j_indirect
+    i32.const 5
+    i32.const 1
+    call $j2j_indirect
+    i32.add)
+
+  (func (export "test_call_complex_8") (result i32)
+    call $call_complex_8
+    call $call_complex_8
+    i32.add)
+
+  (func $call_complex_9 (result i32)
+    i32.const 2
+    i32.const 3
+    call $j2i_indirect
+    i32.const 5
+    i32.const 1
+    call $j2j_indirect
+    i32.add)
+
+  (func (export "test_call_complex_9") (result i32)
+    call $call_complex_9
+    call $call_complex_9
+    i32.add)
+
+  (func $call_complex_10 (result i32)
+    i32.const 2
+    i32.const 3
+    i32.const 2 ;; $i2j_direct
+    call_indirect (type $bin)
+    i32.const 5
+    i32.const 1
+    call $j2i_direct
+    i32.add)
+
+  (func (export "test_call_complex_10") (result i32)
+    call $call_complex_10
+    call $call_complex_10
+    i32.add)
+
+  (func $call_complex_11 (result i32)
+    i32.const 2
+    i32.const 3
+    i32.const 3 ;; $i2j_indirect
+    call_indirect (type $bin)
+    i32.const 5
+    i32.const 1
+    call $j2i_direct
+    i32.add)
+
+  (func (export "test_call_complex_11") (result i32)
+    call $call_complex_11
+    call $call_complex_11
+    i32.add)
+
+  (func $call_complex_12 (result i32)
+    i32.const 2
+    i32.const 3
+    i32.const 4 ;; $j2i_direct
+    call_indirect (type $bin)
+    i32.const 5
+    i32.const 1
+    call $j2i_direct
+    i32.add)
+
+  (func (export "test_call_complex_12") (result i32)
+    call $call_complex_12
+    call $call_complex_12
+    i32.add)
+
+  (func $call_complex_13 (result i32)
+    i32.const 2
+    i32.const 3
+    i32.const 5 ;; $j2i_indirect
+    call_indirect (type $bin)
+    i32.const 5
+    i32.const 1
+    call $j2i_direct
+    i32.add)
+
+  (func (export "test_call_complex_13") (result i32)
+    call $call_complex_13
+    call $call_complex_13
+    i32.add)
+)
+(;; STDOUT ;;;
+test_call_complex_0() => i32:36
+test_call_complex_1() => i32:36
+test_call_complex_2() => i32:36
+test_call_complex_3() => i32:36
+test_call_complex_4() => i32:36
+test_call_complex_5() => i32:36
+test_call_complex_6() => i32:36
+test_call_complex_7() => i32:36
+test_call_complex_8() => i32:36
+test_call_complex_9() => i32:36
+test_call_complex_10() => i32:36
+test_call_complex_11() => i32:36
+test_call_complex_12() => i32:36
+test_call_complex_13() => i32:36
+;;; STDOUT ;;)
