@@ -1,8 +1,10 @@
 /bin
+/build
 /out
 /fuzz-out
 /emscripten
 *.pyc
 *.user
 .idea/
+.vscode/
 /cmake-build-debug/

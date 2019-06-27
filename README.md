@@ -33,6 +33,41 @@ Wabt has been compiled to JavaScript via emscripten. Some of the functionality i
 - [wat2wasm](https://webassembly.github.io/wabt/demo/wat2wasm/)
 - [wasm2wat](https://webassembly.github.io/wabt/demo/wasm2wat/)
 
+## Supported Proposals
+
+* Proposal: Name and link to the WebAssembly proposal repo
+* flag: Flag to pass to the tool to enable support for the feature
+* binary: Whether wabt can read/write the binary format
+* text: Whether wabt can read/write the text format
+* validate: Whether wabt can validate the syntax
+* interpret: Whether wabt can execute these operations in `wasm-interp` or `spectest-interp`
+
+| Proposal | flag | binary | text | validate | interpret |
+| - | - | - | - | - | - |
+| [exception handling][] | `--enable-exceptions` | ✓ | ✓ | ✓ | |
+| [mutable globals][] | `--enable-mutable-globals` | ✓ | ✓ | ✓ | ✓ |
+| [nontrapping float-to-int conversions][] | `--enable-saturating-float-to-int` | ✓ | ✓ | ✓ | ✓ |
+| [sign extension][] | `--enable-sign-extension` | ✓ | ✓ | ✓ | ✓ |
+| [simd][] | `--enable-simd` | ✓ | ✓ | ✓ | ✓ |
+| [threads][] | `--enable-threads` | ✓ | ✓ | ✓ | |
+| [multi-value][] | `--enable-multi-value` | ✓ | ✓ | ✓ | ✓ |
+| [tail-call][] | `--enable-tail-call` | ✓ | ✓ | ✓ | ✓ |
+| [bulk memory][] | `--enable-bulk-memory` | ✓ | ✓ | ✓ | ✓ |
+| [reference types][] | `--enable-reference-types` | ✓ | ✓ | ✓ | |
+| [annotations][] | `--enable-annotations` | | ✓ | | |
+
+[exception handling]: https://github.com/WebAssembly/exception-handling
+[mutable globals]: https://github.com/WebAssembly/mutable-global
+[nontrapping float-to-int conversions]: https://github.com/WebAssembly/nontrapping-float-to-int-conversions
+[sign extension]: https://github.com/WebAssembly/sign-extension-ops
+[simd]: https://github.com/WebAssembly/simd
+[threads]: https://github.com/WebAssembly/threads
+[multi-value]: https://github.com/WebAssembly/multi-value
+[tail-call]: https://github.com/WebAssembly/tail-call
+[bulk memory]: https://github.com/WebAssembly/bulk-memory-operations
+[reference types]: https://github.com/WebAssembly/reference-types
+[annotations]: https://github.com/WebAssembly/annotations
+
 ## Cloning
 
 Clone as normal, but don't forget to get the submodules as well:
@@ -44,10 +79,32 @@ $ cd wabt
 
 This will fetch the testsuite and gtest repos, which are needed for some tests.
 
-## Building (macOS and Linux)
+## Building using CMake directly (Linux and macOS)
 
-You'll need [CMake](https://cmake.org). If you just run `make`, it will run
-CMake for you, and put the result in `out/clang/Debug/` by default:
+You'll need [CMake](https://cmake.org). You can then run CMake, the normal way:
+
+```console
+$ mkdir build
+$ cd build
+$ cmake ..
+$ cmake --build .
+```
+
+This will produce build files using CMake's default build generator. Read the CMake
+documentation for more information.
+
+**NOTE**: You must create a separate directory for the build artifacts (e.g. `build` above).
+Running `cmake` from the repo root directory will not work since the build produces an
+executable called `wasm2c` which conflicts with the `wasm2c` directory.
+
+## Building using the top-level `Makefile` (Linux and macOS)
+
+**NOTE**: Under the hood, this uses `make` to run CMake, which then calls `make` again.
+On some systems (typically macOS), this doesn't build properly. If you see these errors,
+you can build using CMake directly as described above.
+
+You'll need [CMake](https://cmake.org). If you just run `make`, it will run CMake for you, 
+and put the result in `out/clang/Debug/` by default:
 
 > Note: If you are on macOS, you will need to use CMake version 3.2 or higher
 
@@ -58,18 +115,13 @@ $ make
 This will build the default version of the tools: a debug build using the Clang
 compiler.
 
-**NOTE**: Under the hood, this uses make to run CMake, which then calls make again.
-On some systems, this doesn't build properly. If you see these errors, you can build
-using CMake directly as described below.
-
 There are many make targets available for other configurations as well. They
 are generated from every combination of a compiler, build type and
 configuration.
 
  - compilers: `gcc`, `clang`, `gcc-i686`, `gcc-fuzz`
  - build types: `debug`, `release`
- - configurations: empty, `asan`, `msan`, `lsan`, `ubsan`, `no-re2c`,
-   `no-tests`
+ - configurations: empty, `asan`, `msan`, `lsan`, `ubsan`, `no-tests`
 
 They are combined with dashes, for example:
 
@@ -77,25 +129,18 @@ They are combined with dashes, for example:
 $ make clang-debug
 $ make gcc-i686-release
 $ make clang-debug-lsan
-$ make gcc-debug-no-re2c
-```
-
-### Building using CMake directly
-
-You can also run CMake yourself, the normal way:
-
-```console
-$ mkdir build
-$ cd build
-$ cmake ..
-...
+$ make gcc-debug-no-tests
 ```
 
 ## Building (Windows)
 
 You'll need [CMake](https://cmake.org). You'll also need
-[Visual Studio](https://www.visualstudio.com/) (2015 or newer) or 
+[Visual Studio](https://www.visualstudio.com/) (2015 or newer) or
 [MinGW](http://www.mingw.org/).
+
+_Note: Visual Studio 2017 and later come with CMake (and the Ninja build system)
+out of the box, and should be on your PATH if you open a Developer Command prompt.
+See <https://aka.ms/cmake> for more details._
 
 You can run CMake from the command prompt, or use the CMake GUI tool. See
 [Running CMake](https://cmake.org/runningcmake/) for more information.
@@ -127,18 +172,15 @@ So, for example, if you want to build the debug configuration on Visual Studio 2
 ```console
 > mkdir build
 > cd build
-> cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=..\bin -G "Visual Studio 14 2015"
-> cmake --build .. --config DEBUG --target install
+> cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=..\ -G "Visual Studio 14 2015"
+> cmake --build . --config DEBUG --target install
 ```
 
-## Changing the lexer
+## Adding new keywords to the lexer
 
-If you make changes to `src/wast-lexer.cc`, you'll need to install
-[re2c](http://re2c.org). Before you upload your PR, please run `make
-update-re2c` to update the prebuilt C sources in `src/prebuilt/`.
-
-CMake will detect if you don't have re2c installed and use the prebuilt source
-files instead.
+If you want to add new keywords, you'll need to install
+[gperf](https://www.gnu.org/software/gperf/). Before you upload your PR, please
+run `make update-gperf` to update the prebuilt C++ sources in `src/prebuilt/`.
 
 ## Running wat2wasm and wast2json
 
