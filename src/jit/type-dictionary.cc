@@ -36,6 +36,15 @@ wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     UnionField("Value", "__size_pad", LookupStruct("ValueSizePad"));
     CloseUnion("Value");
 
+    DefineUnion("MemoryValue");
+    UnionField("MemoryValue", "i8", Int8);
+    UnionField("MemoryValue", "i16", Int16);
+    UnionField("MemoryValue", "i32", Int32);
+    UnionField("MemoryValue", "i64", Int64);
+    UnionField("MemoryValue", "f32", Float);
+    UnionField("MemoryValue", "f64", Double);
+    CloseUnion("MemoryValue");
+
     DefineStruct("CallFrame");
     DefineField("CallFrame", "pc", toIlType<IstreamOffset>(this));
     DefineField("CallFrame", "is_jit", Int8);
