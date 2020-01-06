@@ -1203,9 +1203,6 @@ wabt::Result BinaryReaderInterp::BeginFunctionBody(Index index, Offset size) {
   func->local_decl_count = 0;
   func->local_count = 0;
 
-  /* wasmjit-omr: emit JIT metadata now that func->offset is known */
-  env_->AddJitMetadata(func);
-
   current_func_ = func;
   depth_fixups_.clear();
   label_stack_.clear();
@@ -1489,11 +1486,10 @@ wabt::Result BinaryReaderInterp::OnCallExpr(Index func_index) {
 
   if (func->is_host) {
     CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
-    CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
   } else {
     CHECK_RESULT(EmitOpcode(Opcode::Call));
-    CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
   }
+  CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
 
   return wabt::Result::Ok;
 }
@@ -1531,7 +1527,7 @@ wabt::Result BinaryReaderInterp::OnReturnCallExpr(Index func_index) {
     CHECK_RESULT(EmitOpcode(Opcode::Return));
   } else {
     CHECK_RESULT(EmitOpcode(Opcode::ReturnCall));
-    CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
+    CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
   }
 
   return wabt::Result::Ok;

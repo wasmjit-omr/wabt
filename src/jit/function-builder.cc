@@ -16,6 +16,7 @@
 
 #include "function-builder.h"
 #include "wabtjit.h"
+#include "thread.h"
 #include "src/cast.h"
 #include "src/interp/interp.h"
 #include "src/interp/interp-internal.h"
@@ -27,83 +28,32 @@
 #include <type_traits>
 
 namespace wabt {
-
 namespace jit {
 
-#define CHECK_TRAP_IN_HELPER(...)                \
-  do {                                           \
-    wabt::interp::Result result = (__VA_ARGS__); \
-    if (result != wabt::interp::Result::Ok) {    \
-      return static_cast<Result_t>(result);      \
-    }                                            \
-  } while (0)
-#define TRAP(type) return static_cast<Result_t>(wabt::interp::Result::Trap##type)
-#define TRAP_UNLESS(cond, type) TRAP_IF(!(cond), type)
-#define TRAP_IF(cond, type)  \
-  do {                       \
-    if (WABT_UNLIKELY(cond)) \
-      TRAP(type);            \
-  } while (0)
-
-FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc) {
-  CHECK_TRAP_IN_HELPER(th->PushCall(current_pc, true));
-  th->set_pc(offset);
-
-  JITedFunction jit_fn;
-
-  if (th->env_->TryJit(th, offset, &jit_fn)) {
-    TRAP_IF(!jit_fn, FailedJITCompilation);
-    CHECK_TRAP_IN_HELPER(jit_fn());
-  } else {
-    th->in_jit_ = false;
-
-    auto last_jit_frame = th->last_jit_frame_;
-    th->last_jit_frame_ = th->call_stack_top_;
-
-    interp::Result result = interp::Result::Ok;
-    while (result == wabt::interp::Result::Ok) {
-      result = th->Run(1000);
-    }
-    th->last_jit_frame_ = last_jit_frame;
-
-    if (result != interp::Result::Returned)
-      return static_cast<Result_t>(result);
-
-    th->in_jit_ = true;
-  }
-
-  th->PopCall();
-
-  return static_cast<Result_t>(wabt::interp::Result::Ok);
-}
-
-FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc) {
+Result_t FunctionBuilder::CallIndirectHelper(ThreadInfo* th, Index table_index, Index sig_index, Index entry_index) {
   using namespace wabt::interp;
-  auto* env = th->env_;
-
-  th->set_pc(current_pc - th->GetIstream());
+  auto* env = th->thread->env_;
 
   Table* table = &env->tables_[table_index];
-  TRAP_IF(entry_index >= table->func_indexes.size(), UndefinedTableIndex);
+  TRAP_IF_HELPER(entry_index >= table->func_indexes.size(), UndefinedTableIndex);
   Index func_index = table->func_indexes[entry_index];
-  TRAP_IF(func_index == kInvalidIndex, UninitializedTableElement);
+  TRAP_IF_HELPER(func_index == kInvalidIndex, UninitializedTableElement);
   Func* func = env->funcs_[func_index].get();
-  TRAP_UNLESS(env->FuncSignaturesAreEqual(func->sig_index, sig_index),
-              IndirectCallSignatureMismatch);
-  if (func->is_host) {
-    auto result = static_cast<Result_t>(th->CallHost(cast<HostFunc>(func)));
-    if (result != static_cast<Result_t>(interp::Result::Ok))
-      return result;
-  } else {
-    auto result = CallHelper(th, cast<DefinedFunc>(func)->offset, current_pc);
-    if (result != static_cast<Result_t>(interp::Result::Ok))
-      return result;
-  }
-  return static_cast<Result_t>(interp::Result::Ok);
-}
+  TRAP_UNLESS_HELPER(env->FuncSignaturesAreEqual(func->sig_index, sig_index),
+                     IndirectCallSignatureMismatch);
 
-FunctionBuilder::Result_t FunctionBuilder::CallHostHelper(wabt::interp::Thread* th, Index func_index) {
-  return static_cast<Result_t>(th->CallHost(cast<wabt::interp::HostFunc>(th->env_->funcs_[func_index].get())));
+  TRAP_IF_HELPER(th->call_stack == th->call_stack_max, CallStackExhausted);
+  th->call_stack->pc = th->pc;
+  th->call_stack->is_jit = true;
+  th->call_stack->is_jit_compiling = false;
+  th->call_stack++;
+
+  auto result = th->jit_fn_table[func_index](th, func_index);
+
+  if (result == static_cast<Result_t>(interp::Result::Ok))
+    th->call_stack--;
+
+  return result;
 }
 
 void* FunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size) {
@@ -126,8 +76,11 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
   DefineFile(__FILE__);
   DefineName(fn->dbg_name_.c_str());
 
+  DefineParameter("thread", types->PointerTo(types->LookupStruct("ThreadInfo")));
+  DefineParameter("index", Int32);
   DefineReturnType(toIlType<Result_t>(types));
 
+  DefineFunction("wasm_fn", __FILE__, "0", nullptr, toIlType<Result_t>(types), 2, Address, Int32);
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
                  Float,
@@ -138,27 +91,13 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  Double,
                  1,
                  Double);
-  DefineFunction("CallHelper", __FILE__, "0",
-                 reinterpret_cast<void*>(CallHelper),
-                 toIlType<Result_t>(types),
-                 3,
-                 toIlType<void*>(types),
-                 toIlType<wabt::interp::IstreamOffset>(types),
-                 types->PointerTo(Int8));
   DefineFunction("CallIndirectHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallIndirectHelper),
                  toIlType<Result_t>(types),
-                 5,
+                 4,
                  toIlType<void*>(types),
                  toIlType<Index>(types),
                  toIlType<Index>(types),
-                 toIlType<Index>(types),
-                 types->PointerTo(Int8));
-  DefineFunction("CallHostHelper", __FILE__, "0",
-                 reinterpret_cast<void*>(CallHostHelper),
-                 toIlType<Result_t>(types),
-                 2,
-                 toIlType<void*>(types),
                  toIlType<Index>(types));
   DefineFunction("MemoryTranslationHelper", __FILE__, "0",
                  reinterpret_cast<void*>(MemoryTranslationHelper),
@@ -502,8 +441,7 @@ TR::IlValue* FunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_
 
 void FunctionBuilder::EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc) {
   if (pc != nullptr) {
-    b->StoreAt(b->ConstAddress(&thread_->pc_),
-               b->ConstInt32(pc - thread_->GetIstream()));
+    b->StoreIndirect("ThreadInfo", "pc", b->Load("thread"), b->ConstInt32(pc - thread_->GetIstream()));
   }
 
   b->Return(result);
@@ -833,52 +771,67 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::Call: {
-      auto th_addr = b->ConstAddress(thread_);
-      auto offset = interp::ReadU32(&pc);
-      auto current_pc = b->Const(pc);
+    case Opcode::Call:
+    case Opcode::InterpCallHost: {
+      auto fn_ind = interp::ReadU32(&pc);
+      auto fn = thread_->env_->GetFunc(fn_ind);
 
-      auto meta_it = thread_->env()->jit_meta_.find(offset);
-      TR_ASSERT_FATAL(meta_it != thread_->env()->jit_meta_.end(),
-                      "Found call to unknown function at offset %u", offset);
+      auto* sig = thread_->env()->GetFuncSignature(fn->sig_index);
 
-      auto* meta = &meta_it->second;
-      auto* sig = thread_->env()->GetFuncSignature(meta->wasm_fn->sig_index);
+      auto* thread = b->Load("thread");
+      auto* call_stack = b->LoadIndirect("ThreadInfo", "call_stack", thread);
 
       MoveToPhysStack(b, pc, &stack, sig->param_types.size());
 
-      b->Store("result",
-      b->      Call("CallHelper", 3, th_addr, b->ConstInt32(offset), current_pc));
+      auto* fn_thunk = b->LoadAt(typeDictionary()->pAddress,
+                       b->       IndexAt(typeDictionary()->pAddress,
+                       b->               LoadIndirect("ThreadInfo", "jit_fn_table", thread),
+                       b->               ConstInt32(fn_ind)));
+
+      EmitTrapIf(b,
+      b->        EqualTo(call_stack, b->LoadIndirect("ThreadInfo", "call_stack_max", thread)),
+      b->        Const(static_cast<Result_t>(interp::Result::TrapCallStackExhausted)),
+                 pc);
+
+      b->StoreIndirect("ThreadInfo", "call_stack", thread, b->IndexAt(typeDictionary()->pAddress, call_stack, b->ConstInt32(1)));
+      b->StoreIndirect("CallFrame", "pc", call_stack, b->ConstInt32(pc - thread_->GetIstream()));
+      b->StoreIndirect("CallFrame", "is_jit", call_stack, b->ConstInt8(1));
+      b->StoreIndirect("CallFrame", "is_jit_compiling", call_stack, b->ConstInt8(0));
+
+      auto* result = b->ComputedCall("wasm_fn", 3,
+                                     fn_thunk,
+                                     thread,
+                     b->             ConstInt32(fn_ind));
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc
-      EmitCheckTrap(b, b->Load("result"), nullptr);
+      EmitCheckTrap(b, result, nullptr);
 
       for (Type t : sig->result_types) {
         if (t == Type::V128)
           return false;
       }
 
+      b->StoreIndirect("ThreadInfo", "call_stack", thread, call_stack);
       MoveFromPhysStack(b, &stack, sig->result_types);
-
       break;
     }
 
     case Opcode::CallIndirect: {
-      auto th_addr = b->ConstAddress(thread_);
       auto table_index = b->ConstInt32(interp::ReadU32(&pc));
       auto sig_index = interp::ReadU32(&pc);
       auto entry_index = stack.Pop();
-      auto current_pc = b->Const(pc);
 
       auto* sig = thread_->env()->GetFuncSignature(sig_index);
 
+      auto* thread = b->Load("thread");
+
       MoveToPhysStack(b, pc, &stack, sig->param_types.size());
 
-      b->Store("result",
-      b->      Call("CallIndirectHelper", 5, th_addr, table_index, b->ConstInt32(sig_index), entry_index, current_pc));
+      b->StoreIndirect("ThreadInfo", "pc", thread, b->ConstInt32(pc - thread_->GetIstream()));
+      auto* result = b->Call("CallIndirectHelper", 4, thread, table_index, b->ConstInt32(sig_index), entry_index);
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc
-      EmitCheckTrap(b, b->Load("result"), nullptr);
+      EmitCheckTrap(b, result, nullptr);
 
       for (Type t : sig->result_types) {
         if (t == Type::V128)
@@ -886,30 +839,6 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       }
 
       MoveFromPhysStack(b, &stack, sig->result_types);
-
-      break;
-    }
-
-    case Opcode::InterpCallHost: {
-      Index func_index = interp::ReadU32(&pc);
-      auto* sig = thread_->env()->GetFuncSignature(thread_->env()->GetFunc(func_index)->sig_index);
-
-      MoveToPhysStack(b, pc, &stack, sig->param_types.size());
-
-      b->Store("result",
-      b->      Call("CallHostHelper", 2,
-      b->           ConstAddress(thread_),
-      b->           ConstInt32(func_index)));
-
-      EmitCheckTrap(b, b->Load("result"), pc);
-
-      for (Type t : sig->result_types) {
-        if (t == Type::V128)
-          return false;
-      }
-
-      MoveFromPhysStack(b, &stack, sig->result_types);
-
       break;
     }
 

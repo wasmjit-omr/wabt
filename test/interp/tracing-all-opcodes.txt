@@ -457,7 +457,7 @@ br_table() =>
 #0.   68: V:0  | return
 return() =>
 >>> running export "call":
-#0.   76: V:0  | call @0
+#0.   76: V:0  | call $1
 #1.    0: V:0  | return
 #0.   84: V:0  | return
 call() =>
@@ -468,7 +468,7 @@ call() =>
 #0.  108: V:0  | return
 call_indirect() =>
 >>> running export "return_call":
-#0.  112: V:0  | return_call @0
+#0.  112: V:0  | return_call $1
 #0.    0: V:0  | return
 return_call() =>
 >>> running export "return_call_indirect":
