@@ -22,6 +22,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include <unordered_map>
@@ -121,13 +122,45 @@ struct Table {
   std::vector<Index> func_indexes;
 };
 
+struct MemoryData {
+  size_t capacity_;
+  size_t size_;
+  char* data_;
+
+  MemoryData(size_t size_);
+  MemoryData(const MemoryData&) = delete;
+  MemoryData(MemoryData&&);
+
+  ~MemoryData();
+
+  MemoryData& operator=(const MemoryData&) = delete;
+  MemoryData& operator=(MemoryData&&);
+
+  char& operator[](size_t i) { return *(data_ + i); }
+  const char& operator[](size_t i) const { return *(data_ + i); }
+
+  size_t size() const noexcept { return size_; }
+
+  char* begin() noexcept { return data_; }
+  const char* cbegin() const noexcept { return data_; }
+
+  char* end() noexcept { return data_ + size_; }
+  const char* cend() const noexcept { return data_ + size_; }
+
+  char* data() noexcept { return data_; }
+  const char* data() const noexcept { return data_; }
+
+  void resize(size_t size);
+};
+static_assert(std::is_standard_layout<MemoryData>::value, "MemoryData must be standard layout");
+
 struct Memory {
   Memory() = default;
   explicit Memory(const Limits& limits)
       : page_limits(limits), data(limits.initial * WABT_PAGE_SIZE) {}
 
   Limits page_limits;
-  std::vector<char> data;
+  MemoryData data;
 };
 
 struct DataSegment {

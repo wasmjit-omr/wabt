@@ -129,8 +129,6 @@ class FunctionBuilder : public TR::MethodBuilder {
 
   static Result_t CallIndirectHelper(ThreadInfo* th, Index table_index, Index sig_index, Index entry_index);
 
-  static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
-
   std::vector<BytecodeWorkItem> workItems_;
 
   interp::Thread* thread_;

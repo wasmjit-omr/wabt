@@ -52,4 +52,10 @@ wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     DefineField("ThreadInfo", "jit_fn_table", toIlType<void**>(this));
     DefineField("ThreadInfo", "thread", toIlType<void*>(this));
     CloseStruct("ThreadInfo");
+
+    DefineStruct("MemoryData");
+    DefineField("MemoryData", "capacity", toIlType<size_t>(this));
+    DefineField("MemoryData", "size", toIlType<size_t>(this));
+    DefineField("MemoryData", "data", toIlType<void*>(this));
+    CloseStruct("MemoryData");
 }

@@ -56,16 +56,6 @@ Result_t FunctionBuilder::CallIndirectHelper(ThreadInfo* th, Index table_index, 
   return result;
 }
 
-void* FunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size) {
-  auto* memory = &th->env_->memories_[memory_id];
-
-  if (address + size > memory->data.size()) {
-    return nullptr;
-  } else {
-    return memory->data.data() + address;
-  }
-}
-
 FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn, TypeDictionary* types)
     : TR::MethodBuilder(types),
       thread_(thread),
@@ -99,14 +89,6 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  toIlType<Index>(types),
                  toIlType<Index>(types),
                  toIlType<Index>(types));
-  DefineFunction("MemoryTranslationHelper", __FILE__, "0",
-                 reinterpret_cast<void*>(MemoryTranslationHelper),
-                 toIlType<void*>(types),
-                 4,
-                 toIlType<void*>(types),
-                 toIlType<uint32_t>(types),
-                 toIlType<uint64_t>(types),
-                 toIlType<uint32_t>(types));
 }
 
 bool FunctionBuilder::buildIL() {
@@ -420,23 +402,21 @@ void FunctionBuilder::EmitIntRemainder(TR::IlBuilder* b, const uint8_t* pc, Virt
 
 template <typename T>
 TR::IlValue* FunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack) {
-  auto th_addr = b->ConstAddress(thread_);
-  auto mem_id = b->ConstInt32(interp::ReadU32(pc));
+  auto mem = b->ConstAddress(&thread_->env_->memories_[interp::ReadU32(pc)].data);
   auto offset = b->ConstInt64(static_cast<uint64_t>(interp::ReadU32(pc)));
 
-  auto address = b->Call("MemoryTranslationHelper",
-                         4,
-                         th_addr,
-                         mem_id,
-                         b->Add(b->UnsignedConvertTo(Int64, stack->Pop()), offset),
-                         b->ConstInt32(sizeof(T)));
+  auto wasm_addr = b->Add(b->UnsignedConvertTo(Int64, stack->Pop()), offset);
 
+  // It's not possible for the address calculation to overflow since the user can only provide two
+  // 32-bit integers, which we add as 64-bit integers.
   EmitTrapIf(b,
-  b->        EqualTo(address, b->ConstAddress(nullptr)),
+  b->        GreaterThan(
+  b->                    Add(wasm_addr, b->ConstInt64(sizeof(T))),
+  b->                    LoadIndirect("MemoryData", "size", mem)),
   b->        Const(static_cast<Result_t>(interp::Result::TrapMemoryAccessOutOfBounds)),
              *pc);
 
-  return address;
+  return b->Add(b->LoadIndirect("MemoryData", "data", mem), wasm_addr);
 }
 
 void FunctionBuilder::EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc) {

@@ -131,6 +131,62 @@ void WriteCall(Stream* stream,
   }
 }
 
+MemoryData::MemoryData(size_t size) : capacity_(0), size_(0), data_(nullptr) {
+  resize(size);
+}
+
+MemoryData::MemoryData(MemoryData&& other) : capacity_(other.capacity_), size_(other.size_), data_(other.data_) {
+  other.capacity_ = other.size_ = 0;
+  other.data_ = nullptr;
+}
+
+MemoryData::~MemoryData() {
+  std::free(data_);
+}
+
+MemoryData& MemoryData::operator=(MemoryData&& other) {
+  std::free(data_);
+
+  capacity_ = other.capacity_;
+  size_ = other.size_;
+  data_ = other.data_;
+
+  other.capacity_ = other.size_ = 0;
+  other.data_ = nullptr;
+
+  return *this;
+}
+
+void MemoryData::resize(size_t size) {
+  if (size <= size_) {
+    size_ = size;
+    return;
+  }
+
+  if (!data_) {
+    data_ = static_cast<char*>(std::malloc(size));
+    if (!data_) {
+      throw std::bad_alloc();
+    }
+
+    std::memset(data_, 0, size);
+    capacity_ = size_ = size;
+  } else {
+    if (size > capacity_) {
+      char* new_data = static_cast<char*>(std::realloc(data_, size));
+      if (!new_data) {
+        throw std::bad_alloc();
+      }
+
+      data_ = new_data;
+      capacity_ = size;
+    }
+
+    std::memset(data_ + size_, 0, size - size_);
+    size_ = size;
+  }
+}
+
 Environment::Environment() : istream_(new OutputBuffer()) {}
 
 Index Environment::FindModuleIndex(string_view name) const {
