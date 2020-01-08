@@ -846,7 +846,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc, &stack);
       stack.Push(
       b-> ConvertTo(Int32,
-      b->           LoadAt(typeDictionary()->PointerTo(Int8), addr)));
+      b->           LoadIndirect("MemoryValue", "i8", addr)));
       break;
     }
 
@@ -854,7 +854,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc, &stack);
       stack.Push(
       b-> UnsignedConvertTo(Int32,
-      b->                   LoadAt(typeDictionary()->PointerTo(Int8), addr)));
+      b->                   LoadIndirect("MemoryValue", "i8", addr)));
       break;
     }
 
@@ -862,7 +862,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc, &stack);
       stack.Push(
       b-> ConvertTo(Int32,
-      b->           LoadAt(typeDictionary()->PointerTo(Int16), addr)));
+      b->           LoadIndirect("MemoryValue", "i16", addr)));
       break;
     }
 
@@ -870,7 +870,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc, &stack);
       stack.Push(
       b-> UnsignedConvertTo(Int32,
-      b->                   LoadAt(typeDictionary()->PointerTo(Int16), addr)));
+      b->                   LoadIndirect("MemoryValue", "i16", addr)));
       break;
     }
 
@@ -878,7 +878,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc, &stack);
       stack.Push(
       b-> ConvertTo(Int64,
-      b->           LoadAt(typeDictionary()->PointerTo(Int8), addr)));
+      b->           LoadIndirect("MemoryValue", "i8", addr)));
       break;
     }
 
@@ -886,7 +886,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc, &stack);
       stack.Push(
       b-> UnsignedConvertTo(Int64,
-      b->                   LoadAt(typeDictionary()->PointerTo(Int8), addr)));
+      b->                   LoadIndirect("MemoryValue", "i8", addr)));
       break;
     }
 
@@ -894,7 +894,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc, &stack);
       stack.Push(
       b-> ConvertTo(Int64,
-      b->           LoadAt(typeDictionary()->PointerTo(Int16), addr)));
+      b->           LoadIndirect("MemoryValue", "i16", addr)));
       break;
     }
 
@@ -902,7 +902,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc, &stack);
       stack.Push(
       b-> UnsignedConvertTo(Int64,
-      b->                   LoadAt(typeDictionary()->PointerTo(Int16), addr)));
+      b->                   LoadIndirect("MemoryValue", "i16", addr)));
       break;
     }
 
@@ -910,7 +910,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc, &stack);
       stack.Push(
       b-> ConvertTo(Int64,
-      b->           LoadAt(typeDictionary()->PointerTo(Int32), addr)));
+      b->           LoadIndirect("MemoryValue", "i32", addr)));
       break;
     }
 
@@ -918,85 +918,85 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc, &stack);
       stack.Push(
       b-> UnsignedConvertTo(Int64,
-      b->                   LoadAt(typeDictionary()->PointerTo(Int32), addr)));
+      b->                   LoadIndirect("MemoryValue", "i32", addr)));
       break;
     }
 
     case Opcode::I32Load: {
       auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc, &stack);
-      stack.Push(b->LoadAt(typeDictionary()->PointerTo(Int32), addr));
+      stack.Push(b->LoadIndirect("MemoryValue", "i32", addr));
       break;
     }
 
     case Opcode::I64Load: {
       auto* addr = EmitMemoryPreAccess<int64_t>(b, &pc, &stack);
-      stack.Push(b->LoadAt(typeDictionary()->PointerTo(Int64), addr));
+      stack.Push(b->LoadIndirect("MemoryValue", "i64", addr));
       break;
     }
 
     case Opcode::F32Load: {
       auto* addr = EmitMemoryPreAccess<float>(b, &pc, &stack);
-      stack.Push(b->LoadAt(typeDictionary()->PointerTo(Float), addr));
+      stack.Push(b->LoadIndirect("MemoryValue", "f32", addr));
       break;
     }
 
     case Opcode::F64Load: {
       auto* addr = EmitMemoryPreAccess<double>(b, &pc, &stack);
-      stack.Push(b->LoadAt(typeDictionary()->PointerTo(Double), addr));
+      stack.Push(b->LoadIndirect("MemoryValue", "f64", addr));
       break;
     }
 
     case Opcode::I32Store8: {
       auto value = b->ConvertTo(Int8, stack.Pop());
-      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc, &stack), value);
+      b->StoreIndirect("MemoryValue", "i8", EmitMemoryPreAccess<int8_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I32Store16: {
       auto value = b->ConvertTo(Int16, stack.Pop());
-      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc, &stack), value);
+      b->StoreIndirect("MemoryValue", "i16", EmitMemoryPreAccess<int16_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I64Store8: {
       auto value = b->ConvertTo(Int8, stack.Pop());
-      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc, &stack), value);
+      b->StoreIndirect("MemoryValue", "i8", EmitMemoryPreAccess<int8_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I64Store16: {
       auto value = b->ConvertTo(Int16, stack.Pop());
-      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc, &stack), value);
+      b->StoreIndirect("MemoryValue", "i16", EmitMemoryPreAccess<int16_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I64Store32: {
       auto value = b->ConvertTo(Int32, stack.Pop());
-      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc, &stack), value);
+      b->StoreIndirect("MemoryValue", "i32", EmitMemoryPreAccess<int32_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I32Store: {
       auto value = stack.Pop();
-      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc, &stack), value);
+      b->StoreIndirect("MemoryValue", "i32", EmitMemoryPreAccess<int32_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I64Store: {
       auto value = stack.Pop();
-      b->StoreAt(EmitMemoryPreAccess<int64_t>(b, &pc, &stack), value);
+      b->StoreIndirect("MemoryValue", "i64", EmitMemoryPreAccess<int64_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::F32Store: {
       auto value = stack.Pop();
-      b->StoreAt(EmitMemoryPreAccess<float>(b, &pc, &stack), value);
+      b->StoreIndirect("MemoryValue", "f32", EmitMemoryPreAccess<float>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::F64Store: {
       auto value = stack.Pop();
-      b->StoreAt(EmitMemoryPreAccess<double>(b, &pc, &stack), value);
+      b->StoreIndirect("MemoryValue", "f64", EmitMemoryPreAccess<double>(b, &pc, &stack), value);
       break;
     }
 
