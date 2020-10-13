@@ -77,9 +77,8 @@ class FunctionBuilder : public TR::MethodBuilder {
       : builder(builder), pc(pc) {}
   };
 
-  void SetUpLocals(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack);
+  bool SetUpLocals(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack);
   void TearDownLocals(TR::IlBuilder* b);
-  uint32_t GetLocalOffset(VirtualStack* stack, Type* type, uint32_t depth);
 
   void MoveToPhysStack(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack, uint32_t depth);
   void MoveFromPhysStack(TR::IlBuilder* b, VirtualStack* stack, const std::vector<Type>& types);
